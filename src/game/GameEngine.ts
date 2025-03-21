@@ -1,4 +1,3 @@
-
 // Main game engine class
 
 export enum GameState {
@@ -912,16 +911,13 @@ export class GameEngine {
   private collectPowerUp(powerUp: GameObject): void {
     if (!powerUp.powerUpType) return;
     
-    switch (powerUp.powerUpType) {
-      case PowerUpType.SLOW_SPEED:
-        this.activateSlowMode();
-        break;
-      case PowerUpType.SHIELD:
-        this.activateShield();
-        break;
-      case PowerUpType.EXTRA_LIFE:
-        this.giveExtraLife();
-        break;
+    // Fix the switch statement to correctly handle PowerUpType
+    if (powerUp.powerUpType === PowerUpType.SLOW_SPEED) {
+      this.activateSlowMode();
+    } else if (powerUp.powerUpType === PowerUpType.SHIELD) {
+      this.activateShield();
+    } else if (powerUp.powerUpType === PowerUpType.EXTRA_LIFE) {
+      this.giveExtraLife();
     }
     
     // Play sound effect (to be implemented)
