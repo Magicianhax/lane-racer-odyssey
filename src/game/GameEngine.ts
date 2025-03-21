@@ -149,15 +149,16 @@ export class GameEngine {
     this.laneWidth = this.roadWidth / 3;
     
     // Calculate lane positions (center x of each lane)
-    const leftLaneCenter = this.roadCenterX - this.laneWidth;
-    const middleLaneCenter = this.roadCenterX;
-    const rightLaneCenter = this.roadCenterX + this.laneWidth;
+    // Divide the road into three equal parts
+    const leftLaneX = this.roadCenterX - this.roadWidth / 3 - this.laneWidth / 2;
+    const middleLaneX = this.roadCenterX;
+    const rightLaneX = this.roadCenterX + this.roadWidth / 3 + this.laneWidth / 2;
     
-    // Set equal lane positions
+    // Set lane positions at the center of each lane
     this.lanePositions = [
-      leftLaneCenter,
-      middleLaneCenter,
-      rightLaneCenter
+      leftLaneX,
+      middleLaneX,
+      rightLaneX
     ];
   }
   
@@ -248,60 +249,49 @@ export class GameEngine {
             this.player.height
           );
         } else {
-          // Fallback car drawing (original code)
-          // Car body
-          ctx.fillStyle = '#D3E4FD'; // Light teal color to match the image
+          // Updated car drawing to match the screenshot
+          // Car body - light blue color
+          ctx.fillStyle = '#D3E4FD';
           ctx.fillRect(this.player.x, this.player.y, this.player.width, this.player.height);
           
-          // Windows
+          // Windows - two black rectangles
           ctx.fillStyle = '#1c1c1c';
-          const windowWidth = this.player.width * 0.7;
+          const windowWidth = this.player.width * 0.8;
+          const windowHeight = this.player.height * 0.2;
           const windowX = this.player.x + (this.player.width - windowWidth) / 2;
           
-          // Front window
+          // Top window (30% from top)
           ctx.fillRect(
             windowX,
-            this.player.y + this.player.height * 0.15,
+            this.player.y + this.player.height * 0.2,
             windowWidth,
-            this.player.height * 0.2
+            windowHeight
           );
           
-          // Rear window
+          // Bottom window (70% from top)
           ctx.fillRect(
             windowX,
             this.player.y + this.player.height * 0.6,
             windowWidth,
-            this.player.height * 0.2
+            windowHeight
           );
           
-          // Headlights
+          // Yellow headlights at the bottom corners
           ctx.fillStyle = '#ffcc00';
+          const lightSize = this.player.width * 0.15;
+          // Bottom left light
           ctx.fillRect(
-            this.player.x + this.player.width * 0.15,
-            this.player.y,
-            this.player.width * 0.15,
-            this.player.height * 0.05
+            this.player.x,
+            this.player.y + this.player.height - lightSize,
+            lightSize,
+            lightSize
           );
+          // Bottom right light
           ctx.fillRect(
-            this.player.x + this.player.width * 0.7,
-            this.player.y,
-            this.player.width * 0.15,
-            this.player.height * 0.05
-          );
-          
-          // Taillights
-          ctx.fillStyle = '#ff3333';
-          ctx.fillRect(
-            this.player.x + this.player.width * 0.15,
-            this.player.y + this.player.height * 0.95,
-            this.player.width * 0.15,
-            this.player.height * 0.05
-          );
-          ctx.fillRect(
-            this.player.x + this.player.width * 0.7,
-            this.player.y + this.player.height * 0.95,
-            this.player.width * 0.15,
-            this.player.height * 0.05
+            this.player.x + this.player.width - lightSize,
+            this.player.y + this.player.height - lightSize,
+            lightSize,
+            lightSize
           );
         }
         
@@ -334,62 +324,51 @@ export class GameEngine {
         }
       },
       render: (ctx: CanvasRenderingContext2D) => {
-        // Draw enemy car
+        // Updated enemy car drawing to match the screenshot
         ctx.save();
         
-        // Car body
+        // Car body - red color
         ctx.fillStyle = '#ff5252';
         ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
         
-        // Windows
+        // Windows - two black rectangles
         ctx.fillStyle = '#1c1c1c';
-        const windowWidth = enemy.width * 0.7;
+        const windowWidth = enemy.width * 0.8;
+        const windowHeight = enemy.height * 0.2;
         const windowX = enemy.x + (enemy.width - windowWidth) / 2;
         
-        // Front window
+        // Top window (20% from top)
         ctx.fillRect(
           windowX,
-          enemy.y + enemy.height * 0.15,
+          enemy.y + enemy.height * 0.2,
           windowWidth,
-          enemy.height * 0.2
+          windowHeight
         );
         
-        // Rear window
+        // Bottom window (60% from top)
         ctx.fillRect(
           windowX,
           enemy.y + enemy.height * 0.6,
           windowWidth,
-          enemy.height * 0.2
+          windowHeight
         );
         
-        // Headlights
+        // Yellow headlights at the bottom corners
         ctx.fillStyle = '#ffcc00';
+        const lightSize = enemy.width * 0.15;
+        // Bottom left light
         ctx.fillRect(
-          enemy.x + enemy.width * 0.15,
-          enemy.y + enemy.height * 0.95,
-          enemy.width * 0.15,
-          enemy.height * 0.05
+          enemy.x,
+          enemy.y + enemy.height - lightSize,
+          lightSize,
+          lightSize
         );
+        // Bottom right light
         ctx.fillRect(
-          enemy.x + enemy.width * 0.7,
-          enemy.y + enemy.height * 0.95,
-          enemy.width * 0.15,
-          enemy.height * 0.05
-        );
-        
-        // Taillights
-        ctx.fillStyle = '#ff3333';
-        ctx.fillRect(
-          enemy.x + enemy.width * 0.15,
-          enemy.y,
-          enemy.width * 0.15,
-          enemy.height * 0.05
-        );
-        ctx.fillRect(
-          enemy.x + enemy.width * 0.7,
-          enemy.y,
-          enemy.width * 0.15,
-          enemy.height * 0.05
+          enemy.x + enemy.width - lightSize,
+          enemy.y + enemy.height - lightSize,
+          lightSize,
+          lightSize
         );
         
         ctx.restore();
@@ -422,18 +401,23 @@ export class GameEngine {
         }
       },
       render: (ctx: CanvasRenderingContext2D) => {
-        // Draw seed
+        // Simplified seed drawing to match the screenshot - simple yellow square with glow
         ctx.save();
-        ctx.fillStyle = '#ffcd3c';
         
-        // Seed with pulsing effect
-        const pulseScale = 1 + 0.1 * Math.sin(Date.now() * 0.005);
+        // Yellow square with rounded corners
         const centerX = seed.x + seed.width / 2;
         const centerY = seed.y + seed.height / 2;
+        
+        // Create square with slight pulse
+        const pulseScale = 1 + 0.1 * Math.sin(Date.now() * 0.005);
         const scaledSize = seed.width * pulseScale;
         
-        // Create rounded rectangle
-        const radius = scaledSize / 4;
+        ctx.fillStyle = '#ffcd3c';
+        ctx.shadowColor = '#ffcd3c';
+        ctx.shadowBlur = 10;
+        
+        // Draw rounded rectangle
+        const radius = scaledSize / 5;
         
         ctx.beginPath();
         ctx.moveTo(centerX - scaledSize / 2 + radius, centerY - scaledSize / 2);
@@ -447,20 +431,7 @@ export class GameEngine {
         ctx.arc(centerX - scaledSize / 2 + radius, centerY - scaledSize / 2 + radius, radius, Math.PI, 3 * Math.PI / 2);
         ctx.closePath();
         
-        // Fill with gradient
-        const gradient = ctx.createRadialGradient(
-          centerX, centerY, 0,
-          centerX, centerY, scaledSize / 2
-        );
-        gradient.addColorStop(0, '#fff9c4');
-        gradient.addColorStop(1, '#ffcd3c');
-        ctx.fillStyle = gradient;
         ctx.fill();
-        
-        // Add glow effect
-        ctx.shadowColor = '#ffcd3c';
-        ctx.shadowBlur = 10;
-        ctx.stroke();
         
         ctx.restore();
       }
@@ -659,7 +630,6 @@ export class GameEngine {
     this.onGameStateChange(this.gameState);
   }
   
-  // Changed from private to public to allow access from the Game component
   public resizeCanvas(): void {
     // Update canvas and game dimensions
     this.calculateDimensions();
@@ -1096,7 +1066,7 @@ export class GameEngine {
   }
   
   private drawRoad(): void {
-    // Road background
+    // Road background - darker gray to match screenshot
     this.ctx.fillStyle = '#333333';
     this.ctx.fillRect(
       this.roadCenterX - this.roadWidth / 2,
@@ -1105,21 +1075,21 @@ export class GameEngine {
       this.canvas.height
     );
     
-    // Lane dividers
+    // Lane dividers - pure white dashed lines
     this.ctx.strokeStyle = '#ffffff';
     this.ctx.setLineDash([20, 15]);
     this.ctx.lineWidth = 3;
     
     // Left lane divider
     this.ctx.beginPath();
-    this.ctx.moveTo(this.lanePositions[0], 0);
-    this.ctx.lineTo(this.lanePositions[0], this.canvas.height);
+    this.ctx.moveTo(this.roadCenterX - this.roadWidth / 3, 0);
+    this.ctx.lineTo(this.roadCenterX - this.roadWidth / 3, this.canvas.height);
     this.ctx.stroke();
     
     // Right lane divider
     this.ctx.beginPath();
-    this.ctx.moveTo(this.lanePositions[2], 0);
-    this.ctx.lineTo(this.lanePositions[2], this.canvas.height);
+    this.ctx.moveTo(this.roadCenterX + this.roadWidth / 3, 0);
+    this.ctx.lineTo(this.roadCenterX + this.roadWidth / 3, this.canvas.height);
     this.ctx.stroke();
     
     // Reset line dash
