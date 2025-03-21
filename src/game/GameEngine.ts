@@ -982,9 +982,9 @@ export class GameEngine {
   }
   
   private collectPowerUp(powerUp: GameObject): void {
-    if (!powerUp.powerUpType) return;
+    if (powerUp.powerUpType === undefined) return;
     
-    // Apply power-up effects
+    // Apply power-up effects based on type
     switch (powerUp.powerUpType) {
       case PowerUpType.SLOW_SPEED:
         // Activate slow mode
@@ -1168,3 +1168,4 @@ export class GameEngine {
     );
   }
 }
+
