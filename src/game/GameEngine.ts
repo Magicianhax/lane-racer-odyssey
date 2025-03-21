@@ -1,4 +1,3 @@
-
 // Main game engine class
 
 export enum GameState {
@@ -14,6 +13,7 @@ export enum PowerUpType {
   EXTRA_LIFE
 }
 
+// Extended GameObject interface to include powerUpType for power-ups
 export interface GameObject {
   x: number;
   y: number;
@@ -22,6 +22,7 @@ export interface GameObject {
   lane: number;
   active: boolean;
   type?: string;
+  powerUpType?: PowerUpType; // Add this to support power-up types
   update: (delta: number) => void;
   render: (ctx: CanvasRenderingContext2D) => void;
 }
@@ -283,62 +284,64 @@ export class GameEngine {
         }
       },
       render: (ctx: CanvasRenderingContext2D) => {
+        const enemy = this.enemies[this.enemies.indexOf(this as unknown as GameObject)];
+        
         // Draw enemy car
         ctx.save();
         
         // Car body
         ctx.fillStyle = '#ff5252';
-        ctx.fillRect(this.x, this.y, this.width, this.height);
+        ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
         
         // Windows
         ctx.fillStyle = '#1c1c1c';
-        const windowWidth = this.width * 0.7;
-        const windowX = this.x + (this.width - windowWidth) / 2;
+        const windowWidth = enemy.width * 0.7;
+        const windowX = enemy.x + (enemy.width - windowWidth) / 2;
         
         // Front window
         ctx.fillRect(
           windowX,
-          this.y + this.height * 0.15,
+          enemy.y + enemy.height * 0.15,
           windowWidth,
-          this.height * 0.2
+          enemy.height * 0.2
         );
         
         // Rear window
         ctx.fillRect(
           windowX,
-          this.y + this.height * 0.6,
+          enemy.y + enemy.height * 0.6,
           windowWidth,
-          this.height * 0.2
+          enemy.height * 0.2
         );
         
         // Headlights
         ctx.fillStyle = '#ffcc00';
         ctx.fillRect(
-          this.x + this.width * 0.15,
-          this.y + this.height * 0.95,
-          this.width * 0.15,
-          this.height * 0.05
+          enemy.x + enemy.width * 0.15,
+          enemy.y + enemy.height * 0.95,
+          enemy.width * 0.15,
+          enemy.height * 0.05
         );
         ctx.fillRect(
-          this.x + this.width * 0.7,
-          this.y + this.height * 0.95,
-          this.width * 0.15,
-          this.height * 0.05
+          enemy.x + enemy.width * 0.7,
+          enemy.y + enemy.height * 0.95,
+          enemy.width * 0.15,
+          enemy.height * 0.05
         );
         
         // Taillights
         ctx.fillStyle = '#ff3333';
         ctx.fillRect(
-          this.x + this.width * 0.15,
-          this.y,
-          this.width * 0.15,
-          this.height * 0.05
+          enemy.x + enemy.width * 0.15,
+          enemy.y,
+          enemy.width * 0.15,
+          enemy.height * 0.05
         );
         ctx.fillRect(
-          this.x + this.width * 0.7,
-          this.y,
-          this.width * 0.15,
-          this.height * 0.05
+          enemy.x + enemy.width * 0.7,
+          enemy.y,
+          enemy.width * 0.15,
+          enemy.height * 0.05
         );
         
         ctx.restore();
@@ -451,10 +454,10 @@ export class GameEngine {
         
         // Fill based on power-up type
         let fillColor, iconColor;
-        if (this.powerUpType === PowerUpType.SLOW_SPEED) {
+        if (powerUp.powerUpType === PowerUpType.SLOW_SPEED) {
           fillColor = '#A170FC';
           iconColor = '#ffffff';
-        } else if (this.powerUpType === PowerUpType.SHIELD) {
+        } else if (powerUp.powerUpType === PowerUpType.SHIELD) {
           fillColor = '#64D2FF';
           iconColor = '#ffffff';
         } else { // EXTRA_LIFE
@@ -478,7 +481,7 @@ export class GameEngine {
         
         // Draw icon based on power-up type
         ctx.fillStyle = iconColor;
-        if (this.powerUpType === PowerUpType.SLOW_SPEED) {
+        if (powerUp.powerUpType === PowerUpType.SLOW_SPEED) {
           // Clock icon
           const clockRadius = radius * 0.6;
           ctx.beginPath();
@@ -497,7 +500,7 @@ export class GameEngine {
           ctx.moveTo(centerX, centerY);
           ctx.lineTo(centerX + clockRadius * 0.4, centerY);
           ctx.stroke();
-        } else if (this.powerUpType === PowerUpType.SHIELD) {
+        } else if (powerUp.powerUpType === PowerUpType.SHIELD) {
           // Shield icon
           const shieldWidth = radius * 1.2;
           const shieldHeight = radius * 1.4;
@@ -603,7 +606,7 @@ export class GameEngine {
     this.onGameStateChange(this.gameState);
   }
   
-  private resizeCanvas(): void {
+  public resizeCanvas(): void {
     // Update canvas and game dimensions
     this.calculateDimensions();
     
@@ -612,7 +615,6 @@ export class GameEngine {
     this.player.x = this.player.lanePosition - (this.player.width / 2);
   }
   
-  // Game state control methods
   public startGame(): void {
     // Reset game state
     this.resetGame();
@@ -680,7 +682,6 @@ export class GameEngine {
     return this.score;
   }
   
-  // Game loop and update methods
   private gameLoop(timestamp: number): void {
     if (this.gameState !== GameState.GAMEPLAY) {
       this.animationFrameId = requestAnimationFrame((time) => this.gameLoop(time));
@@ -1007,7 +1008,6 @@ export class GameEngine {
     this.ctx.setLineDash([]);
   }
   
-  // Touch control methods for mobile devices
   public handleTouchLeft(): void {
     if (this.gameState === GameState.GAMEPLAY) {
       this.movePlayerLeft();
@@ -1020,7 +1020,6 @@ export class GameEngine {
     }
   }
   
-  // Cleanup method
   public cleanup(): void {
     if (this.animationFrameId !== null) {
       cancelAnimationFrame(this.animationFrameId);

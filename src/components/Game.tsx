@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine, GameState, PowerUpType } from '../game/GameEngine';
 import { Button } from '@/components/ui/button';
@@ -54,7 +53,7 @@ const Game: React.FC = () => {
       
       // Update game engine if it exists
       if (gameEngineRef.current) {
-        gameEngineRef.current.resizeCanvas?.();
+        gameEngineRef.current.resizeCanvas();
       }
     };
     
