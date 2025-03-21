@@ -149,10 +149,15 @@ export class GameEngine {
     this.laneWidth = this.roadWidth / 3;
     
     // Calculate lane positions (center x of each lane)
+    const leftLaneCenter = this.roadCenterX - this.laneWidth;
+    const middleLaneCenter = this.roadCenterX;
+    const rightLaneCenter = this.roadCenterX + this.laneWidth;
+    
+    // Set equal lane positions
     this.lanePositions = [
-      this.roadCenterX - this.laneWidth,
-      this.roadCenterX,
-      this.roadCenterX + this.laneWidth
+      leftLaneCenter,
+      middleLaneCenter,
+      rightLaneCenter
     ];
   }
   
@@ -1168,4 +1173,3 @@ export class GameEngine {
     );
   }
 }
-
