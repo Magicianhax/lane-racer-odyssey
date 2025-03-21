@@ -1,4 +1,3 @@
-
 // Main game engine class
 
 export enum GameState {
@@ -250,7 +249,7 @@ export class GameEngine {
   private createPlayer(): PlayerCar {
     // Use a more suitable aspect ratio for the car image (width/height)
     const aspectRatio = 0.55; // approximate width/height ratio of the car image
-    const width = this.laneWidth * 0.8;
+    const width = this.laneWidth * 0.9; // Increased from 0.8 to 0.9
     const height = width / aspectRatio;
     const lane = 1; // Start in middle lane
     
@@ -382,7 +381,7 @@ export class GameEngine {
   private createEnemy(lane: number): GameObject {
     // Use a shorter aspect ratio for the car image (width/height)
     const aspectRatio = 0.8; // Modified from 0.55 to 0.8 to reduce height
-    const width = this.laneWidth * 0.8;
+    const width = this.laneWidth * 0.9; // Increased from 0.8 to 0.9
     const height = width / aspectRatio; // This will make the car shorter
     
     // Choose a random enemy car image if multiple are available
