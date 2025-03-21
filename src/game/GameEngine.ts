@@ -1,3 +1,4 @@
+
 // Main game engine class
 
 export enum GameState {
@@ -121,6 +122,9 @@ export class GameEngine {
   
   // Option to use defaults if image is broken
   private useDefaultsIfBroken: boolean = false;
+
+  // High score tracking
+  private highScore: number = 0;
   
   constructor(config: GameConfig) {
     this.canvas = config.canvas;
@@ -221,6 +225,478 @@ export class GameEngine {
     
     // Set up event listeners
     this.setupEventListeners();
+
+    // Load high score from local storage
+    this.loadHighScore();
+  }
+
+  // Add the missing methods
+  public resizeCanvas(): void {
+    this.calculateDimensions();
+    // If player exists, update its position based on new dimensions
+    if (this.player) {
+      this.player.lanePosition = this.lanePositions[this.player.lane];
+      this.player.x = this.player.lanePosition - (this.player.width / 2);
+    }
+  }
+
+  public getHighScore(): number {
+    return this.highScore;
+  }
+
+  public cleanup(): void {
+    // Cancel animation frame if it exists
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+    
+    // Remove event listeners
+    this.removeEventListeners();
+  }
+
+  public startGame(): void {
+    // Reset game state
+    this.resetGame();
+    
+    // Start game loop
+    this.gameState = GameState.GAMEPLAY;
+    this.onGameStateChange(GameState.GAMEPLAY);
+    
+    // Start game loop if not already running
+    if (this.animationFrameId === null) {
+      this.lastFrameTime = performance.now();
+      this.gameLoop();
+    }
+  }
+
+  public handleTouchLeft(): void {
+    this.movePlayerLeft();
+  }
+
+  public handleTouchRight(): void {
+    this.movePlayerRight();
+  }
+  
+  // Helper methods for the newly added public methods
+  private setupEventListeners(): void {
+    window.addEventListener('keydown', this.handleKeyDown.bind(this));
+  }
+
+  private removeEventListeners(): void {
+    window.removeEventListener('keydown', this.handleKeyDown.bind(this));
+  }
+
+  private handleKeyDown(e: KeyboardEvent): void {
+    if (this.gameState !== GameState.GAMEPLAY) return;
+    
+    switch (e.key) {
+      case 'ArrowLeft':
+        this.movePlayerLeft();
+        break;
+      case 'ArrowRight':
+        this.movePlayerRight();
+        break;
+      case 'p':
+      case 'P':
+        this.togglePause();
+        break;
+    }
+  }
+
+  private movePlayerLeft(): void {
+    if (!this.player || this.player.transitioning || this.gameState !== GameState.GAMEPLAY) return;
+    
+    if (this.player.lane > 0) {
+      this.player.targetLane = this.player.lane - 1;
+      this.player.transitioning = true;
+    }
+  }
+
+  private movePlayerRight(): void {
+    if (!this.player || this.player.transitioning || this.gameState !== GameState.GAMEPLAY) return;
+    
+    if (this.player.lane < 2) {
+      this.player.targetLane = this.player.lane + 1;
+      this.player.transitioning = true;
+    }
+  }
+
+  private togglePause(): void {
+    if (this.gameState === GameState.GAMEPLAY) {
+      this.gameState = GameState.PAUSED;
+      this.onGameStateChange(GameState.PAUSED);
+    } else if (this.gameState === GameState.PAUSED) {
+      this.gameState = GameState.GAMEPLAY;
+      this.onGameStateChange(GameState.GAMEPLAY);
+      this.lastFrameTime = performance.now();
+    }
+  }
+
+  private resetGame(): void {
+    // Reset game parameters
+    this.score = 0;
+    this.onScoreChange(this.score);
+    this.gameSpeed = 1;
+    this.gameTime = 0;
+    
+    // Clear game objects
+    this.enemies = [];
+    this.seeds = [];
+    this.powerUps = [];
+    this.explosions = [];
+    
+    // Reset timers
+    this.enemySpawnTimer = 0;
+    this.seedSpawnTimer = 0;
+    this.powerUpSpawnTimer = 0;
+    this.difficultyTimer = 0;
+    
+    // Reset power-up states
+    this.slowModeActive = false;
+    this.slowModeTimer = 0;
+    
+    // Create player if it doesn't exist
+    if (!this.player) {
+      this.player = this.createPlayer();
+    } else {
+      // Reset player
+      this.player.lives = 3;
+      this.player.shield = false;
+      this.player.shieldTimer = 0;
+      this.player.lane = 1;
+      this.player.lanePosition = this.lanePositions[1];
+      this.player.targetLane = 1;
+      this.player.transitioning = false;
+      this.player.x = this.player.lanePosition - (this.player.width / 2);
+      this.player.active = true;
+    }
+    
+    this.onLivesChange(this.player.lives);
+  }
+
+  private loadHighScore(): void {
+    const savedHighScore = localStorage.getItem('highScore');
+    if (savedHighScore) {
+      this.highScore = parseInt(savedHighScore, 10);
+    }
+  }
+
+  private saveHighScore(): void {
+    if (this.score > this.highScore) {
+      this.highScore = this.score;
+      localStorage.setItem('highScore', this.highScore.toString());
+    }
+  }
+
+  private gameLoop(): void {
+    const currentTime = performance.now();
+    const deltaTime = currentTime - this.lastFrameTime;
+    this.lastFrameTime = currentTime;
+    
+    // Don't update if game is paused
+    if (this.gameState === GameState.GAMEPLAY) {
+      this.update(deltaTime);
+    }
+    
+    this.render();
+    
+    // Continue game loop
+    this.animationFrameId = requestAnimationFrame(this.gameLoop.bind(this));
+  }
+
+  private update(deltaTime: number): void {
+    // Update game time
+    this.gameTime += deltaTime;
+    
+    // Accumulate time for fixed time step updates
+    this.accumulatedTime += deltaTime;
+    
+    // Update at fixed time steps
+    const timeStep = 16; // ~60 fps
+    while (this.accumulatedTime >= timeStep) {
+      this.updateGameState(timeStep);
+      this.accumulatedTime -= timeStep;
+    }
+  }
+
+  private updateGameState(deltaTime: number): void {
+    // Update player
+    if (this.player) {
+      this.player.update(deltaTime);
+    }
+    
+    // Update enemies
+    this.enemies.forEach(enemy => enemy.update(deltaTime));
+    this.enemies = this.enemies.filter(enemy => enemy.active);
+    
+    // Update seeds
+    this.seeds.forEach(seed => seed.update(deltaTime));
+    this.seeds = this.seeds.filter(seed => seed.active);
+    
+    // Update power-ups
+    this.powerUps.forEach(powerUp => powerUp.update(deltaTime));
+    this.powerUps = this.powerUps.filter(powerUp => powerUp.active);
+    
+    // Update explosions
+    this.updateExplosions(deltaTime);
+    
+    // Check collisions
+    this.checkCollisions();
+    
+    // Spawn game objects
+    this.updateSpawns(deltaTime);
+    
+    // Update power-up timers
+    this.updatePowerUps(deltaTime);
+    
+    // Update difficulty
+    this.updateDifficulty(deltaTime);
+  }
+
+  private updateExplosions(deltaTime: number): void {
+    // Update explosion particles
+    this.explosions.forEach(particle => {
+      particle.x += particle.vx * deltaTime * 0.05;
+      particle.y += particle.vy * deltaTime * 0.05;
+      particle.currentLife -= deltaTime;
+      particle.alpha = particle.currentLife / particle.lifetime;
+    });
+    
+    // Remove expired particles
+    this.explosions = this.explosions.filter(particle => particle.currentLife > 0);
+  }
+
+  private checkCollisions(): void {
+    if (!this.player || this.gameState !== GameState.GAMEPLAY) return;
+    
+    // Check enemy collisions
+    this.enemies.forEach(enemy => {
+      if (this.isColliding(this.player!, enemy)) {
+        if (this.player!.shield) {
+          // Player has shield, destroy enemy
+          enemy.active = false;
+          this.createExplosion(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2);
+        } else {
+          // Player takes damage
+          this.player!.lives--;
+          this.onLivesChange(this.player!.lives);
+          enemy.active = false;
+          this.createExplosion(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2);
+          
+          // Check game over
+          if (this.player!.lives <= 0) {
+            this.gameOver();
+          }
+        }
+      }
+    });
+    
+    // Check seed collisions
+    this.seeds.forEach(seed => {
+      if (this.isColliding(this.player!, seed)) {
+        seed.active = false;
+        this.score += 10;
+        this.onScoreChange(this.score);
+      }
+    });
+    
+    // Check power-up collisions
+    this.powerUps.forEach(powerUp => {
+      if (this.isColliding(this.player!, powerUp) && powerUp.powerUpType !== undefined) {
+        powerUp.active = false;
+        
+        switch (powerUp.powerUpType) {
+          case PowerUpType.SLOW_SPEED:
+            this.activateSlowMode();
+            break;
+          case PowerUpType.SHIELD:
+            this.activateShield();
+            break;
+          case PowerUpType.EXTRA_LIFE:
+            this.addExtraLife();
+            break;
+        }
+      }
+    });
+  }
+
+  private isColliding(obj1: GameObject, obj2: GameObject): boolean {
+    return (
+      obj1.x < obj2.x + obj2.width &&
+      obj1.x + obj1.width > obj2.x &&
+      obj1.y < obj2.y + obj2.height &&
+      obj1.y + obj1.height > obj2.y
+    );
+  }
+
+  private createExplosion(x: number, y: number): void {
+    const particleCount = 20;
+    const colors = ['#ff6600', '#ffcc00', '#ff3300', '#ff9900'];
+    
+    for (let i = 0; i < particleCount; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 1 + Math.random() * 3;
+      const size = 2 + Math.random() * 6;
+      const lifetime = 500 + Math.random() * 1000;
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      
+      this.explosions.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        size,
+        color,
+        alpha: 1,
+        lifetime,
+        currentLife: lifetime
+      });
+    }
+  }
+
+  private updateSpawns(deltaTime: number): void {
+    // Spawn enemies
+    this.enemySpawnTimer += deltaTime;
+    if (this.enemySpawnTimer >= this.enemySpawnInterval) {
+      this.spawnEnemy();
+      this.enemySpawnTimer = 0;
+    }
+    
+    // Spawn seeds
+    this.seedSpawnTimer += deltaTime;
+    if (this.seedSpawnTimer >= this.seedSpawnInterval) {
+      this.spawnSeed();
+      this.seedSpawnTimer = 0;
+    }
+    
+    // Spawn power-ups
+    this.powerUpSpawnTimer += deltaTime;
+    if (this.powerUpSpawnTimer >= this.powerUpSpawnInterval) {
+      this.spawnPowerUp();
+      this.powerUpSpawnTimer = 0;
+    }
+  }
+
+  private spawnEnemy(): void {
+    const lane = Math.floor(Math.random() * 3);
+    this.enemies.push(this.createEnemy(lane));
+  }
+
+  private spawnSeed(): void {
+    // Implement seed spawning logic
+  }
+
+  private spawnPowerUp(): void {
+    // Implement power-up spawning logic
+  }
+
+  private updateDifficulty(deltaTime: number): void {
+    this.difficultyTimer += deltaTime;
+    if (this.difficultyTimer >= this.difficultyInterval) {
+      this.gameSpeed = Math.min(this.gameSpeed + 0.2, 2.5);
+      this.enemySpawnInterval = Math.max(this.enemySpawnInterval - 100, 1000);
+      this.difficultyTimer = 0;
+    }
+  }
+
+  private updatePowerUps(deltaTime: number): void {
+    // Update slow mode
+    if (this.slowModeActive) {
+      this.slowModeTimer -= deltaTime;
+      if (this.slowModeTimer <= 0) {
+        this.slowModeActive = false;
+        this.onPowerUpEnd(PowerUpType.SLOW_SPEED);
+      }
+    }
+  }
+
+  private activateSlowMode(): void {
+    this.slowModeActive = true;
+    this.slowModeTimer = this.slowModeDuration;
+    this.onPowerUpStart(PowerUpType.SLOW_SPEED, this.slowModeDuration);
+  }
+
+  private activateShield(): void {
+    if (this.player) {
+      this.player.shield = true;
+      this.player.shieldTimer = 3000; // 3 seconds
+      this.onPowerUpStart(PowerUpType.SHIELD, 3000);
+    }
+  }
+
+  private addExtraLife(): void {
+    if (this.player) {
+      this.player.lives = Math.min(this.player.lives + 1, 5); // Max 5 lives
+      this.onLivesChange(this.player.lives);
+      this.onPowerUpStart(PowerUpType.EXTRA_LIFE, 0);
+    }
+  }
+
+  private gameOver(): void {
+    this.gameState = GameState.GAME_OVER;
+    this.onGameStateChange(GameState.GAME_OVER);
+    this.saveHighScore();
+  }
+
+  private render(): void {
+    // Clear canvas
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    
+    // Draw background
+    this.drawBackground();
+    
+    // Draw road
+    this.drawRoad();
+    
+    // Draw game objects
+    this.drawGameObjects();
+    
+    // Draw UI
+    this.drawUI();
+  }
+
+  private drawBackground(): void {
+    // Implement background drawing
+  }
+
+  private drawRoad(): void {
+    // Implement road drawing
+  }
+
+  private drawGameObjects(): void {
+    // Draw player
+    if (this.player) {
+      this.player.render(this.ctx);
+    }
+    
+    // Draw enemies
+    this.enemies.forEach(enemy => enemy.render(this.ctx));
+    
+    // Draw seeds
+    this.seeds.forEach(seed => seed.render(this.ctx));
+    
+    // Draw power-ups
+    this.powerUps.forEach(powerUp => powerUp.render(this.ctx));
+    
+    // Draw explosions
+    this.drawExplosions();
+  }
+
+  private drawExplosions(): void {
+    this.explosions.forEach(particle => {
+      this.ctx.save();
+      this.ctx.globalAlpha = particle.alpha;
+      this.ctx.fillStyle = particle.color;
+      this.ctx.beginPath();
+      this.ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.restore();
+    });
+  }
+
+  private drawUI(): void {
+    // Implement UI drawing
   }
   
   private checkAllImagesLoaded(): void {
@@ -446,6 +922,4 @@ export class GameEngine {
     
     return enemy;
   }
-  
-  // ... keep existing code (remaining methods unchanged)
 }
