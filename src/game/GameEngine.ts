@@ -1,3 +1,4 @@
+
 // Main game engine class
 
 export enum GameState {
@@ -22,7 +23,7 @@ export interface GameObject {
   lane: number;
   active: boolean;
   type?: string;
-  powerUpType?: PowerUpType; // Add this to support power-up types
+  powerUpType?: PowerUpType; // Ensure this is defined in the interface
   update: (delta: number) => void;
   render: (ctx: CanvasRenderingContext2D) => void;
 }
@@ -265,7 +266,7 @@ export class GameEngine {
     const width = this.laneWidth * 0.7;
     const height = width * 1.8;
     
-    return {
+    const enemy = {
       x: this.lanePositions[lane] - (width / 2),
       y: -height,
       width,
@@ -276,16 +277,15 @@ export class GameEngine {
       update: (delta: number) => {
         // Move downward
         const speed = 0.3 * this.gameSpeed * (this.slowModeActive ? 0.5 : 1);
-        this.enemies[this.enemies.indexOf(this as unknown as GameObject)].y += speed * delta;
+        // Use a direct reference to the enemy object instead of this
+        enemy.y += speed * delta;
         
         // Check if out of bounds
-        if (this.enemies[this.enemies.indexOf(this as unknown as GameObject)].y > this.canvas.height) {
-          this.enemies[this.enemies.indexOf(this as unknown as GameObject)].active = false;
+        if (enemy.y > this.canvas.height) {
+          enemy.active = false;
         }
       },
       render: (ctx: CanvasRenderingContext2D) => {
-        const enemy = this.enemies[this.enemies.indexOf(this as unknown as GameObject)];
-        
         // Draw enemy car
         ctx.save();
         
@@ -347,12 +347,14 @@ export class GameEngine {
         ctx.restore();
       }
     };
+    
+    return enemy;
   }
   
   private createSeed(lane: number): GameObject {
     const size = this.laneWidth * 0.2;
     
-    return {
+    const seed = {
       x: this.lanePositions[lane] - (size / 2),
       y: -size,
       width: size,
@@ -363,16 +365,15 @@ export class GameEngine {
       update: (delta: number) => {
         // Move downward
         const speed = 0.25 * this.gameSpeed * (this.slowModeActive ? 0.5 : 1);
-        this.seeds[this.seeds.indexOf(this as unknown as GameObject)].y += speed * delta;
+        // Use a direct reference to the seed object instead of this
+        seed.y += speed * delta;
         
         // Check if out of bounds
-        if (this.seeds[this.seeds.indexOf(this as unknown as GameObject)].y > this.canvas.height) {
-          this.seeds[this.seeds.indexOf(this as unknown as GameObject)].active = false;
+        if (seed.y > this.canvas.height) {
+          seed.active = false;
         }
       },
       render: (ctx: CanvasRenderingContext2D) => {
-        const seed = this.seeds[this.seeds.indexOf(this as unknown as GameObject)];
-        
         // Draw seed
         ctx.save();
         ctx.fillStyle = '#ffcd3c';
@@ -416,12 +417,14 @@ export class GameEngine {
         ctx.restore();
       }
     };
+    
+    return seed;
   }
   
   private createPowerUp(lane: number, type: PowerUpType): GameObject {
     const size = this.laneWidth * 0.35;
     
-    return {
+    const powerUp = {
       x: this.lanePositions[lane] - (size / 2),
       y: -size,
       width: size,
@@ -433,15 +436,15 @@ export class GameEngine {
       update: (delta: number) => {
         // Move downward
         const speed = 0.2 * this.gameSpeed * (this.slowModeActive ? 0.5 : 1);
-        this.powerUps[this.powerUps.indexOf(this as unknown as GameObject)].y += speed * delta;
+        // Use a direct reference to the powerUp object instead of this
+        powerUp.y += speed * delta;
         
         // Check if out of bounds
-        if (this.powerUps[this.powerUps.indexOf(this as unknown as GameObject)].y > this.canvas.height) {
-          this.powerUps[this.powerUps.indexOf(this as unknown as GameObject)].active = false;
+        if (powerUp.y > this.canvas.height) {
+          powerUp.active = false;
         }
       },
       render: (ctx: CanvasRenderingContext2D) => {
-        const powerUp = this.powerUps[this.powerUps.indexOf(this as unknown as GameObject)];
         const centerX = powerUp.x + powerUp.width / 2;
         const centerY = powerUp.y + powerUp.height / 2;
         const radius = powerUp.width / 2;
@@ -558,6 +561,8 @@ export class GameEngine {
         ctx.restore();
       }
     };
+    
+    return powerUp;
   }
   
   private setupEventListeners(): void {
@@ -606,6 +611,7 @@ export class GameEngine {
     this.onGameStateChange(this.gameState);
   }
   
+  // Changed from private to public to allow access from the Game component
   public resizeCanvas(): void {
     // Update canvas and game dimensions
     this.calculateDimensions();
@@ -904,9 +910,9 @@ export class GameEngine {
   }
   
   private collectPowerUp(powerUp: GameObject): void {
-    const powerUpObj = powerUp as unknown as { powerUpType: PowerUpType };
+    if (!powerUp.powerUpType) return;
     
-    switch (powerUpObj.powerUpType) {
+    switch (powerUp.powerUpType) {
       case PowerUpType.SLOW_SPEED:
         this.activateSlowMode();
         break;
