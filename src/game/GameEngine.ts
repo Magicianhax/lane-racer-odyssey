@@ -1,4 +1,3 @@
-
 // Main game engine class
 
 export enum GameState {
@@ -72,6 +71,11 @@ export class GameEngine {
   private seeds: GameObject[] = [];
   private powerUps: GameObject[] = [];
   
+  // Car images
+  private playerCarImage: HTMLImageElement;
+  private enemyCarImage: HTMLImageElement;
+  private imagesLoaded: boolean = false;
+  
   // Explosion animation
   private explosions: ExplosionParticle[] = [];
   
@@ -121,8 +125,26 @@ export class GameEngine {
     // Initialize game dimensions
     this.calculateDimensions();
     
-    // Initialize player
-    this.player = this.createPlayer();
+    // Load car images
+    this.playerCarImage = new Image();
+    this.playerCarImage.src = '/lovable-uploads/e0e56876-6200-411c-bf4c-0e18962da129.png';
+    
+    this.enemyCarImage = new Image();
+    this.enemyCarImage.src = '/lovable-uploads/97084615-c052-447d-a950-1ac8cf98cccf.png';
+    
+    // Wait for images to load
+    let loadedImages = 0;
+    const onImageLoad = () => {
+      loadedImages++;
+      if (loadedImages === 2) {
+        this.imagesLoaded = true;
+        // Initialize player after images are loaded
+        this.player = this.createPlayer();
+      }
+    };
+    
+    this.playerCarImage.onload = onImageLoad;
+    this.enemyCarImage.onload = onImageLoad;
     
     // Set up event listeners
     this.setupEventListeners();
@@ -143,12 +165,14 @@ export class GameEngine {
   }
   
   private createPlayer(): PlayerCar {
-    const width = this.laneWidth * 0.7;
-    const height = width * 1.8;
+    // Use a more suitable aspect ratio for the car image (width/height)
+    const aspectRatio = 0.55; // approximate width/height ratio of the car image
+    const width = this.laneWidth * 0.8;
+    const height = width / aspectRatio;
     const lane = 1; // Start in middle lane
     
     return {
-      x: this.lanePositions[lane],
+      x: this.lanePositions[lane] - (width / 2),
       y: this.canvas.height - height - 20,
       width,
       height,
@@ -188,7 +212,7 @@ export class GameEngine {
         }
       },
       render: (ctx: CanvasRenderingContext2D) => {
-        // Draw player car
+        // Draw player car using image
         ctx.save();
         
         // Draw shield effect if active
@@ -218,60 +242,10 @@ export class GameEngine {
           ctx.stroke();
         }
         
-        // Car body
-        ctx.fillStyle = '#f5f5f7';
-        ctx.fillRect(this.player.x, this.player.y, this.player.width, this.player.height);
-        
-        // Windows
-        ctx.fillStyle = '#1c1c1c';
-        const windowWidth = this.player.width * 0.7;
-        const windowX = this.player.x + (this.player.width - windowWidth) / 2;
-        
-        // Front window
-        ctx.fillRect(
-          windowX,
-          this.player.y + this.player.height * 0.15,
-          windowWidth,
-          this.player.height * 0.2
-        );
-        
-        // Rear window
-        ctx.fillRect(
-          windowX,
-          this.player.y + this.player.height * 0.6,
-          windowWidth,
-          this.player.height * 0.2
-        );
-        
-        // Headlights
-        ctx.fillStyle = '#ffcc00';
-        ctx.fillRect(
-          this.player.x + this.player.width * 0.15,
-          this.player.y,
-          this.player.width * 0.15,
-          this.player.height * 0.05
-        );
-        ctx.fillRect(
-          this.player.x + this.player.width * 0.7,
-          this.player.y,
-          this.player.width * 0.15,
-          this.player.height * 0.05
-        );
-        
-        // Taillights
-        ctx.fillStyle = '#ff3333';
-        ctx.fillRect(
-          this.player.x + this.player.width * 0.15,
-          this.player.y + this.player.height * 0.95,
-          this.player.width * 0.15,
-          this.player.height * 0.05
-        );
-        ctx.fillRect(
-          this.player.x + this.player.width * 0.7,
-          this.player.y + this.player.height * 0.95,
-          this.player.width * 0.15,
-          this.player.height * 0.05
-        );
+        // Draw car image
+        if (this.imagesLoaded) {
+          ctx.drawImage(this.playerCarImage, this.player.x, this.player.y, this.player.width, this.player.height);
+        }
         
         ctx.restore();
       }
@@ -279,8 +253,10 @@ export class GameEngine {
   }
   
   private createEnemy(lane: number): GameObject {
-    const width = this.laneWidth * 0.7;
-    const height = width * 1.8;
+    // Use a more suitable aspect ratio for the car image (width/height)
+    const aspectRatio = 0.55; // approximate width/height ratio of the car image
+    const width = this.laneWidth * 0.8;
+    const height = width / aspectRatio;
     
     const enemy = {
       x: this.lanePositions[lane] - (width / 2),
@@ -302,63 +278,12 @@ export class GameEngine {
         }
       },
       render: (ctx: CanvasRenderingContext2D) => {
-        // Draw enemy car
+        // Draw enemy car using image
         ctx.save();
         
-        // Car body
-        ctx.fillStyle = '#ff5252';
-        ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
-        
-        // Windows
-        ctx.fillStyle = '#1c1c1c';
-        const windowWidth = enemy.width * 0.7;
-        const windowX = enemy.x + (enemy.width - windowWidth) / 2;
-        
-        // Front window
-        ctx.fillRect(
-          windowX,
-          enemy.y + enemy.height * 0.15,
-          windowWidth,
-          enemy.height * 0.2
-        );
-        
-        // Rear window
-        ctx.fillRect(
-          windowX,
-          enemy.y + enemy.height * 0.6,
-          windowWidth,
-          enemy.height * 0.2
-        );
-        
-        // Headlights
-        ctx.fillStyle = '#ffcc00';
-        ctx.fillRect(
-          enemy.x + enemy.width * 0.15,
-          enemy.y + enemy.height * 0.95,
-          enemy.width * 0.15,
-          enemy.height * 0.05
-        );
-        ctx.fillRect(
-          enemy.x + enemy.width * 0.7,
-          enemy.y + enemy.height * 0.95,
-          enemy.width * 0.15,
-          enemy.height * 0.05
-        );
-        
-        // Taillights
-        ctx.fillStyle = '#ff3333';
-        ctx.fillRect(
-          enemy.x + enemy.width * 0.15,
-          enemy.y,
-          enemy.width * 0.15,
-          enemy.height * 0.05
-        );
-        ctx.fillRect(
-          enemy.x + enemy.width * 0.7,
-          enemy.y,
-          enemy.width * 0.15,
-          enemy.height * 0.05
-        );
+        if (this.imagesLoaded) {
+          ctx.drawImage(this.enemyCarImage, enemy.x, enemy.y, enemy.width, enemy.height);
+        }
         
         ctx.restore();
       }
@@ -627,17 +552,24 @@ export class GameEngine {
     this.onGameStateChange(this.gameState);
   }
   
-  // Changed from private to public to allow access from the Game component
   public resizeCanvas(): void {
     // Update canvas and game dimensions
     this.calculateDimensions();
     
     // Update player position
-    this.player.lanePosition = this.lanePositions[this.player.lane];
-    this.player.x = this.player.lanePosition - (this.player.width / 2);
+    if (this.player) {
+      this.player.lanePosition = this.lanePositions[this.player.lane];
+      this.player.x = this.player.lanePosition - (this.player.width / 2);
+    }
   }
   
   public startGame(): void {
+    // Make sure images are loaded before starting
+    if (!this.imagesLoaded) {
+      setTimeout(() => this.startGame(), 100);
+      return;
+    }
+    
     // Reset game state
     this.resetGame();
     
@@ -986,7 +918,7 @@ export class GameEngine {
   private collectPowerUp(powerUp: GameObject): void {
     if (powerUp.powerUpType === undefined) return;
     
-    // Fix the PowerUpType comparison by using proper enum comparison
+    // Handle each power-up type
     if (powerUp.powerUpType === PowerUpType.SLOW_SPEED) {
       this.activateSlowMode();
     } else if (powerUp.powerUpType === PowerUpType.SHIELD) {
