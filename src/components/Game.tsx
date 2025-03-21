@@ -21,6 +21,8 @@ const Game: React.FC = () => {
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [gameInitialized, setGameInitialized] = useState(false);
   const [carAssetsLoaded, setCarAssetsLoaded] = useState(false);
+  const [playerCarURL, setPlayerCarURL] = useState<string | null>(null);
+  const [enemyCarURL, setEnemyCarURL] = useState<string | null>(null);
   
   const isMobile = useIsMobile();
   
@@ -29,61 +31,90 @@ const Game: React.FC = () => {
     // Function to preload images
     const preloadCarAssets = async () => {
       try {
-        // Create the assets directory if it doesn't exist
-        const createAssetsDir = async () => {
-          // This is a fake operation for structure - Vite handles this automatically
-          console.log("Ensuring car assets are available...");
-          return true;
-        };
+        console.log("Loading custom car assets from uploads...");
         
-        await createAssetsDir();
-        
-        // Copy the car images to the assets directory
-        const copyCarImages = async () => {
-          const playerImageBlob = await fetch('/lovable-uploads/e0e56876-6200-411c-bf4c-0e18962da129.png')
-            .then(r => r.blob());
-          const enemyImageBlob = await fetch('/lovable-uploads/97084615-c052-447d-a950-1ac8cf98cccf.png')
-            .then(r => r.blob());
-            
-          // Create URLs for these assets
-          const playerURL = URL.createObjectURL(playerImageBlob);
-          const enemyURL = URL.createObjectURL(enemyImageBlob);
-          
-          // Create new images and wait for them to load
-          const playerImg = new Image();
-          const enemyImg = new Image();
-          
-          const playerPromise = new Promise((resolve, reject) => {
-            playerImg.onload = resolve;
-            playerImg.onerror = reject;
-            playerImg.src = playerURL;
-          });
-          
-          const enemyPromise = new Promise((resolve, reject) => {
-            enemyImg.onload = resolve;
-            enemyImg.onerror = reject;
-            enemyImg.src = enemyURL;
-          });
-          
+        // Load the car images from the uploads
+        const loadCustomImages = async () => {
           try {
-            await Promise.all([playerPromise, enemyPromise]);
-            console.log("Car images preloaded successfully");
+            // Try to get the player car image
+            const playerImageBlob = await fetch('/lovable-uploads/e0e56876-6200-411c-bf4c-0e18962da129.png')
+              .then(r => {
+                if (!r.ok) {
+                  throw new Error(`HTTP error! status: ${r.status}`);
+                }
+                return r.blob();
+              });
+              
+            // Try to get the enemy car image
+            const enemyImageBlob = await fetch('/lovable-uploads/97084615-c052-447d-a950-1ac8cf98cccf.png')
+              .then(r => {
+                if (!r.ok) {
+                  throw new Error(`HTTP error! status: ${r.status}`);
+                }
+                return r.blob();
+              });
             
-            // Save to localStorage for caching
-            localStorage.setItem('playerCarDataURL', playerImg.src);
-            localStorage.setItem('enemyCarDataURL', enemyImg.src);
+            // Create blob URLs
+            const playerURL = URL.createObjectURL(playerImageBlob);
+            const enemyURL = URL.createObjectURL(enemyImageBlob);
             
-            return { playerURL, enemyURL };
+            // Store these URLs
+            setPlayerCarURL(playerURL);
+            setEnemyCarURL(enemyURL);
+            
+            console.log("Custom car images loaded successfully:", {
+              playerURL,
+              enemyURL
+            });
+            
+            // Preload the images to ensure they're in cache
+            return new Promise<void>((resolve, reject) => {
+              const playerImg = new Image();
+              const enemyImg = new Image();
+              
+              let playerLoaded = false;
+              let enemyLoaded = false;
+              
+              const checkAllLoaded = () => {
+                if (playerLoaded && enemyLoaded) resolve();
+              };
+              
+              playerImg.onload = () => {
+                console.log("Player image fully loaded");
+                playerLoaded = true;
+                checkAllLoaded();
+              };
+              
+              enemyImg.onload = () => {
+                console.log("Enemy image fully loaded");
+                enemyLoaded = true;
+                checkAllLoaded();
+              };
+              
+              playerImg.onerror = (e) => {
+                console.error("Error preloading player image:", e);
+                reject(e);
+              };
+              
+              enemyImg.onerror = (e) => {
+                console.error("Error preloading enemy image:", e);
+                reject(e);
+              };
+              
+              playerImg.src = playerURL;
+              enemyImg.src = enemyURL;
+            });
           } catch (error) {
-            console.error("Error preloading car images:", error);
+            console.error("Failed to load custom car images:", error);
             throw error;
           }
         };
         
-        await copyCarImages();
+        await loadCustomImages();
         setCarAssetsLoaded(true);
       } catch (error) {
         console.error("Error preparing car assets:", error);
+        toast.error("Failed to load custom car images. Please refresh the page.");
         // Still mark as loaded to allow fallback rendering
         setCarAssetsLoaded(true);
       }
@@ -94,7 +125,7 @@ const Game: React.FC = () => {
   
   // Initialize game
   useEffect(() => {
-    if (!canvasRef.current || !carAssetsLoaded) return;
+    if (!canvasRef.current || !carAssetsLoaded || !playerCarURL || !enemyCarURL) return;
     
     // Check for first time players
     const hasPlayed = localStorage.getItem('hasPlayed');
@@ -177,6 +208,10 @@ const Game: React.FC = () => {
             toast.info('Shield deactivated');
             break;
         }
+      },
+      customAssets: {
+        playerCarURL,
+        enemyCarURL
       }
     });
     
@@ -189,8 +224,12 @@ const Game: React.FC = () => {
       if (gameEngineRef.current) {
         gameEngineRef.current.cleanup();
       }
+      
+      // Revoke the blob URLs to avoid memory leaks
+      if (playerCarURL) URL.revokeObjectURL(playerCarURL);
+      if (enemyCarURL) URL.revokeObjectURL(enemyCarURL);
     };
-  }, [carAssetsLoaded]);
+  }, [carAssetsLoaded, playerCarURL, enemyCarURL]);
   
   // Timer effects for power-ups
   useEffect(() => {
@@ -296,9 +335,9 @@ const Game: React.FC = () => {
                 <Button 
                   onClick={handleStartGame}
                   className="game-button w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-xl py-6 text-lg font-medium"
-                  disabled={!gameInitialized || !carAssetsLoaded}
+                  disabled={!gameInitialized || !carAssetsLoaded || !playerCarURL || !enemyCarURL}
                 >
-                  {gameInitialized && carAssetsLoaded ? 'Start Game' : <Loader2 className="h-5 w-5 animate-spin" />}
+                  {gameInitialized && carAssetsLoaded && playerCarURL && enemyCarURL ? 'Start Game' : <Loader2 className="h-5 w-5 animate-spin" />}
                 </Button>
                 
                 {highScore > 0 && (

@@ -56,6 +56,10 @@ export interface GameConfig {
   onGameStateChange: (state: GameState) => void;
   onPowerUpStart: (type: PowerUpType, duration: number) => void;
   onPowerUpEnd: (type: PowerUpType) => void;
+  customAssets?: {
+    playerCarURL: string;
+    enemyCarURL: string;
+  };
 }
 
 export class GameEngine {
@@ -131,13 +135,19 @@ export class GameEngine {
     // Load car images with proper error handling
     this.playerCarImage = new Image();
     this.playerCarImage.crossOrigin = "anonymous"; // Try to fix CORS issues
-    this.playerCarImage.src = '/assets/player-car.png'; // Use a local path in public/assets
-    
     this.enemyCarImage = new Image();
     this.enemyCarImage.crossOrigin = "anonymous"; // Try to fix CORS issues
-    this.enemyCarImage.src = '/assets/enemy-car.png'; // Use a local path in public/assets
     
-    console.log("Loading car images from local paths...");
+    // Use custom assets if provided
+    if (config.customAssets) {
+      console.log("Using custom car assets:", config.customAssets);
+      this.playerCarImage.src = config.customAssets.playerCarURL;
+      this.enemyCarImage.src = config.customAssets.enemyCarURL;
+    } else {
+      console.log("No custom assets provided, using default paths");
+      this.playerCarImage.src = '/assets/player-car.png';
+      this.enemyCarImage.src = '/assets/enemy-car.png';
+    }
     
     // Wait for images to load
     this.playerCarImage.onload = () => {
@@ -274,24 +284,14 @@ export class GameEngine {
           ctx.stroke();
         }
         
-        // Draw car - safely handling image
-        if (this.playerCarLoaded) {
-          try {
-            // Only draw the image if it's not in a broken state
-            if (this.playerCarImage.complete && this.playerCarImage.naturalWidth > 0) {
-              ctx.drawImage(this.playerCarImage, this.player.x, this.player.y, this.player.width, this.player.height);
-            } else {
-              // Fallback if image is broken
-              this.drawCarFallback(ctx, this.player.x, this.player.y, this.player.width, this.player.height, 'blue');
-            }
-          } catch (e) {
-            console.error("Error drawing player car:", e);
-            this.drawCarFallback(ctx, this.player.x, this.player.y, this.player.width, this.player.height, 'blue');
-          }
-        } else {
-          // Fallback if image not loaded
-          this.drawCarFallback(ctx, this.player.x, this.player.y, this.player.width, this.player.height, 'blue');
-        }
+        // Draw the player car image
+        ctx.drawImage(
+          this.playerCarImage, 
+          this.player.x, 
+          this.player.y, 
+          this.player.width, 
+          this.player.height
+        );
         
         ctx.restore();
       }
@@ -350,24 +350,14 @@ export class GameEngine {
       render: (ctx: CanvasRenderingContext2D) => {
         ctx.save();
         
-        // Draw enemy car - safely handling image
-        if (this.enemyCarLoaded) {
-          try {
-            // Only draw the image if it's not in a broken state
-            if (this.enemyCarImage.complete && this.enemyCarImage.naturalWidth > 0) {
-              ctx.drawImage(this.enemyCarImage, enemy.x, enemy.y, enemy.width, enemy.height);
-            } else {
-              // Fallback if image is broken
-              this.drawCarFallback(ctx, enemy.x, enemy.y, enemy.width, enemy.height, 'red');
-            }
-          } catch (e) {
-            console.error("Error drawing enemy car:", e);
-            this.drawCarFallback(ctx, enemy.x, enemy.y, enemy.width, enemy.height, 'red');
-          }
-        } else {
-          // Fallback if image not loaded
-          this.drawCarFallback(ctx, enemy.x, enemy.y, enemy.width, enemy.height, 'red');
-        }
+        // Draw the enemy car image
+        ctx.drawImage(
+          this.enemyCarImage, 
+          enemy.x, 
+          enemy.y, 
+          enemy.width, 
+          enemy.height
+        );
         
         ctx.restore();
       }
