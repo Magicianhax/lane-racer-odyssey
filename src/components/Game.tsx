@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine, GameState, PowerUpType } from '../game/GameEngine';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,7 @@ const Game: React.FC = () => {
   const [slowModeTimer, setSlowModeTimer] = useState<number>(0);
   const [shieldTimer, setShieldTimer] = useState<number>(0);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+  const [gameInitialized, setGameInitialized] = useState(false);
   
   const isMobile = useIsMobile();
   
@@ -112,6 +114,7 @@ const Game: React.FC = () => {
     
     gameEngineRef.current = gameEngine;
     setHighScore(gameEngine.getHighScore());
+    setGameInitialized(true);
     
     return () => {
       window.removeEventListener('resize', resizeCanvas);
@@ -142,11 +145,15 @@ const Game: React.FC = () => {
   
   // Game control handlers
   const handleStartGame = () => {
+    console.log("Start game clicked, gameEngine exists:", !!gameEngineRef.current);
     if (gameEngineRef.current) {
       gameEngineRef.current.startGame();
       toast.success('Game started!', {
         description: 'Use left and right arrow keys to move'
       });
+    } else {
+      console.error("Game engine not initialized");
+      toast.error('Game engine not ready. Please refresh the page.');
     }
   };
   
@@ -221,8 +228,9 @@ const Game: React.FC = () => {
                 <Button 
                   onClick={handleStartGame}
                   className="game-button w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-xl py-6 text-lg font-medium"
+                  disabled={!gameInitialized}
                 >
-                  Start Game
+                  {gameInitialized ? 'Start Game' : <Loader2 className="h-5 w-5 animate-spin" />}
                 </Button>
                 
                 {highScore > 0 && (

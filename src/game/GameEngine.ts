@@ -1,3 +1,4 @@
+
 // Main game engine class
 
 export enum GameState {
@@ -66,7 +67,7 @@ export class GameEngine {
   private accumulatedTime: number = 0;
   
   // Game objects
-  private player: PlayerCar;
+  private player: PlayerCar | null = null;
   private enemies: GameObject[] = [];
   private seeds: GameObject[] = [];
   private powerUps: GameObject[] = [];
@@ -75,6 +76,7 @@ export class GameEngine {
   private playerCarImage: HTMLImageElement;
   private enemyCarImage: HTMLImageElement;
   private imagesLoaded: boolean = false;
+  private imageLoadErrors: boolean = false;
   
   // Explosion animation
   private explosions: ExplosionParticle[] = [];
@@ -132,9 +134,25 @@ export class GameEngine {
     this.enemyCarImage = new Image();
     this.enemyCarImage.src = '/lovable-uploads/97084615-c052-447d-a950-1ac8cf98cccf.png';
     
+    console.log("Loading car images...");
+    
     // Wait for images to load
     let loadedImages = 0;
     const onImageLoad = () => {
+      loadedImages++;
+      console.log("Image loaded:", loadedImages);
+      if (loadedImages === 2) {
+        this.imagesLoaded = true;
+        console.log("All images loaded successfully");
+        // Initialize player after images are loaded
+        this.player = this.createPlayer();
+      }
+    };
+    
+    const onImageError = (e: ErrorEvent) => {
+      console.error("Error loading image:", e);
+      this.imageLoadErrors = true;
+      // Try to continue anyway
       loadedImages++;
       if (loadedImages === 2) {
         this.imagesLoaded = true;
@@ -144,7 +162,10 @@ export class GameEngine {
     };
     
     this.playerCarImage.onload = onImageLoad;
+    this.playerCarImage.onerror = onImageError as any;
+    
     this.enemyCarImage.onload = onImageLoad;
+    this.enemyCarImage.onerror = onImageError as any;
     
     // Set up event listeners
     this.setupEventListeners();
@@ -185,6 +206,8 @@ export class GameEngine {
       shieldTimer: 0,
       active: true,
       update: (delta: number) => {
+        if (!this.player) return;
+        
         // Handle lane transitions
         if (this.player.transitioning) {
           const transitionSpeed = 0.01 * delta;
@@ -212,6 +235,8 @@ export class GameEngine {
         }
       },
       render: (ctx: CanvasRenderingContext2D) => {
+        if (!this.player) return;
+        
         // Draw player car using image
         ctx.save();
         
@@ -243,8 +268,12 @@ export class GameEngine {
         }
         
         // Draw car image
-        if (this.imagesLoaded) {
+        if (this.imagesLoaded && this.playerCarImage) {
           ctx.drawImage(this.playerCarImage, this.player.x, this.player.y, this.player.width, this.player.height);
+        } else {
+          // Fallback if image not loaded
+          ctx.fillStyle = 'blue';
+          ctx.fillRect(this.player.x, this.player.y, this.player.width, this.player.height);
         }
         
         ctx.restore();
@@ -527,6 +556,8 @@ export class GameEngine {
   }
   
   private movePlayerLeft(): void {
+    if (!this.player) return;
+    
     if (this.player.lane > 0 && !this.player.transitioning) {
       this.player.targetLane = this.player.lane - 1;
       this.player.transitioning = true;
@@ -534,6 +565,8 @@ export class GameEngine {
   }
   
   private movePlayerRight(): void {
+    if (!this.player) return;
+    
     if (this.player.lane < 2 && !this.player.transitioning) {
       this.player.targetLane = this.player.lane + 1;
       this.player.transitioning = true;
@@ -564,10 +597,19 @@ export class GameEngine {
   }
   
   public startGame(): void {
+    console.log("startGame called, images loaded:", this.imagesLoaded);
+    
     // Make sure images are loaded before starting
     if (!this.imagesLoaded) {
+      console.log("Images not loaded yet, retrying in 100ms");
       setTimeout(() => this.startGame(), 100);
       return;
+    }
+    
+    // Make sure player is initialized
+    if (!this.player) {
+      console.log("Player not initialized yet, creating player");
+      this.player = this.createPlayer();
     }
     
     // Reset game state
@@ -577,6 +619,7 @@ export class GameEngine {
     this.gameState = GameState.GAMEPLAY;
     this.onGameStateChange(this.gameState);
     this.lastFrameTime = performance.now();
+    console.log("Starting game loop");
     this.gameLoop(this.lastFrameTime);
   }
   
@@ -600,7 +643,18 @@ export class GameEngine {
     this.slowModeTimer = 0;
     
     // Reset player
-    this.player = this.createPlayer();
+    if (!this.player) {
+      this.player = this.createPlayer();
+    } else {
+      this.player.lives = 3;
+      this.player.shield = false;
+      this.player.shieldTimer = 0;
+      this.player.lane = 1;
+      this.player.targetLane = 1;
+      this.player.transitioning = false;
+      this.player.lanePosition = this.lanePositions[1];
+      this.player.x = this.player.lanePosition - (this.player.width / 2);
+    }
     
     // Update UI
     this.onScoreChange(this.score);
@@ -638,7 +692,9 @@ export class GameEngine {
   }
   
   private gameLoop(timestamp: number): void {
+    // Check if we're in gameplay state
     if (this.gameState !== GameState.GAMEPLAY) {
+      console.log("Game loop called but not in GAMEPLAY state:", this.gameState);
       this.animationFrameId = requestAnimationFrame((time) => this.gameLoop(time));
       return;
     }
@@ -699,7 +755,9 @@ export class GameEngine {
     }
     
     // Update player
-    this.player.update(deltaTime);
+    if (this.player) {
+      this.player.update(deltaTime);
+    }
     
     // Update enemies
     this.enemies.forEach(enemy => enemy.update(deltaTime));
@@ -817,6 +875,8 @@ export class GameEngine {
   }
   
   private checkCollisions(): void {
+    if (!this.player) return;
+    
     // Check player collision with enemies
     for (const enemy of this.enemies) {
       if (this.checkObjectCollision(this.player, enemy)) {
@@ -962,7 +1022,11 @@ export class GameEngine {
     this.seeds.forEach(seed => seed.render(this.ctx));
     this.powerUps.forEach(powerUp => powerUp.render(this.ctx));
     this.enemies.forEach(enemy => enemy.render(this.ctx));
-    this.player.render(this.ctx);
+    
+    // Draw player
+    if (this.player) {
+      this.player.render(this.ctx);
+    }
     
     // Draw explosion particles
     this.renderExplosions();
