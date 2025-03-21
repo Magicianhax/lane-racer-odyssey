@@ -895,4 +895,272 @@ export class GameEngine {
       powerUpType = PowerUpType.EXTRA_LIFE; // 10% chance
     }
     
-    const lane = Math.floor(Math.random
+    const lane = Math.floor(Math.random() * 3);
+    this.powerUps.push(this.createPowerUp(lane, powerUpType));
+  }
+  
+  private increaseDifficulty(): void {
+    // Increase game speed
+    this.gameSpeed = Math.min(this.gameSpeed + 0.15, 2.5);
+    
+    // Decrease spawn intervals
+    this.enemySpawnInterval = Math.max(this.enemySpawnInterval - 200, 800);
+    this.seedSpawnInterval = Math.max(this.seedSpawnInterval - 50, 600);
+  }
+  
+  public handleTouchLeft(): void {
+    this.movePlayerLeft();
+  }
+  
+  public handleTouchRight(): void {
+    this.movePlayerRight();
+  }
+  
+  public cleanup(): void {
+    // Clean up event listeners and cancel animation frame
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+  }
+  
+  private checkCollisions(): void {
+    // Check player-enemy collisions
+    for (const enemy of this.enemies) {
+      if (this.isColliding(this.player, enemy)) {
+        if (this.player.shield) {
+          // If player has shield, just destroy the enemy
+          enemy.active = false;
+          
+          // Create explosion effect
+          this.createExplosion(
+            enemy.x + enemy.width / 2,
+            enemy.y + enemy.height / 2,
+            '#ff5252'
+          );
+        } else {
+          // Reduce player lives and create explosion
+          this.player.lives--;
+          this.onLivesChange(this.player.lives);
+          
+          // Create explosion effect
+          this.createExplosion(
+            enemy.x + enemy.width / 2,
+            enemy.y + enemy.height / 2,
+            '#ff5252'
+          );
+          
+          // Remove the enemy
+          enemy.active = false;
+          
+          // Check if game over
+          if (this.player.lives <= 0) {
+            this.gameOver();
+            return;
+          }
+        }
+      }
+    }
+    
+    // Check player-seed collisions
+    for (const seed of this.seeds) {
+      if (this.isColliding(this.player, seed)) {
+        // Increase score and remove the seed
+        this.score += 10;
+        this.onScoreChange(this.score);
+        seed.active = false;
+      }
+    }
+    
+    // Check player-powerup collisions
+    for (const powerUp of this.powerUps) {
+      if (this.isColliding(this.player, powerUp) && powerUp.powerUpType !== undefined) {
+        this.collectPowerUp(powerUp);
+        powerUp.active = false;
+      }
+    }
+  }
+  
+  private collectPowerUp(powerUp: GameObject): void {
+    if (!powerUp.powerUpType) return;
+    
+    // Apply power-up effects
+    if (powerUp.powerUpType === PowerUpType.SLOW_SPEED) {
+      // Activate slow mode
+      this.slowModeActive = true;
+      this.slowModeTimer = this.slowModeDuration;
+      this.onPowerUpStart(PowerUpType.SLOW_SPEED, this.slowModeDuration);
+    } else if (powerUp.powerUpType === PowerUpType.SHIELD) {
+      // Activate shield
+      this.player.shield = true;
+      this.player.shieldTimer = 3000; // 3 seconds
+      this.onPowerUpStart(PowerUpType.SHIELD, 3000);
+    } else if (powerUp.powerUpType === PowerUpType.EXTRA_LIFE) {
+      // Add extra life (up to max 5)
+      if (this.player.lives < 5) {
+        this.player.lives++;
+        this.onLivesChange(this.player.lives);
+        this.onPowerUpStart(PowerUpType.EXTRA_LIFE, 0);
+      }
+    }
+  }
+  
+  private isColliding(a: GameObject, b: GameObject): boolean {
+    return (
+      a.x < b.x + b.width &&
+      a.x + a.width > b.x &&
+      a.y < b.y + b.height &&
+      a.y + a.height > b.y
+    );
+  }
+  
+  private createExplosion(x: number, y: number, color: string): void {
+    // Create multiple explosion particles
+    const particleCount = 30;
+    const particles: ExplosionParticle[] = [];
+    
+    for (let i = 0; i < particleCount; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 2 + Math.random() * 3;
+      const size = 3 + Math.random() * 7;
+      const lifetime = 500 + Math.random() * 1000;
+      
+      particles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        size,
+        color,
+        alpha: 1,
+        lifetime,
+        currentLife: lifetime
+      });
+    }
+    
+    this.explosions.push(...particles);
+  }
+  
+  private render(): void {
+    // Clear canvas
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    
+    // Draw background
+    this.drawBackground();
+    
+    // Draw road
+    this.drawRoad();
+    
+    // Draw objects
+    this.drawGameObjects();
+    
+    // Draw explosion particles
+    this.drawExplosions();
+    
+    // Draw pause overlay
+    if (this.gameState === GameState.PAUSED) {
+      this.drawPauseOverlay();
+    }
+  }
+  
+  private drawBackground(): void {
+    // Gradient sky background
+    const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+    gradient.addColorStop(0, '#1a2a6c');
+    gradient.addColorStop(0.5, '#2a3a7c');
+    gradient.addColorStop(1, '#3a4a8c');
+    
+    this.ctx.fillStyle = gradient;
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    
+    // Add some stars
+    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    for (let i = 0; i < 50; i++) {
+      const x = Math.random() * this.canvas.width;
+      const y = (Math.random() * this.canvas.height) / 2;
+      const size = Math.random() * 2;
+      
+      this.ctx.beginPath();
+      this.ctx.arc(x, y, size, 0, Math.PI * 2);
+      this.ctx.fill();
+    }
+  }
+  
+  private drawRoad(): void {
+    // Road background
+    this.ctx.fillStyle = '#333333';
+    this.ctx.fillRect(
+      this.roadCenterX - this.roadWidth / 2,
+      0,
+      this.roadWidth,
+      this.canvas.height
+    );
+    
+    // Lane dividers
+    this.ctx.strokeStyle = '#ffffff';
+    this.ctx.setLineDash([20, 15]);
+    this.ctx.lineWidth = 3;
+    
+    // Left lane divider
+    this.ctx.beginPath();
+    this.ctx.moveTo(this.lanePositions[0], 0);
+    this.ctx.lineTo(this.lanePositions[0], this.canvas.height);
+    this.ctx.stroke();
+    
+    // Right lane divider
+    this.ctx.beginPath();
+    this.ctx.moveTo(this.lanePositions[2], 0);
+    this.ctx.lineTo(this.lanePositions[2], this.canvas.height);
+    this.ctx.stroke();
+    
+    // Reset line dash
+    this.ctx.setLineDash([]);
+  }
+  
+  private drawGameObjects(): void {
+    // Draw seeds
+    this.seeds.forEach(seed => seed.render(this.ctx));
+    
+    // Draw power-ups
+    this.powerUps.forEach(powerUp => powerUp.render(this.ctx));
+    
+    // Draw enemies
+    this.enemies.forEach(enemy => enemy.render(this.ctx));
+    
+    // Draw player
+    this.player.render(this.ctx);
+  }
+  
+  private drawExplosions(): void {
+    // Draw explosion particles
+    this.explosions.forEach(particle => {
+      this.ctx.save();
+      this.ctx.globalAlpha = particle.alpha;
+      this.ctx.fillStyle = particle.color;
+      this.ctx.beginPath();
+      this.ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.restore();
+    });
+  }
+  
+  private drawPauseOverlay(): void {
+    // Darkened background
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    
+    // Pause text
+    this.ctx.fillStyle = '#ffffff';
+    this.ctx.font = '36px Arial';
+    this.ctx.textAlign = 'center';
+    this.ctx.fillText('PAUSED', this.canvas.width / 2, this.canvas.height / 2);
+    
+    // Resume instruction
+    this.ctx.font = '18px Arial';
+    this.ctx.fillText(
+      'Press P or ESC to resume',
+      this.canvas.width / 2,
+      this.canvas.height / 2 + 40
+    );
+  }
+}
