@@ -6,6 +6,9 @@ import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2 } from
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
+const DEFAULT_PLAYER_CAR = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgNjQgMTI4IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHg9IjEwIiB5PSIxMCIgd2lkdGg9IjQ0IiBoZWlnaHQ9IjEwOCIgcng9IjYiIGZpbGw9IiMzQ0JCQkIiLz48cmVjdCB4PSIxNiIgeT0iMzIiIHdpZHRoPSIzMiIgaGVpZ2h0PSIyNCIgZmlsbD0iIzIyMjgzOCIvPjxjaXJjbGUgY3g9IjIwIiBjeT0iMTAwIiByPSI4IiBmaWxsPSIjMjIyIi8+PGNpcmNsZSBjeD0iNDQiIGN5PSIxMDAiIHI9IjgiIGZpbGw9IiMyMjIiLz48Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSI0IiBmaWxsPSIjRkZGRjAwIi8+PGNpcmNsZSBjeD0iNDgiIGN5PSIxNiIgcj0iNCIgZmlsbD0iI0ZGRkYwMCIvPjwvc3ZnPg==';
+const DEFAULT_ENEMY_CAR = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgNjQgMTI4IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHg9IjEwIiB5PSIxMCIgd2lkdGg9IjQ0IiBoZWlnaHQ9IjEwOCIgcng9IjYiIGZpbGw9IiNERDM3M0MiLz48cmVjdCB4PSIxNiIgeT0iMzIiIHdpZHRoPSIzMiIgaGVpZ2h0PSIyNCIgZmlsbD0iIzIyMjgzOCIvPjxjaXJjbGUgY3g9IjIwIiBjeT0iMTAwIiByPSI4IiBmaWxsPSIjMjIyIi8+PGNpcmNsZSBjeD0iNDQiIGN5PSIxMDAiIHI9IjgiIGZpbGw9IiMyMjIiLz48Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSI0IiBmaWxsPSIjRkZGRjAwIi8+PGNpcmNsZSBjeD0iNDgiIGN5PSIxNiIgcj0iNCIgZmlsbD0iI0ZGRkYwMCIvPjwvc3ZnPg==';
+
 const Game: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameEngineRef = useRef<GameEngine | null>(null);
@@ -21,113 +24,116 @@ const Game: React.FC = () => {
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [gameInitialized, setGameInitialized] = useState(false);
   const [carAssetsLoaded, setCarAssetsLoaded] = useState(false);
-  const [playerCarURL, setPlayerCarURL] = useState<string | null>(null);
-  const [enemyCarURL, setEnemyCarURL] = useState<string | null>(null);
+  const [playerCarURL, setPlayerCarURL] = useState<string>(DEFAULT_PLAYER_CAR);
+  const [enemyCarURL, setEnemyCarURL] = useState<string>(DEFAULT_ENEMY_CAR);
+  const [loadingError, setLoadingError] = useState<string | null>(null);
   
   const isMobile = useIsMobile();
   
-  // Preload car assets before initializing the game
   useEffect(() => {
-    // Function to preload images
     const preloadCarAssets = async () => {
       try {
         console.log("Loading custom car assets from uploads...");
         
-        // Load the car images from the uploads
-        const loadCustomImages = async () => {
-          try {
-            // Try to get the player car image
-            const playerImageBlob = await fetch('/lovable-uploads/e0e56876-6200-411c-bf4c-0e18962da129.png')
-              .then(r => {
-                if (!r.ok) {
-                  throw new Error(`HTTP error! status: ${r.status}`);
-                }
-                return r.blob();
-              });
-              
-            // Try to get the enemy car image
-            const enemyImageBlob = await fetch('/lovable-uploads/97084615-c052-447d-a950-1ac8cf98cccf.png')
-              .then(r => {
-                if (!r.ok) {
-                  throw new Error(`HTTP error! status: ${r.status}`);
-                }
-                return r.blob();
-              });
+        try {
+          const checkPlayerImage = await fetch('/lovable-uploads/e0e56876-6200-411c-bf4c-0e18962da129.png', { method: 'HEAD' })
+            .then(r => r.ok);
+          
+          const checkEnemyImage = await fetch('/lovable-uploads/97084615-c052-447d-a950-1ac8cf98cccf.png', { method: 'HEAD' })
+            .then(r => r.ok);
             
-            // Create blob URLs
-            const playerURL = URL.createObjectURL(playerImageBlob);
-            const enemyURL = URL.createObjectURL(enemyImageBlob);
-            
-            // Store these URLs
-            setPlayerCarURL(playerURL);
-            setEnemyCarURL(enemyURL);
-            
-            console.log("Custom car images loaded successfully:", {
-              playerURL,
-              enemyURL
-            });
-            
-            // Preload the images to ensure they're in cache
-            return new Promise<void>((resolve, reject) => {
-              const playerImg = new Image();
-              const enemyImg = new Image();
-              
-              let playerLoaded = false;
-              let enemyLoaded = false;
-              
-              const checkAllLoaded = () => {
-                if (playerLoaded && enemyLoaded) resolve();
-              };
-              
-              playerImg.onload = () => {
-                console.log("Player image fully loaded");
-                playerLoaded = true;
-                checkAllLoaded();
-              };
-              
-              enemyImg.onload = () => {
-                console.log("Enemy image fully loaded");
-                enemyLoaded = true;
-                checkAllLoaded();
-              };
-              
-              playerImg.onerror = (e) => {
-                console.error("Error preloading player image:", e);
-                reject(e);
-              };
-              
-              enemyImg.onerror = (e) => {
-                console.error("Error preloading enemy image:", e);
-                reject(e);
-              };
-              
-              playerImg.src = playerURL;
-              enemyImg.src = enemyURL;
-            });
-          } catch (error) {
-            console.error("Failed to load custom car images:", error);
-            throw error;
+          if (!checkPlayerImage || !checkEnemyImage) {
+            console.log("One or both image HEAD requests failed, using default images");
+            setPlayerCarURL(DEFAULT_PLAYER_CAR);
+            setEnemyCarURL(DEFAULT_ENEMY_CAR);
+            setCarAssetsLoaded(true);
+            return;
           }
-        };
+          
+          const playerImg = new Image();
+          const enemyImg = new Image();
+          
+          let playerLoaded = false;
+          let enemyLoaded = false;
+          
+          playerImg.crossOrigin = "anonymous";
+          enemyImg.crossOrigin = "anonymous";
+          
+          const playerPromise = new Promise<string>((resolve, reject) => {
+            playerImg.onload = () => {
+              console.log("Player image fully loaded");
+              playerLoaded = true;
+              resolve(playerImg.src);
+            };
+            
+            playerImg.onerror = (e) => {
+              console.error("Error loading player image:", e);
+              resolve(DEFAULT_PLAYER_CAR);
+            };
+            
+            playerImg.src = '/lovable-uploads/e0e56876-6200-411c-bf4c-0e18962da129.png';
+            
+            setTimeout(() => {
+              if (!playerLoaded) {
+                console.warn("Player image loading timed out");
+                resolve(DEFAULT_PLAYER_CAR);
+              }
+            }, 3000);
+          });
+          
+          const enemyPromise = new Promise<string>((resolve, reject) => {
+            enemyImg.onload = () => {
+              console.log("Enemy image fully loaded");
+              enemyLoaded = true;
+              resolve(enemyImg.src);
+            };
+            
+            enemyImg.onerror = (e) => {
+              console.error("Error loading enemy image:", e);
+              resolve(DEFAULT_ENEMY_CAR);
+            };
+            
+            enemyImg.src = '/lovable-uploads/97084615-c052-447d-a950-1ac8cf98cccf.png';
+            
+            setTimeout(() => {
+              if (!enemyLoaded) {
+                console.warn("Enemy image loading timed out");
+                resolve(DEFAULT_ENEMY_CAR);
+              }
+            }, 3000);
+          });
+          
+          const [playerSrc, enemySrc] = await Promise.all([playerPromise, enemyPromise]);
+          
+          setPlayerCarURL(playerSrc);
+          setEnemyCarURL(enemySrc);
+          
+          console.log("Car images processed successfully, using sources:", {
+            playerSrc,
+            enemySrc
+          });
+          
+        } catch (error) {
+          console.error("Error loading custom car images:", error);
+          setPlayerCarURL(DEFAULT_PLAYER_CAR);
+          setEnemyCarURL(DEFAULT_ENEMY_CAR);
+        }
         
-        await loadCustomImages();
         setCarAssetsLoaded(true);
+        setLoadingError(null);
       } catch (error) {
-        console.error("Error preparing car assets:", error);
-        toast.error("Failed to load custom car images. Please refresh the page.");
-        // Still mark as loaded to allow fallback rendering
+        console.error("Error in preloadCarAssets:", error);
         setCarAssetsLoaded(true);
+        setLoadingError("Failed to load custom car images. Using default cars instead.");
       }
     };
     
     preloadCarAssets();
   }, []);
   
-  // Initialize game
   useEffect(() => {
-    if (!canvasRef.current || !carAssetsLoaded || !playerCarURL || !enemyCarURL) return;
+    if (!canvasRef.current || !carAssetsLoaded) return;
     
-    // Check for first time players
     const hasPlayed = localStorage.getItem('hasPlayed');
     if (!hasPlayed) {
       setIsFirstTime(true);
@@ -136,7 +142,6 @@ const Game: React.FC = () => {
       setIsFirstTime(false);
     }
     
-    // Resize canvas to fit container
     const resizeCanvas = () => {
       if (!canvasRef.current) return;
       
@@ -152,86 +157,92 @@ const Game: React.FC = () => {
       canvasRef.current.height = height;
       setCanvasSize({ width, height });
       
-      // Update game engine if it exists
       if (gameEngineRef.current) {
         gameEngineRef.current.resizeCanvas();
       }
     };
     
-    // Initialize canvas size
     resizeCanvas();
     
-    // Add resize event listener
     window.addEventListener('resize', resizeCanvas);
     
-    // Initialize game engine
-    const gameEngine = new GameEngine({
-      canvas: canvasRef.current,
-      onScoreChange: (newScore) => setScore(newScore),
-      onLivesChange: (newLives) => setLives(newLives),
-      onGameStateChange: (newState) => setGameState(newState),
-      onPowerUpStart: (type, duration) => {
-        switch (type) {
-          case PowerUpType.SLOW_SPEED:
-            setActiveSlowMode(true);
-            setSlowModeTimer(duration);
-            toast.success('Slow mode activated!', {
-              description: 'Traffic speed reduced for 5 seconds',
-              icon: <Clock className="h-5 w-5 text-blue-500" />
-            });
-            break;
-          case PowerUpType.SHIELD:
-            setActiveShield(true);
-            setShieldTimer(duration);
-            toast.success('Shield activated!', {
-              description: 'Invulnerable for 3 seconds',
-              icon: <Shield className="h-5 w-5 text-cyan-500" />
-            });
-            break;
-          case PowerUpType.EXTRA_LIFE:
-            toast.success('Extra life collected!', {
-              icon: <Heart className="h-5 w-5 text-red-500" />
-            });
-            break;
-        }
-      },
-      onPowerUpEnd: (type) => {
-        switch (type) {
-          case PowerUpType.SLOW_SPEED:
-            setActiveSlowMode(false);
-            setSlowModeTimer(0);
-            toast.info('Slow mode ended');
-            break;
-          case PowerUpType.SHIELD:
-            setActiveShield(false);
-            setShieldTimer(0);
-            toast.info('Shield deactivated');
-            break;
-        }
-      },
-      customAssets: {
+    try {
+      console.log("Initializing game engine with car assets:", {
         playerCarURL,
         enemyCarURL
+      });
+      
+      const gameEngine = new GameEngine({
+        canvas: canvasRef.current,
+        onScoreChange: (newScore) => setScore(newScore),
+        onLivesChange: (newLives) => setLives(newLives),
+        onGameStateChange: (newState) => setGameState(newState),
+        onPowerUpStart: (type, duration) => {
+          switch (type) {
+            case PowerUpType.SLOW_SPEED:
+              setActiveSlowMode(true);
+              setSlowModeTimer(duration);
+              toast.success('Slow mode activated!', {
+                description: 'Traffic speed reduced for 5 seconds',
+                icon: <Clock className="h-5 w-5 text-blue-500" />
+              });
+              break;
+            case PowerUpType.SHIELD:
+              setActiveShield(true);
+              setShieldTimer(duration);
+              toast.success('Shield activated!', {
+                description: 'Invulnerable for 3 seconds',
+                icon: <Shield className="h-5 w-5 text-cyan-500" />
+              });
+              break;
+            case PowerUpType.EXTRA_LIFE:
+              toast.success('Extra life collected!', {
+                icon: <Heart className="h-5 w-5 text-red-500" />
+              });
+              break;
+          }
+        },
+        onPowerUpEnd: (type) => {
+          switch (type) {
+            case PowerUpType.SLOW_SPEED:
+              setActiveSlowMode(false);
+              setSlowModeTimer(0);
+              toast.info('Slow mode ended');
+              break;
+            case PowerUpType.SHIELD:
+              setActiveShield(false);
+              setShieldTimer(0);
+              toast.info('Shield deactivated');
+              break;
+          }
+        },
+        customAssets: {
+          playerCarURL,
+          enemyCarURL,
+          useDefaultsIfBroken: true
+        }
+      });
+      
+      gameEngineRef.current = gameEngine;
+      setHighScore(gameEngine.getHighScore());
+      setGameInitialized(true);
+      
+      if (loadingError) {
+        toast.warning(loadingError);
       }
-    });
-    
-    gameEngineRef.current = gameEngine;
-    setHighScore(gameEngine.getHighScore());
-    setGameInitialized(true);
+    } catch (err) {
+      console.error("Error initializing game engine:", err);
+      toast.error("Error initializing game. Please refresh the page.");
+    }
     
     return () => {
       window.removeEventListener('resize', resizeCanvas);
       if (gameEngineRef.current) {
         gameEngineRef.current.cleanup();
       }
-      
-      // Revoke the blob URLs to avoid memory leaks
-      if (playerCarURL) URL.revokeObjectURL(playerCarURL);
-      if (enemyCarURL) URL.revokeObjectURL(enemyCarURL);
     };
-  }, [carAssetsLoaded, playerCarURL, enemyCarURL]);
+  }, [carAssetsLoaded, playerCarURL, enemyCarURL, loadingError]);
   
-  // Timer effects for power-ups
   useEffect(() => {
     if (slowModeTimer > 0) {
       const interval = setInterval(() => {
@@ -250,7 +261,6 @@ const Game: React.FC = () => {
     }
   }, [shieldTimer]);
   
-  // Game control handlers
   const handleStartGame = () => {
     console.log("Start game clicked, gameEngine exists:", !!gameEngineRef.current);
     if (gameEngineRef.current) {
@@ -266,13 +276,11 @@ const Game: React.FC = () => {
   
   const handleTryAgain = () => {
     if (gameEngineRef.current) {
-      // Update high score if needed
       setHighScore(gameEngineRef.current.getHighScore());
       gameEngineRef.current.startGame();
     }
   };
   
-  // Touch control handlers for mobile
   const handleTouchLeft = () => {
     if (gameEngineRef.current) {
       gameEngineRef.current.handleTouchLeft();
@@ -287,25 +295,20 @@ const Game: React.FC = () => {
   
   return (
     <div className="flex flex-col items-center justify-center w-full h-full">
-      {/* Game Canvas Container */}
       <div className="game-canvas-container relative w-full max-w-[600px]">
         <canvas ref={canvasRef} className="w-full h-full"></canvas>
         
-        {/* Head-up Display (HUD) */}
         <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10">
-          {/* Lives */}
           <div className="flex items-center space-x-2 glassmorphism px-3 py-1 rounded-full">
             {Array.from({ length: lives }).map((_, i) => (
               <Heart key={i} className="w-5 h-5 text-red-500 fill-red-500" />
             ))}
           </div>
           
-          {/* Score */}
           <div className="glassmorphism px-4 py-1 rounded-full">
             <div className="hud-text text-xl font-medium">{score}</div>
           </div>
           
-          {/* Power-up Indicators */}
           <div className="flex items-center space-x-2">
             {activeSlowMode && (
               <div className="flex items-center space-x-1 glassmorphism px-3 py-1 rounded-full">
@@ -323,7 +326,6 @@ const Game: React.FC = () => {
           </div>
         </div>
         
-        {/* Start Screen */}
         {gameState === GameState.START_SCREEN && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-black/20 to-black/80 backdrop-blur-sm transition-all duration-500 animate-fade-in">
             <div className="glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in">
@@ -335,9 +337,9 @@ const Game: React.FC = () => {
                 <Button 
                   onClick={handleStartGame}
                   className="game-button w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-xl py-6 text-lg font-medium"
-                  disabled={!gameInitialized || !carAssetsLoaded || !playerCarURL || !enemyCarURL}
+                  disabled={!gameInitialized}
                 >
-                  {gameInitialized && carAssetsLoaded && playerCarURL && enemyCarURL ? 'Start Game' : <Loader2 className="h-5 w-5 animate-spin" />}
+                  {gameInitialized ? 'Start Game' : <Loader2 className="h-5 w-5 animate-spin" />}
                 </Button>
                 
                 {highScore > 0 && (
@@ -375,7 +377,6 @@ const Game: React.FC = () => {
           </div>
         )}
         
-        {/* Game Over Screen */}
         {gameState === GameState.GAME_OVER && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-black/20 to-black/80 backdrop-blur-sm transition-all duration-500 animate-fade-in">
             <div className="game-over-modal glassmorphism rounded-3xl p-8 max-w-md mx-auto text-center">
@@ -412,7 +413,6 @@ const Game: React.FC = () => {
           </div>
         )}
         
-        {/* Mobile Touch Controls */}
         {isMobile && gameState === GameState.GAMEPLAY && (
           <div className="absolute bottom-10 left-0 right-0 flex justify-between px-8">
             <Button
@@ -441,15 +441,13 @@ const Game: React.FC = () => {
           </div>
         )}
         
-        {/* Loading State */}
-        {(canvasSize.width === 0 || !carAssetsLoaded) && (
+        {(!carAssetsLoaded || !gameInitialized) && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-background">
             <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
             <p className="text-sm text-muted-foreground">Loading game assets...</p>
           </div>
         )}
         
-        {/* Noise overlay */}
         <div className="bg-noise absolute inset-0 pointer-events-none opacity-5"></div>
       </div>
     </div>

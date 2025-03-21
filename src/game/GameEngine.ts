@@ -59,6 +59,7 @@ export interface GameConfig {
   customAssets?: {
     playerCarURL: string;
     enemyCarURL: string;
+    useDefaultsIfBroken?: boolean;
   };
 }
 
@@ -118,6 +119,9 @@ export class GameEngine {
   // Animation frame id for cleanup
   private animationFrameId: number | null = null;
   
+  // Option to use defaults if image is broken
+  private useDefaultsIfBroken: boolean = false;
+  
   constructor(config: GameConfig) {
     this.canvas = config.canvas;
     this.ctx = this.canvas.getContext('2d')!;
@@ -132,6 +136,11 @@ export class GameEngine {
     // Initialize game dimensions
     this.calculateDimensions();
     
+    // Set flag for fallbacks
+    if (config.customAssets?.useDefaultsIfBroken) {
+      this.useDefaultsIfBroken = true;
+    }
+    
     // Load car images with proper error handling
     this.playerCarImage = new Image();
     this.playerCarImage.crossOrigin = "anonymous"; // Try to fix CORS issues
@@ -141,40 +150,47 @@ export class GameEngine {
     // Use custom assets if provided
     if (config.customAssets) {
       console.log("Using custom car assets:", config.customAssets);
+      
+      // Set up event handlers before setting src
+      this.playerCarImage.onload = () => {
+        console.log("Player car image loaded successfully");
+        this.playerCarLoaded = true;
+        this.checkAllImagesLoaded();
+      };
+      
+      this.enemyCarImage.onload = () => {
+        console.log("Enemy car image loaded successfully");
+        this.enemyCarLoaded = true;
+        this.checkAllImagesLoaded();
+      };
+      
+      this.playerCarImage.onerror = (e) => {
+        console.error("Error loading player car image:", e);
+        this.imageLoadErrors = true;
+        this.playerCarLoaded = true; // Consider it "loaded" so we can continue with fallbacks
+        this.checkAllImagesLoaded();
+      };
+      
+      this.enemyCarImage.onerror = (e) => {
+        console.error("Error loading enemy car image:", e);
+        this.imageLoadErrors = true;
+        this.enemyCarLoaded = true; // Consider it "loaded" so we can continue with fallbacks
+        this.checkAllImagesLoaded();
+      };
+      
+      // Now set the src attributes
       this.playerCarImage.src = config.customAssets.playerCarURL;
       this.enemyCarImage.src = config.customAssets.enemyCarURL;
     } else {
-      console.log("No custom assets provided, using default paths");
-      this.playerCarImage.src = '/assets/player-car.png';
-      this.enemyCarImage.src = '/assets/enemy-car.png';
-    }
-    
-    // Wait for images to load
-    this.playerCarImage.onload = () => {
-      console.log("Player car image loaded successfully");
+      console.error("No custom assets provided, game cannot initialize properly");
+      // Mark as loaded but with errors, so we can use fallbacks
       this.playerCarLoaded = true;
-      this.checkAllImagesLoaded();
-    };
-    
-    this.enemyCarImage.onload = () => {
-      console.log("Enemy car image loaded successfully");
       this.enemyCarLoaded = true;
-      this.checkAllImagesLoaded();
-    };
-    
-    this.playerCarImage.onerror = (e) => {
-      console.error("Error loading player car image:", e);
       this.imageLoadErrors = true;
-      this.playerCarLoaded = true; // Consider it "loaded" so we can continue with fallbacks
-      this.checkAllImagesLoaded();
-    };
-    
-    this.enemyCarImage.onerror = (e) => {
-      console.error("Error loading enemy car image:", e);
-      this.imageLoadErrors = true;
-      this.enemyCarLoaded = true; // Consider it "loaded" so we can continue with fallbacks
-      this.checkAllImagesLoaded();
-    };
+      this.imagesLoaded = true;
+      // Initialize player after images are loaded or failed
+      this.player = this.createPlayer();
+    }
     
     // Set up event listeners
     this.setupEventListeners();
@@ -284,14 +300,27 @@ export class GameEngine {
           ctx.stroke();
         }
         
-        // Draw the player car image
-        ctx.drawImage(
-          this.playerCarImage, 
-          this.player.x, 
-          this.player.y, 
-          this.player.width, 
-          this.player.height
-        );
+        try {
+          // Draw the player car image
+          ctx.drawImage(
+            this.playerCarImage, 
+            this.player.x, 
+            this.player.y, 
+            this.player.width, 
+            this.player.height
+          );
+        } catch (e) {
+          // Fallback to drawing a simple car if image fails
+          console.warn("Error drawing player car image, using fallback:", e);
+          this.drawCarFallback(
+            ctx, 
+            this.player.x, 
+            this.player.y, 
+            this.player.width, 
+            this.player.height, 
+            '#3cbbbb'
+          );
+        }
         
         ctx.restore();
       }
@@ -350,14 +379,27 @@ export class GameEngine {
       render: (ctx: CanvasRenderingContext2D) => {
         ctx.save();
         
-        // Draw the enemy car image
-        ctx.drawImage(
-          this.enemyCarImage, 
-          enemy.x, 
-          enemy.y, 
-          enemy.width, 
-          enemy.height
-        );
+        try {
+          // Draw the enemy car image
+          ctx.drawImage(
+            this.enemyCarImage, 
+            enemy.x, 
+            enemy.y, 
+            enemy.width, 
+            enemy.height
+          );
+        } catch (e) {
+          // Fallback to drawing a simple car if image fails
+          console.warn("Error drawing enemy car image, using fallback");
+          this.drawCarFallback(
+            ctx, 
+            enemy.x, 
+            enemy.y, 
+            enemy.width, 
+            enemy.height, 
+            '#dd373c'
+          );
+        }
         
         ctx.restore();
       }
@@ -665,7 +707,15 @@ export class GameEngine {
     this.onGameStateChange(this.gameState);
     this.lastFrameTime = performance.now();
     console.log("Starting game loop");
-    this.gameLoop(this.lastFrameTime);
+    
+    // Use try/catch for safety
+    try {
+      this.gameLoop(this.lastFrameTime);
+    } catch (error) {
+      console.error("Error starting game loop:", error);
+      this.gameState = GameState.START_SCREEN;
+      this.onGameStateChange(this.gameState);
+    }
   }
   
   private resetGame(): void {
@@ -1054,27 +1104,32 @@ export class GameEngine {
   }
   
   private render(): void {
-    // Clear canvas
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    
-    // Draw background
-    this.drawBackground();
-    
-    // Draw lanes
-    this.drawLanes();
-    
-    // Draw game objects
-    this.seeds.forEach(seed => seed.render(this.ctx));
-    this.powerUps.forEach(powerUp => powerUp.render(this.ctx));
-    this.enemies.forEach(enemy => enemy.render(this.ctx));
-    
-    // Draw player
-    if (this.player) {
-      this.player.render(this.ctx);
+    try {
+      // Clear canvas
+      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      
+      // Draw background
+      this.drawBackground();
+      
+      // Draw lanes
+      this.drawLanes();
+      
+      // Draw game objects
+      this.seeds.forEach(seed => seed.render(this.ctx));
+      this.powerUps.forEach(powerUp => powerUp.render(this.ctx));
+      this.enemies.forEach(enemy => enemy.render(this.ctx));
+      
+      // Draw player
+      if (this.player) {
+        this.player.render(this.ctx);
+      }
+      
+      // Draw explosion particles
+      this.renderExplosions();
+    } catch (error) {
+      console.error("Error in render function:", error);
+      // Don't crash the game loop if there's an error in rendering
     }
-    
-    // Draw explosion particles
-    this.renderExplosions();
   }
   
   private renderExplosions(): void {
