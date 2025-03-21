@@ -1,3 +1,4 @@
+
 // Main game engine class
 
 export enum GameState {
@@ -58,7 +59,7 @@ export interface GameConfig {
   onPowerUpEnd: (type: PowerUpType) => void;
   customAssets?: {
     playerCarURL: string;
-    enemyCarURL: string;
+    enemyCarURLs: string[];
     useDefaultsIfBroken?: boolean;
   };
 }
@@ -78,7 +79,7 @@ export class GameEngine {
   
   // Car images
   private playerCarImage: HTMLImageElement;
-  private enemyCarImage: HTMLImageElement;
+  private enemyCarImages: HTMLImageElement[] = [];
   private playerCarLoaded: boolean = false;
   private enemyCarLoaded: boolean = false;
   private imagesLoaded: boolean = false;
@@ -144,23 +145,15 @@ export class GameEngine {
     // Load car images with proper error handling
     this.playerCarImage = new Image();
     this.playerCarImage.crossOrigin = "anonymous"; // Try to fix CORS issues
-    this.enemyCarImage = new Image();
-    this.enemyCarImage.crossOrigin = "anonymous"; // Try to fix CORS issues
     
     // Use custom assets if provided
     if (config.customAssets) {
       console.log("Using custom car assets:", config.customAssets);
       
-      // Set up event handlers before setting src
+      // Load player car image
       this.playerCarImage.onload = () => {
         console.log("Player car image loaded successfully");
         this.playerCarLoaded = true;
-        this.checkAllImagesLoaded();
-      };
-      
-      this.enemyCarImage.onload = () => {
-        console.log("Enemy car image loaded successfully");
-        this.enemyCarLoaded = true;
         this.checkAllImagesLoaded();
       };
       
@@ -171,16 +164,51 @@ export class GameEngine {
         this.checkAllImagesLoaded();
       };
       
-      this.enemyCarImage.onerror = (e) => {
-        console.error("Error loading enemy car image:", e);
-        this.imageLoadErrors = true;
-        this.enemyCarLoaded = true; // Consider it "loaded" so we can continue with fallbacks
-        this.checkAllImagesLoaded();
-      };
-      
-      // Now set the src attributes
       this.playerCarImage.src = config.customAssets.playerCarURL;
-      this.enemyCarImage.src = config.customAssets.enemyCarURL;
+      
+      // Load enemy car images
+      let enemyImagesLoaded = 0;
+      const totalEnemyImages = config.customAssets.enemyCarURLs.length;
+      
+      config.customAssets.enemyCarURLs.forEach((url, index) => {
+        const enemyImg = new Image();
+        enemyImg.crossOrigin = "anonymous";
+        
+        enemyImg.onload = () => {
+          console.log(`Enemy car image ${index} loaded successfully`);
+          this.enemyCarImages[index] = enemyImg;
+          enemyImagesLoaded++;
+          
+          if (enemyImagesLoaded === totalEnemyImages) {
+            this.enemyCarLoaded = true;
+            this.checkAllImagesLoaded();
+          }
+        };
+        
+        enemyImg.onerror = (e) => {
+          console.error(`Error loading enemy car image ${index}:`, e);
+          this.imageLoadErrors = true;
+          
+          // Create a backup image
+          const backupImg = new Image();
+          backupImg.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgNjQgMTI4IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHg9IjEwIiB5PSIxMCIgd2lkdGg9IjQ0IiBoZWlnaHQ9IjEwOCIgcng9IjYiIGZpbGw9IiNERDM3M0MiLz48cmVjdCB4PSIxNiIgeT0iMzIiIHdpZHRoPSIzMiIgaGVpZ2h0PSIyNCIgZmlsbD0iIzIyMjgzOCIvPjxjaXJjbGUgY3g9IjIwIiBjeT0iMTAwIiByPSI4IiBmaWxsPSIjMjIyIi8+PGNpcmNsZSBjeD0iNDQiIGN5PSIxMDAiIHI9IjgiIGZpbGw9IiMyMjIiLz48Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSI0IiBmaWxsPSIjRkZGRjAwIi8+PGNpcmNsZSBjeD0iNDgiIGN5PSIxNiIgcj0iNCIgZmlsbD0iI0ZGRkYwMCIvPjwvc3ZnPg==';
+          this.enemyCarImages[index] = backupImg;
+          
+          enemyImagesLoaded++;
+          if (enemyImagesLoaded === totalEnemyImages) {
+            this.enemyCarLoaded = true;
+            this.checkAllImagesLoaded();
+          }
+        };
+        
+        enemyImg.src = url;
+      });
+      
+      // If there are no enemy car URLs, mark as loaded
+      if (totalEnemyImages === 0) {
+        this.enemyCarLoaded = true;
+        this.checkAllImagesLoaded();
+      }
     } else {
       console.error("No custom assets provided, game cannot initialize properly");
       // Mark as loaded but with errors, so we can use fallbacks
@@ -352,10 +380,15 @@ export class GameEngine {
   }
   
   private createEnemy(lane: number): GameObject {
-    // Use a more suitable aspect ratio for the car image (width/height)
-    const aspectRatio = 0.55; // approximate width/height ratio of the car image
+    // Use a shorter aspect ratio for the car image (width/height)
+    const aspectRatio = 0.8; // Modified from 0.55 to 0.8 to reduce height
     const width = this.laneWidth * 0.8;
-    const height = width / aspectRatio;
+    const height = width / aspectRatio; // This will make the car shorter
+    
+    // Choose a random enemy car image if multiple are available
+    const enemyImageIndex = this.enemyCarImages.length > 0 
+      ? Math.floor(Math.random() * this.enemyCarImages.length) 
+      : 0;
     
     const enemy = {
       x: this.lanePositions[lane] - (width / 2),
@@ -365,6 +398,7 @@ export class GameEngine {
       lane,
       active: true,
       type: 'enemy',
+      imageIndex: enemyImageIndex,
       update: (delta: number) => {
         // Move downward
         const speed = 0.3 * this.gameSpeed * (this.slowModeActive ? 0.5 : 1);
@@ -380,14 +414,20 @@ export class GameEngine {
         ctx.save();
         
         try {
-          // Draw the enemy car image
-          ctx.drawImage(
-            this.enemyCarImage, 
-            enemy.x, 
-            enemy.y, 
-            enemy.width, 
-            enemy.height
-          );
+          // Get the specific enemy car image to use
+          const enemyImage = this.enemyCarImages[enemy.imageIndex];
+          if (enemyImage) {
+            // Draw the enemy car image
+            ctx.drawImage(
+              enemyImage, 
+              enemy.x, 
+              enemy.y, 
+              enemy.width, 
+              enemy.height
+            );
+          } else {
+            throw new Error("Enemy car image not available");
+          }
         } catch (e) {
           // Fallback to drawing a simple car if image fails
           console.warn("Error drawing enemy car image, using fallback");

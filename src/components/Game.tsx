@@ -7,7 +7,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
 const DEFAULT_PLAYER_CAR = 'https://i.imgur.com/JtOUSct.png';
-const DEFAULT_ENEMY_CAR = 'https://i.imgur.com/h3sp6nL.png';
+const DEFAULT_ENEMY_CARS = ['https://i.imgur.com/h3sp6nL.png', 'https://i.imgur.com/S3rzkPt.png'];
 
 const Game: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -25,7 +25,7 @@ const Game: React.FC = () => {
   const [gameInitialized, setGameInitialized] = useState(false);
   const [carAssetsLoaded, setCarAssetsLoaded] = useState(false);
   const [playerCarURL, setPlayerCarURL] = useState<string>(DEFAULT_PLAYER_CAR);
-  const [enemyCarURL, setEnemyCarURL] = useState<string>(DEFAULT_ENEMY_CAR);
+  const [enemyCarURLs, setEnemyCarURLs] = useState<string[]>(DEFAULT_ENEMY_CARS);
   const [loadingError, setLoadingError] = useState<string | null>(null);
   
   const isMobile = useIsMobile();
@@ -61,45 +61,47 @@ const Game: React.FC = () => {
             }, 3000);
           });
           
-          const enemyImg = new Image();
-          let enemyLoaded = false;
-          
-          const enemyPromise = new Promise<string>((resolve, reject) => {
-            enemyImg.onload = () => {
-              console.log("Enemy image fully loaded");
-              enemyLoaded = true;
-              resolve(enemyImg.src);
-            };
+          const enemyPromises = DEFAULT_ENEMY_CARS.map(url => {
+            const enemyImg = new Image();
+            let enemyLoaded = false;
             
-            enemyImg.onerror = (e) => {
-              console.error("Error loading enemy image:", e);
-              resolve(DEFAULT_ENEMY_CAR);
-            };
-            
-            enemyImg.src = DEFAULT_ENEMY_CAR;
-            
-            setTimeout(() => {
-              if (!enemyLoaded) {
-                console.warn("Enemy image loading timed out");
-                resolve(DEFAULT_ENEMY_CAR);
-              }
-            }, 3000);
+            return new Promise<string>((resolve, reject) => {
+              enemyImg.onload = () => {
+                console.log(`Enemy image ${url} fully loaded`);
+                enemyLoaded = true;
+                resolve(url);
+              };
+              
+              enemyImg.onerror = (e) => {
+                console.error(`Error loading enemy image ${url}:`, e);
+                resolve(DEFAULT_ENEMY_CARS[0]); // Use first car as fallback
+              };
+              
+              enemyImg.src = url;
+              
+              setTimeout(() => {
+                if (!enemyLoaded) {
+                  console.warn(`Enemy image ${url} loading timed out`);
+                  resolve(DEFAULT_ENEMY_CARS[0]);
+                }
+              }, 3000);
+            });
           });
           
-          const [playerSrc, enemySrc] = await Promise.all([playerPromise, enemyPromise]);
+          const [playerSrc, ...enemySrcs] = await Promise.all([playerPromise, ...enemyPromises]);
           
           setPlayerCarURL(playerSrc);
-          setEnemyCarURL(enemySrc);
+          setEnemyCarURLs(enemySrcs.length > 0 ? enemySrcs : DEFAULT_ENEMY_CARS);
           
           console.log("Car images processed successfully, using sources:", {
             playerSrc,
-            enemySrc
+            enemySrcs
           });
           
         } catch (error) {
           console.error("Error loading car images:", error);
           setPlayerCarURL(DEFAULT_PLAYER_CAR);
-          setEnemyCarURL(DEFAULT_ENEMY_CAR);
+          setEnemyCarURLs(DEFAULT_ENEMY_CARS);
         }
         
         setCarAssetsLoaded(true);
@@ -152,7 +154,7 @@ const Game: React.FC = () => {
     try {
       console.log("Initializing game engine with car assets:", {
         playerCarURL,
-        enemyCarURL
+        enemyCarURLs
       });
       
       const gameEngine = new GameEngine({
@@ -201,7 +203,7 @@ const Game: React.FC = () => {
         },
         customAssets: {
           playerCarURL,
-          enemyCarURL,
+          enemyCarURLs,
           useDefaultsIfBroken: true
         }
       });
@@ -224,7 +226,7 @@ const Game: React.FC = () => {
         gameEngineRef.current.cleanup();
       }
     };
-  }, [carAssetsLoaded, playerCarURL, enemyCarURL, loadingError]);
+  }, [carAssetsLoaded, playerCarURL, enemyCarURLs, loadingError]);
   
   useEffect(() => {
     if (slowModeTimer > 0) {
