@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine, GameState, PowerUpType } from '../game/GameEngine';
 import { Button } from '@/components/ui/button';
@@ -6,7 +7,7 @@ import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2 } from
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
-const DEFAULT_PLAYER_CAR = 'https://i.imgur.com/lGu5sXs.png';
+const DEFAULT_PLAYER_CAR = 'https://i.imgur.com/XSSm7h9.png';
 const DEFAULT_ENEMY_CARS = ['https://i.imgur.com/SlsgTeq.png', 'https://i.imgur.com/5k0TGAP.png'];
 
 const Game: React.FC = () => {
