@@ -220,10 +220,10 @@ export class GameEngine {
   }
   
   private createPlayer(): PlayerCar {
-    // Use a shorter aspect ratio for the car image (width/height)
-    const aspectRatio = 0.8; // Modified from 0.55 to 0.8 to reduce height
+    // Use a more suitable aspect ratio for the car image (width/height)
+    const aspectRatio = 0.55; // approximate width/height ratio of the car image
     const width = this.laneWidth * 0.8;
-    const height = width / aspectRatio; // This will make the car shorter
+    const height = width / aspectRatio;
     const lane = 1; // Start in middle lane
     
     return {
@@ -352,10 +352,10 @@ export class GameEngine {
   }
   
   private createEnemy(lane: number): GameObject {
-    // Use a shorter aspect ratio for the car image (width/height)
-    const aspectRatio = 0.8; // Modified from 0.55 to 0.8 to reduce height
+    // Use a more suitable aspect ratio for the car image (width/height)
+    const aspectRatio = 0.55; // approximate width/height ratio of the car image
     const width = this.laneWidth * 0.8;
-    const height = width / aspectRatio; // This will make the car shorter
+    const height = width / aspectRatio;
     
     const enemy = {
       x: this.lanePositions[lane] - (width / 2),
@@ -901,21 +901,32 @@ export class GameEngine {
       } else {
         lane = Math.floor(Math.random() * 3);
       }
-    } else if (this.gameTime > 120000) { // 2+ minutes - challenging
-      // More frequent double-lane enemies
-      const pattern = Math.floor(Math.random() * 4);
+    } else if (this.gameTime > 120000) { // 2+ minutes - more complex patterns
+      const pattern = Math.floor(Math.random() * 3);
       if (pattern === 0) {
-        // Two lanes filled
-        const lane1 = Math.floor(Math.random() * 3);
-        let lane2 = (lane1 + 1) % 3;
-        this.enemies.push(this.createEnemy(lane1));
-        setTimeout(() => this.enemies.push(this.createEnemy(lane2)), 300);
+        // Two adjacent lanes
+        const startLane = Math.floor(Math.random() * 2);
+        this.enemies.push(this.createEnemy(startLane));
+        this.enemies.push(this.createEnemy(startLane + 1));
         return;
       } else {
         lane = Math.floor(Math.random() * 3);
       }
+    } else if (this.gameTime > 60000) { // 1+ minute - simple patterns
+      // Alternating lanes
+      const usedLanes = this.enemies
+        .filter(e => e.y < 0)
+        .map(e => e.lane);
+      
+      if (usedLanes.length > 0) {
+        // Avoid last used lane
+        const availableLanes = [0, 1, 2].filter(l => !usedLanes.includes(l));
+        lane = availableLanes[Math.floor(Math.random() * availableLanes.length)];
+      } else {
+        lane = Math.floor(Math.random() * 3);
+      }
     } else {
-      // Standard random lane selection
+      // Early game - completely random
       lane = Math.floor(Math.random() * 3);
     }
     
@@ -923,135 +934,115 @@ export class GameEngine {
   }
   
   private spawnSeed(): void {
-    // Random lane, opposite to recent enemies to make it fair
-    let availableLanes = [0, 1, 2];
-    
-    // Try to avoid placing seeds where there are enemies
-    if (this.enemies.length > 0) {
-      const recentEnemies = this.enemies.slice(-3);
-      const enemyLanes = recentEnemies.map(enemy => enemy.lane);
-      availableLanes = availableLanes.filter(lane => !enemyLanes.includes(lane));
-    }
-    
-    // If all lanes have enemies, just pick a random one
-    if (availableLanes.length === 0) {
-      availableLanes = [0, 1, 2];
-    }
-    
-    const laneIndex = Math.floor(Math.random() * availableLanes.length);
-    const lane = availableLanes[laneIndex];
-    
+    // Determine seed lane
+    const lane = Math.floor(Math.random() * 3);
     this.seeds.push(this.createSeed(lane));
   }
   
   private spawnPowerUp(): void {
-    // Random power-up type
-    const powerUpTypes = [
-      PowerUpType.SLOW_SPEED,
-      PowerUpType.SHIELD,
-      PowerUpType.EXTRA_LIFE
-    ];
+    // Determine power-up type and lane
+    let powerUpType: PowerUpType;
     
-    const typeIndex = Math.floor(Math.random() * powerUpTypes.length);
-    const powerUpType = powerUpTypes[typeIndex];
-    
-    // Random lane (try to avoid lanes with enemies)
-    let availableLanes = [0, 1, 2];
-    if (this.enemies.length > 0) {
-      const recentEnemies = this.enemies.slice(-3);
-      const enemyLanes = recentEnemies.map(enemy => enemy.lane);
-      availableLanes = availableLanes.filter(lane => !enemyLanes.includes(lane));
+    // Weighted probability based on rarity
+    const rand = Math.random();
+    if (rand < 0.6) {
+      powerUpType = PowerUpType.SLOW_SPEED; // 60% chance
+    } else if (rand < 0.9) {
+      powerUpType = PowerUpType.SHIELD; // 30% chance
+    } else {
+      powerUpType = PowerUpType.EXTRA_LIFE; // 10% chance
     }
     
-    if (availableLanes.length === 0) {
-      availableLanes = [0, 1, 2];
-    }
-    
-    const laneIndex = Math.floor(Math.random() * availableLanes.length);
-    const lane = availableLanes[laneIndex];
-    
+    const lane = Math.floor(Math.random() * 3);
     this.powerUps.push(this.createPowerUp(lane, powerUpType));
   }
   
   private increaseDifficulty(): void {
     // Increase game speed
-    this.gameSpeed = Math.min(this.gameSpeed + 0.2, 3.0);
+    if (this.gameSpeed < 2) { // Cap at 2x speed
+      this.gameSpeed += 0.1;
+    }
     
-    // Increase enemy spawn rate
-    this.enemySpawnInterval = Math.max(this.enemySpawnInterval - 100, 800);
-    
-    // Increase seed spawn rate
-    this.seedSpawnInterval = Math.max(this.seedSpawnInterval - 50, 500);
+    // Decrease enemy spawn interval
+    if (this.enemySpawnInterval > 500) { // Min 0.5 seconds
+      this.enemySpawnInterval *= 0.9;
+    }
   }
   
   private checkCollisions(): void {
     if (!this.player) return;
     
-    // Check if player is invulnerable due to shield
-    const isInvulnerable = this.player.shield;
-    
-    // Check collisions with enemies
+    // Check player collision with enemies
     for (const enemy of this.enemies) {
-      if (this.detectCollision(this.player, enemy)) {
-        if (!isInvulnerable) {
-          // Player hit an enemy car
-          this.handlePlayerHit();
+      if (this.checkObjectCollision(this.player, enemy)) {
+        if (!this.player.shield) {
+          this.handlePlayerCrash();
+          this.createExplosion(
+            enemy.x + enemy.width / 2,
+            enemy.y + enemy.height / 2,
+            enemy.width
+          );
         }
-        // Create explosion at collision point
-        this.createExplosion(
-          enemy.x + enemy.width / 2,
-          enemy.y + enemy.height / 2,
-          '#FF5555'
-        );
-        // Remove enemy
         enemy.active = false;
       }
     }
     
-    // Check collisions with seeds
+    // Check player collision with seeds
     for (const seed of this.seeds) {
-      if (this.detectCollision(this.player, seed)) {
-        // Player collected a seed
-        this.score += 10;
-        this.onScoreChange(this.score);
-        
-        // Create small visual effect
-        this.createExplosion(
-          seed.x + seed.width / 2,
-          seed.y + seed.height / 2,
-          '#FFDD00',
-          10, // fewer particles
-          0.5 // smaller particles
-        );
-        
-        // Remove seed
+      if (this.checkObjectCollision(this.player, seed)) {
+        this.collectSeed();
         seed.active = false;
       }
     }
     
-    // Check collisions with power-ups
+    // Check player collision with power-ups
     for (const powerUp of this.powerUps) {
-      if (this.detectCollision(this.player, powerUp)) {
-        // Apply power-up effect
-        this.applyPowerUp(powerUp.powerUpType!);
-        
-        // Create visual effect
-        this.createExplosion(
-          powerUp.x + powerUp.width / 2,
-          powerUp.y + powerUp.height / 2,
-          powerUp.powerUpType === PowerUpType.SLOW_SPEED ? '#A170FC' :
-            powerUp.powerUpType === PowerUpType.SHIELD ? '#64D2FF' : '#FF6B6B',
-          15, // more particles
-          1.0 // normal-sized particles
-        );
-        
-        // Remove power-up
+      if (this.checkObjectCollision(this.player, powerUp)) {
+        this.collectPowerUp(powerUp);
         powerUp.active = false;
       }
     }
   }
   
-  private detectCollision(obj1: GameObject, obj2: GameObject): boolean {
+  private createExplosion(x: number, y: number, size: number): void {
+    // Create explosion particles
+    const particleCount = 40; // Number of particles
+    const colors = ['#ff5252', '#ffcd3c', '#ff9500', '#ff3d00', '#ffd600'];
+    
+    for (let i = 0; i < particleCount; i++) {
+      // Create random angle and velocity
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 5 + 2;
+      
+      // Calculate velocity components
+      const vx = Math.cos(angle) * speed;
+      const vy = Math.sin(angle) * speed;
+      
+      // Random particle size
+      const particleSize = Math.random() * (size / 8) + (size / 16);
+      
+      // Random color from predefined array
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      
+      // Random lifetime between 500ms and 1000ms
+      const lifetime = Math.random() * 500 + 500;
+      
+      // Create and add particle
+      this.explosions.push({
+        x,
+        y,
+        vx,
+        vy,
+        size: particleSize,
+        color,
+        alpha: 1,
+        lifetime,
+        currentLife: lifetime
+      });
+    }
+  }
+  
+  private checkObjectCollision(obj1: GameObject, obj2: GameObject): boolean {
     return (
       obj1.x < obj2.x + obj2.width &&
       obj1.x + obj1.width > obj2.x &&
@@ -1060,171 +1051,181 @@ export class GameEngine {
     );
   }
   
-  private handlePlayerHit(): void {
-    if (!this.player) return;
-    
+  private handlePlayerCrash(): void {
     // Decrease player lives
     this.player.lives--;
     this.onLivesChange(this.player.lives);
     
-    // Check for game over
+    // Check game over
     if (this.player.lives <= 0) {
       this.gameOver();
     }
   }
   
-  private applyPowerUp(type: PowerUpType): void {
-    if (!this.player) return;
+  private collectSeed(): void {
+    // Increase score
+    this.score += 10;
+    this.onScoreChange(this.score);
     
-    switch (type) {
-      case PowerUpType.SLOW_SPEED:
-        // Activate slow mode
-        this.slowModeActive = true;
-        this.slowModeTimer = this.slowModeDuration;
-        this.onPowerUpStart(PowerUpType.SLOW_SPEED, this.slowModeDuration);
-        break;
-      case PowerUpType.SHIELD:
-        // Activate shield
-        this.player.shield = true;
-        this.player.shieldTimer = 3000; // 3 seconds of shield
-        this.onPowerUpStart(PowerUpType.SHIELD, 3000);
-        break;
-      case PowerUpType.EXTRA_LIFE:
-        // Add extra life (max 5)
-        if (this.player.lives < 5) {
-          this.player.lives++;
-          this.onLivesChange(this.player.lives);
-        }
-        break;
-    }
+    // Play sound effect (to be implemented)
   }
   
-  private createExplosion(x: number, y: number, color: string, count: number = 20, size: number = 1.0): void {
-    for (let i = 0; i < count; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = Math.random() * 2 + 1;
-      const particleSize = (Math.random() * 5 + 5) * size;
-      
-      this.explosions.push({
-        x,
-        y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        size: particleSize,
-        color,
-        alpha: 1,
-        lifetime: 500 + Math.random() * 500,
-        currentLife: 500 + Math.random() * 500
-      });
+  private collectPowerUp(powerUp: GameObject): void {
+    if (powerUp.powerUpType === undefined) return;
+    
+    // Handle each power-up type
+    if (powerUp.powerUpType === PowerUpType.SLOW_SPEED) {
+      this.activateSlowMode();
+    } else if (powerUp.powerUpType === PowerUpType.SHIELD) {
+      this.activateShield();
+    } else if (powerUp.powerUpType === PowerUpType.EXTRA_LIFE) {
+      this.giveExtraLife();
     }
+    
+    // Play sound effect (to be implemented)
+  }
+  
+  private activateSlowMode(): void {
+    this.slowModeActive = true;
+    this.slowModeTimer = this.slowModeDuration;
+    this.onPowerUpStart(PowerUpType.SLOW_SPEED, this.slowModeDuration);
+  }
+  
+  private activateShield(): void {
+    this.player.shield = true;
+    this.player.shieldTimer = 3000; // 3 seconds
+    this.onPowerUpStart(PowerUpType.SHIELD, 3000);
+  }
+  
+  private giveExtraLife(): void {
+    this.player.lives++;
+    this.onLivesChange(this.player.lives);
+    this.onPowerUpStart(PowerUpType.EXTRA_LIFE, 0);
   }
   
   private render(): void {
-    if (!this.ctx) return;
-    
-    // Clear canvas
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    
-    // Draw background
-    this.drawBackground();
-    
-    // Draw game objects
-    this.seeds.forEach(seed => seed.render(this.ctx));
-    this.enemies.forEach(enemy => enemy.render(this.ctx));
-    this.powerUps.forEach(powerUp => powerUp.render(this.ctx));
-    
-    // Draw player
-    if (this.player) {
-      this.player.render(this.ctx);
+    try {
+      // Clear canvas
+      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      
+      // Draw background
+      this.drawBackground();
+      
+      // Draw lanes
+      this.drawLanes();
+      
+      // Draw game objects
+      this.seeds.forEach(seed => seed.render(this.ctx));
+      this.powerUps.forEach(powerUp => powerUp.render(this.ctx));
+      this.enemies.forEach(enemy => enemy.render(this.ctx));
+      
+      // Draw player
+      if (this.player) {
+        this.player.render(this.ctx);
+      }
+      
+      // Draw explosion particles
+      this.renderExplosions();
+    } catch (error) {
+      console.error("Error in render function:", error);
+      // Don't crash the game loop if there's an error in rendering
     }
-    
-    // Draw explosion particles
-    this.drawExplosions();
   }
   
-  private drawBackground(): void {
-    // Draw sky
-    const skyGradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
-    skyGradient.addColorStop(0, '#1a202c');
-    skyGradient.addColorStop(1, '#2d3748');
-    this.ctx.fillStyle = skyGradient;
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    
-    // Draw road
-    const roadX = this.roadCenterX - this.roadWidth / 2;
-    this.ctx.fillStyle = '#1c1c20';
-    this.ctx.fillRect(roadX, 0, this.roadWidth, this.canvas.height);
-    
-    // Draw lane markers
-    this.ctx.strokeStyle = '#f7cc42';
-    this.ctx.lineWidth = 5;
-    this.ctx.setLineDash([30, 30]);
-    
-    // Left lane marker
-    this.ctx.beginPath();
-    this.ctx.moveTo(this.lanePositions[0], 0);
-    this.ctx.lineTo(this.lanePositions[0], this.canvas.height);
-    this.ctx.stroke();
-    
-    // Right lane marker
-    this.ctx.beginPath();
-    this.ctx.moveTo(this.lanePositions[2], 0);
-    this.ctx.lineTo(this.lanePositions[2], this.canvas.height);
-    this.ctx.stroke();
-    
-    this.ctx.setLineDash([]);
-  }
-  
-  private drawExplosions(): void {
-    if (!this.ctx) return;
+  private renderExplosions(): void {
+    if (this.explosions.length === 0) return;
     
     for (const particle of this.explosions) {
       this.ctx.save();
+      
+      // Set transparency based on particle life
       this.ctx.globalAlpha = particle.alpha;
+      
+      // Draw particle
       this.ctx.fillStyle = particle.color;
       this.ctx.beginPath();
       this.ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
       this.ctx.fill();
+      
+      // Optional: Add glow effect
+      this.ctx.shadowColor = particle.color;
+      this.ctx.shadowBlur = 10;
+      this.ctx.fill();
+      
       this.ctx.restore();
     }
   }
   
+  private drawBackground(): void {
+    // Draw road background
+    this.ctx.fillStyle = '#1c1c1c';
+    this.ctx.fillRect(
+      this.roadCenterX - this.roadWidth / 2,
+      0,
+      this.roadWidth,
+      this.canvas.height
+    );
+    
+    // Draw side areas
+    this.ctx.fillStyle = '#121212';
+    this.ctx.fillRect(
+      0,
+      0,
+      this.roadCenterX - this.roadWidth / 2,
+      this.canvas.height
+    );
+    this.ctx.fillRect(
+      this.roadCenterX + this.roadWidth / 2,
+      0,
+      this.canvas.width - (this.roadCenterX + this.roadWidth / 2),
+      this.canvas.height
+    );
+  }
+  
+  private drawLanes(): void {
+    // Draw lane dividers
+    this.ctx.strokeStyle = '#ffffff';
+    this.ctx.lineWidth = 5;
+    this.ctx.setLineDash([20, 20]); // Dashed line
+    
+    // Animate lane dividers
+    const dashOffset = (this.gameTime * 0.1) % 40;
+    this.ctx.lineDashOffset = dashOffset;
+    
+    // Left lane divider
+    this.ctx.beginPath();
+    this.ctx.moveTo(this.roadCenterX - this.laneWidth / 2, 0);
+    this.ctx.lineTo(this.roadCenterX - this.laneWidth / 2, this.canvas.height);
+    this.ctx.stroke();
+    
+    // Right lane divider
+    this.ctx.beginPath();
+    this.ctx.moveTo(this.roadCenterX + this.laneWidth / 2, 0);
+    this.ctx.lineTo(this.roadCenterX + this.laneWidth / 2, this.canvas.height);
+    this.ctx.stroke();
+    
+    // Reset line dash
+    this.ctx.setLineDash([]);
+  }
+  
+  public handleTouchLeft(): void {
+    if (this.gameState === GameState.GAMEPLAY) {
+      this.movePlayerLeft();
+    }
+  }
+  
+  public handleTouchRight(): void {
+    if (this.gameState === GameState.GAMEPLAY) {
+      this.movePlayerRight();
+    }
+  }
+  
   public cleanup(): void {
-    // Stop game loop
     if (this.animationFrameId !== null) {
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
     }
     
-    // Remove event listeners
-    window.removeEventListener('keydown', this.handleKeyDown);
-    window.removeEventListener('resize', this.handleResize);
+    // Remove event listeners if needed
   }
-  
-  // Methods for touch controls (used in mobile mode)
-  public handleTouchLeft(): void {
-    this.movePlayerLeft();
-  }
-  
-  public handleTouchRight(): void {
-    this.movePlayerRight();
-  }
-  
-  // For clean event listener removal
-  private handleKeyDown = (e: KeyboardEvent) => {
-    if (this.gameState !== GameState.GAMEPLAY) return;
-    
-    if (e.key === 'ArrowLeft' || e.key === 'a') {
-      this.movePlayerLeft();
-    } else if (e.key === 'ArrowRight' || e.key === 'd') {
-      this.movePlayerRight();
-    } else if (e.key === 'p' || e.key === 'Escape') {
-      this.togglePause();
-    }
-  };
-  
-  private handleResize = () => {
-    this.resizeCanvas();
-  };
 }
-
