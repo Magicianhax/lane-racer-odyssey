@@ -985,23 +985,27 @@ export class GameEngine {
     if (!powerUp.powerUpType) return;
     
     // Apply power-up effects
-    if (powerUp.powerUpType === PowerUpType.SLOW_SPEED) {
-      // Activate slow mode
-      this.slowModeActive = true;
-      this.slowModeTimer = this.slowModeDuration;
-      this.onPowerUpStart(PowerUpType.SLOW_SPEED, this.slowModeDuration);
-    } else if (powerUp.powerUpType === PowerUpType.SHIELD) {
-      // Activate shield
-      this.player.shield = true;
-      this.player.shieldTimer = 3000; // 3 seconds
-      this.onPowerUpStart(PowerUpType.SHIELD, 3000);
-    } else if (powerUp.powerUpType === PowerUpType.EXTRA_LIFE) {
-      // Add extra life (up to max 5)
-      if (this.player.lives < 5) {
-        this.player.lives++;
-        this.onLivesChange(this.player.lives);
-        this.onPowerUpStart(PowerUpType.EXTRA_LIFE, 0);
-      }
+    switch (powerUp.powerUpType) {
+      case PowerUpType.SLOW_SPEED:
+        // Activate slow mode
+        this.slowModeActive = true;
+        this.slowModeTimer = this.slowModeDuration;
+        this.onPowerUpStart(PowerUpType.SLOW_SPEED, this.slowModeDuration);
+        break;
+      case PowerUpType.SHIELD:
+        // Activate shield
+        this.player.shield = true;
+        this.player.shieldTimer = 3000; // 3 seconds
+        this.onPowerUpStart(PowerUpType.SHIELD, 3000);
+        break;
+      case PowerUpType.EXTRA_LIFE:
+        // Add extra life (up to max 5)
+        if (this.player.lives < 5) {
+          this.player.lives++;
+          this.onLivesChange(this.player.lives);
+          this.onPowerUpStart(PowerUpType.EXTRA_LIFE, 0);
+        }
+        break;
     }
   }
   
