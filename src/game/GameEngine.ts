@@ -1,4 +1,3 @@
-
 // Main game engine class
 
 export enum GameState {
@@ -75,6 +74,8 @@ export class GameEngine {
   // Car images
   private playerCarImage: HTMLImageElement;
   private enemyCarImage: HTMLImageElement;
+  private playerCarLoaded: boolean = false;
+  private enemyCarLoaded: boolean = false;
   private imagesLoaded: boolean = false;
   private imageLoadErrors: boolean = false;
   
@@ -127,48 +128,55 @@ export class GameEngine {
     // Initialize game dimensions
     this.calculateDimensions();
     
-    // Load car images
+    // Load car images with proper error handling
     this.playerCarImage = new Image();
-    this.playerCarImage.src = '/lovable-uploads/e0e56876-6200-411c-bf4c-0e18962da129.png';
+    this.playerCarImage.crossOrigin = "anonymous"; // Try to fix CORS issues
+    this.playerCarImage.src = '/assets/player-car.png'; // Use a local path in public/assets
     
     this.enemyCarImage = new Image();
-    this.enemyCarImage.src = '/lovable-uploads/97084615-c052-447d-a950-1ac8cf98cccf.png';
+    this.enemyCarImage.crossOrigin = "anonymous"; // Try to fix CORS issues
+    this.enemyCarImage.src = '/assets/enemy-car.png'; // Use a local path in public/assets
     
-    console.log("Loading car images...");
+    console.log("Loading car images from local paths...");
     
     // Wait for images to load
-    let loadedImages = 0;
-    const onImageLoad = () => {
-      loadedImages++;
-      console.log("Image loaded:", loadedImages);
-      if (loadedImages === 2) {
-        this.imagesLoaded = true;
-        console.log("All images loaded successfully");
-        // Initialize player after images are loaded
-        this.player = this.createPlayer();
-      }
+    this.playerCarImage.onload = () => {
+      console.log("Player car image loaded successfully");
+      this.playerCarLoaded = true;
+      this.checkAllImagesLoaded();
     };
     
-    const onImageError = (e: ErrorEvent) => {
-      console.error("Error loading image:", e);
+    this.enemyCarImage.onload = () => {
+      console.log("Enemy car image loaded successfully");
+      this.enemyCarLoaded = true;
+      this.checkAllImagesLoaded();
+    };
+    
+    this.playerCarImage.onerror = (e) => {
+      console.error("Error loading player car image:", e);
       this.imageLoadErrors = true;
-      // Try to continue anyway
-      loadedImages++;
-      if (loadedImages === 2) {
-        this.imagesLoaded = true;
-        // Initialize player after images are loaded
-        this.player = this.createPlayer();
-      }
+      this.playerCarLoaded = true; // Consider it "loaded" so we can continue with fallbacks
+      this.checkAllImagesLoaded();
     };
     
-    this.playerCarImage.onload = onImageLoad;
-    this.playerCarImage.onerror = onImageError as any;
-    
-    this.enemyCarImage.onload = onImageLoad;
-    this.enemyCarImage.onerror = onImageError as any;
+    this.enemyCarImage.onerror = (e) => {
+      console.error("Error loading enemy car image:", e);
+      this.imageLoadErrors = true;
+      this.enemyCarLoaded = true; // Consider it "loaded" so we can continue with fallbacks
+      this.checkAllImagesLoaded();
+    };
     
     // Set up event listeners
     this.setupEventListeners();
+  }
+  
+  private checkAllImagesLoaded(): void {
+    if (this.playerCarLoaded && this.enemyCarLoaded) {
+      console.log("All car images processed, can continue with game initialization");
+      this.imagesLoaded = true;
+      // Initialize player after images are loaded or failed
+      this.player = this.createPlayer();
+    }
   }
   
   private calculateDimensions(): void {
@@ -237,7 +245,6 @@ export class GameEngine {
       render: (ctx: CanvasRenderingContext2D) => {
         if (!this.player) return;
         
-        // Draw player car using image
         ctx.save();
         
         // Draw shield effect if active
@@ -267,18 +274,52 @@ export class GameEngine {
           ctx.stroke();
         }
         
-        // Draw car image
-        if (this.imagesLoaded && this.playerCarImage) {
-          ctx.drawImage(this.playerCarImage, this.player.x, this.player.y, this.player.width, this.player.height);
+        // Draw car - safely handling image
+        if (this.playerCarLoaded) {
+          try {
+            // Only draw the image if it's not in a broken state
+            if (this.playerCarImage.complete && this.playerCarImage.naturalWidth > 0) {
+              ctx.drawImage(this.playerCarImage, this.player.x, this.player.y, this.player.width, this.player.height);
+            } else {
+              // Fallback if image is broken
+              this.drawCarFallback(ctx, this.player.x, this.player.y, this.player.width, this.player.height, 'blue');
+            }
+          } catch (e) {
+            console.error("Error drawing player car:", e);
+            this.drawCarFallback(ctx, this.player.x, this.player.y, this.player.width, this.player.height, 'blue');
+          }
         } else {
           // Fallback if image not loaded
-          ctx.fillStyle = 'blue';
-          ctx.fillRect(this.player.x, this.player.y, this.player.width, this.player.height);
+          this.drawCarFallback(ctx, this.player.x, this.player.y, this.player.width, this.player.height, 'blue');
         }
         
         ctx.restore();
       }
     };
+  }
+  
+  private drawCarFallback(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, color: string): void {
+    // Draw car body
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, width, height);
+    
+    // Draw car details (windows, etc.)
+    ctx.fillStyle = '#222';
+    
+    // Draw windows (top part of car)
+    const windowHeight = height * 0.3;
+    const windowWidth = width * 0.7;
+    const windowX = x + (width - windowWidth) / 2;
+    const windowY = y + height * 0.15;
+    ctx.fillRect(windowX, windowY, windowWidth, windowHeight);
+    
+    // Draw headlights or taillights
+    ctx.fillStyle = '#ffdd00';
+    
+    // Front lights
+    const lightSize = width * 0.15;
+    ctx.fillRect(x + width * 0.1, y + height * 0.1, lightSize, lightSize);
+    ctx.fillRect(x + width - width * 0.1 - lightSize, y + height * 0.1, lightSize, lightSize);
   }
   
   private createEnemy(lane: number): GameObject {
@@ -307,11 +348,25 @@ export class GameEngine {
         }
       },
       render: (ctx: CanvasRenderingContext2D) => {
-        // Draw enemy car using image
         ctx.save();
         
-        if (this.imagesLoaded) {
-          ctx.drawImage(this.enemyCarImage, enemy.x, enemy.y, enemy.width, enemy.height);
+        // Draw enemy car - safely handling image
+        if (this.enemyCarLoaded) {
+          try {
+            // Only draw the image if it's not in a broken state
+            if (this.enemyCarImage.complete && this.enemyCarImage.naturalWidth > 0) {
+              ctx.drawImage(this.enemyCarImage, enemy.x, enemy.y, enemy.width, enemy.height);
+            } else {
+              // Fallback if image is broken
+              this.drawCarFallback(ctx, enemy.x, enemy.y, enemy.width, enemy.height, 'red');
+            }
+          } catch (e) {
+            console.error("Error drawing enemy car:", e);
+            this.drawCarFallback(ctx, enemy.x, enemy.y, enemy.width, enemy.height, 'red');
+          }
+        } else {
+          // Fallback if image not loaded
+          this.drawCarFallback(ctx, enemy.x, enemy.y, enemy.width, enemy.height, 'red');
         }
         
         ctx.restore();
@@ -597,11 +652,11 @@ export class GameEngine {
   }
   
   public startGame(): void {
-    console.log("startGame called, images loaded:", this.imagesLoaded);
+    console.log("startGame called, images processed:", this.imagesLoaded);
     
-    // Make sure images are loaded before starting
+    // Make sure images are processed before starting
     if (!this.imagesLoaded) {
-      console.log("Images not loaded yet, retrying in 100ms");
+      console.log("Images not processed yet, retrying in 100ms");
       setTimeout(() => this.startGame(), 100);
       return;
     }

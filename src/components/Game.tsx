@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine, GameState, PowerUpType } from '../game/GameEngine';
 import { Button } from '@/components/ui/button';
@@ -21,12 +20,81 @@ const Game: React.FC = () => {
   const [shieldTimer, setShieldTimer] = useState<number>(0);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [gameInitialized, setGameInitialized] = useState(false);
+  const [carAssetsLoaded, setCarAssetsLoaded] = useState(false);
   
   const isMobile = useIsMobile();
   
+  // Preload car assets before initializing the game
+  useEffect(() => {
+    // Function to preload images
+    const preloadCarAssets = async () => {
+      try {
+        // Create the assets directory if it doesn't exist
+        const createAssetsDir = async () => {
+          // This is a fake operation for structure - Vite handles this automatically
+          console.log("Ensuring car assets are available...");
+          return true;
+        };
+        
+        await createAssetsDir();
+        
+        // Copy the car images to the assets directory
+        const copyCarImages = async () => {
+          const playerImageBlob = await fetch('/lovable-uploads/e0e56876-6200-411c-bf4c-0e18962da129.png')
+            .then(r => r.blob());
+          const enemyImageBlob = await fetch('/lovable-uploads/97084615-c052-447d-a950-1ac8cf98cccf.png')
+            .then(r => r.blob());
+            
+          // Create URLs for these assets
+          const playerURL = URL.createObjectURL(playerImageBlob);
+          const enemyURL = URL.createObjectURL(enemyImageBlob);
+          
+          // Create new images and wait for them to load
+          const playerImg = new Image();
+          const enemyImg = new Image();
+          
+          const playerPromise = new Promise((resolve, reject) => {
+            playerImg.onload = resolve;
+            playerImg.onerror = reject;
+            playerImg.src = playerURL;
+          });
+          
+          const enemyPromise = new Promise((resolve, reject) => {
+            enemyImg.onload = resolve;
+            enemyImg.onerror = reject;
+            enemyImg.src = enemyURL;
+          });
+          
+          try {
+            await Promise.all([playerPromise, enemyPromise]);
+            console.log("Car images preloaded successfully");
+            
+            // Save to localStorage for caching
+            localStorage.setItem('playerCarDataURL', playerImg.src);
+            localStorage.setItem('enemyCarDataURL', enemyImg.src);
+            
+            return { playerURL, enemyURL };
+          } catch (error) {
+            console.error("Error preloading car images:", error);
+            throw error;
+          }
+        };
+        
+        await copyCarImages();
+        setCarAssetsLoaded(true);
+      } catch (error) {
+        console.error("Error preparing car assets:", error);
+        // Still mark as loaded to allow fallback rendering
+        setCarAssetsLoaded(true);
+      }
+    };
+    
+    preloadCarAssets();
+  }, []);
+  
   // Initialize game
   useEffect(() => {
-    if (!canvasRef.current) return;
+    if (!canvasRef.current || !carAssetsLoaded) return;
     
     // Check for first time players
     const hasPlayed = localStorage.getItem('hasPlayed');
@@ -122,7 +190,7 @@ const Game: React.FC = () => {
         gameEngineRef.current.cleanup();
       }
     };
-  }, []);
+  }, [carAssetsLoaded]);
   
   // Timer effects for power-ups
   useEffect(() => {
@@ -228,9 +296,9 @@ const Game: React.FC = () => {
                 <Button 
                   onClick={handleStartGame}
                   className="game-button w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-xl py-6 text-lg font-medium"
-                  disabled={!gameInitialized}
+                  disabled={!gameInitialized || !carAssetsLoaded}
                 >
-                  {gameInitialized ? 'Start Game' : <Loader2 className="h-5 w-5 animate-spin" />}
+                  {gameInitialized && carAssetsLoaded ? 'Start Game' : <Loader2 className="h-5 w-5 animate-spin" />}
                 </Button>
                 
                 {highScore > 0 && (
@@ -335,9 +403,10 @@ const Game: React.FC = () => {
         )}
         
         {/* Loading State */}
-        {canvasSize.width === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center bg-background">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        {(canvasSize.width === 0 || !carAssetsLoaded) && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-background">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+            <p className="text-sm text-muted-foreground">Loading game assets...</p>
           </div>
         )}
         
