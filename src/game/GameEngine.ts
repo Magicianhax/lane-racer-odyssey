@@ -909,9 +909,9 @@ export class GameEngine {
   }
   
   private collectPowerUp(powerUp: GameObject): void {
-    if (!powerUp.powerUpType) return;
+    if (powerUp.powerUpType === undefined) return;
     
-    // Fix the PowerUpType comparison by using strict equality with the enum values
+    // Fix the PowerUpType comparison by using proper enum comparison
     if (powerUp.powerUpType === PowerUpType.SLOW_SPEED) {
       this.activateSlowMode();
     } else if (powerUp.powerUpType === PowerUpType.SHIELD) {
