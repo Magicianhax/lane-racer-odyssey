@@ -1,3 +1,4 @@
+
 // Main game engine class
 
 export enum GameState {
@@ -74,10 +75,6 @@ export class GameEngine {
   // Explosion animation
   private explosions: ExplosionParticle[] = [];
   
-  // Player car image
-  private playerCarImage: HTMLImageElement | null = null;
-  private playerCarImageLoaded: boolean = false;
-  
   // Game parameters
   private score: number = 0;
   private gameSpeed: number = 1;
@@ -124,22 +121,11 @@ export class GameEngine {
     // Initialize game dimensions
     this.calculateDimensions();
     
-    // Load player car image
-    this.loadPlayerCarImage();
-    
     // Initialize player
     this.player = this.createPlayer();
     
     // Set up event listeners
     this.setupEventListeners();
-  }
-  
-  private loadPlayerCarImage(): void {
-    this.playerCarImage = new Image();
-    this.playerCarImage.src = '/lovable-uploads/533a1103-8c22-4d05-9b81-0cf90c1d8681.png';
-    this.playerCarImage.onload = () => {
-      this.playerCarImageLoaded = true;
-    };
   }
   
   private calculateDimensions(): void {
@@ -149,16 +135,10 @@ export class GameEngine {
     this.laneWidth = this.roadWidth / 3;
     
     // Calculate lane positions (center x of each lane)
-    // Divide the road into three equal parts
-    const leftLaneX = this.roadCenterX - this.roadWidth / 3 - this.laneWidth / 2;
-    const middleLaneX = this.roadCenterX;
-    const rightLaneX = this.roadCenterX + this.roadWidth / 3 + this.laneWidth / 2;
-    
-    // Set lane positions at the center of each lane
     this.lanePositions = [
-      leftLaneX,
-      middleLaneX,
-      rightLaneX
+      this.roadCenterX - this.laneWidth,
+      this.roadCenterX,
+      this.roadCenterX + this.laneWidth
     ];
   }
   
@@ -238,62 +218,60 @@ export class GameEngine {
           ctx.stroke();
         }
         
-        // Draw player car image if loaded, otherwise fall back to the original rendering
-        if (this.playerCarImage && this.playerCarImageLoaded) {
-          // Center the image on the player's position
-          ctx.drawImage(
-            this.playerCarImage,
-            this.player.x,
-            this.player.y,
-            this.player.width,
-            this.player.height
-          );
-        } else {
-          // Updated car drawing to match the screenshot
-          // Car body - light blue color
-          ctx.fillStyle = '#D3E4FD';
-          ctx.fillRect(this.player.x, this.player.y, this.player.width, this.player.height);
-          
-          // Windows - two black rectangles
-          ctx.fillStyle = '#1c1c1c';
-          const windowWidth = this.player.width * 0.8;
-          const windowHeight = this.player.height * 0.2;
-          const windowX = this.player.x + (this.player.width - windowWidth) / 2;
-          
-          // Top window (30% from top)
-          ctx.fillRect(
-            windowX,
-            this.player.y + this.player.height * 0.2,
-            windowWidth,
-            windowHeight
-          );
-          
-          // Bottom window (70% from top)
-          ctx.fillRect(
-            windowX,
-            this.player.y + this.player.height * 0.6,
-            windowWidth,
-            windowHeight
-          );
-          
-          // Yellow headlights at the bottom corners
-          ctx.fillStyle = '#ffcc00';
-          const lightSize = this.player.width * 0.15;
-          // Bottom left light
-          ctx.fillRect(
-            this.player.x,
-            this.player.y + this.player.height - lightSize,
-            lightSize,
-            lightSize
-          );
-          // Bottom right light
-          ctx.fillRect(
-            this.player.x + this.player.width - lightSize,
-            this.player.y + this.player.height - lightSize,
-            lightSize,
-            lightSize
-          );
-        }
+        // Car body
+        ctx.fillStyle = '#f5f5f7';
+        ctx.fillRect(this.player.x, this.player.y, this.player.width, this.player.height);
+        
+        // Windows
+        ctx.fillStyle = '#1c1c1c';
+        const windowWidth = this.player.width * 0.7;
+        const windowX = this.player.x + (this.player.width - windowWidth) / 2;
+        
+        // Front window
+        ctx.fillRect(
+          windowX,
+          this.player.y + this.player.height * 0.15,
+          windowWidth,
+          this.player.height * 0.2
+        );
+        
+        // Rear window
+        ctx.fillRect(
+          windowX,
+          this.player.y + this.player.height * 0.6,
+          windowWidth,
+          this.player.height * 0.2
+        );
+        
+        // Headlights
+        ctx.fillStyle = '#ffcc00';
+        ctx.fillRect(
+          this.player.x + this.player.width * 0.15,
+          this.player.y,
+          this.player.width * 0.15,
+          this.player.height * 0.05
+        );
+        ctx.fillRect(
+          this.player.x + this.player.width * 0.7,
+          this.player.y,
+          this.player.width * 0.15,
+          this.player.height * 0.05
+        );
+        
+        // Taillights
+        ctx.fillStyle = '#ff3333';
+        ctx.fillRect(
+          this.player.x + this.player.width * 0.15,
+          this.player.y + this.player.height * 0.95,
+          this.player.width * 0.15,
+          this.player.height * 0.05
+        );
+        ctx.fillRect(
+          this.player.x + this.player.width * 0.7,
+          this.player.y + this.player.height * 0.95,
+          this.player.width * 0.15,
+          this.player.height * 0.05
+        );
         
         ctx.restore();
       }
@@ -324,51 +302,62 @@ export class GameEngine {
         }
       },
       render: (ctx: CanvasRenderingContext2D) => {
-        // Updated enemy car drawing to match the screenshot
+        // Draw enemy car
         ctx.save();
         
-        // Car body - red color
+        // Car body
         ctx.fillStyle = '#ff5252';
         ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
         
-        // Windows - two black rectangles
+        // Windows
         ctx.fillStyle = '#1c1c1c';
-        const windowWidth = enemy.width * 0.8;
-        const windowHeight = enemy.height * 0.2;
+        const windowWidth = enemy.width * 0.7;
         const windowX = enemy.x + (enemy.width - windowWidth) / 2;
         
-        // Top window (20% from top)
+        // Front window
         ctx.fillRect(
           windowX,
-          enemy.y + enemy.height * 0.2,
+          enemy.y + enemy.height * 0.15,
           windowWidth,
-          windowHeight
+          enemy.height * 0.2
         );
         
-        // Bottom window (60% from top)
+        // Rear window
         ctx.fillRect(
           windowX,
           enemy.y + enemy.height * 0.6,
           windowWidth,
-          windowHeight
+          enemy.height * 0.2
         );
         
-        // Yellow headlights at the bottom corners
+        // Headlights
         ctx.fillStyle = '#ffcc00';
-        const lightSize = enemy.width * 0.15;
-        // Bottom left light
         ctx.fillRect(
-          enemy.x,
-          enemy.y + enemy.height - lightSize,
-          lightSize,
-          lightSize
+          enemy.x + enemy.width * 0.15,
+          enemy.y + enemy.height * 0.95,
+          enemy.width * 0.15,
+          enemy.height * 0.05
         );
-        // Bottom right light
         ctx.fillRect(
-          enemy.x + enemy.width - lightSize,
-          enemy.y + enemy.height - lightSize,
-          lightSize,
-          lightSize
+          enemy.x + enemy.width * 0.7,
+          enemy.y + enemy.height * 0.95,
+          enemy.width * 0.15,
+          enemy.height * 0.05
+        );
+        
+        // Taillights
+        ctx.fillStyle = '#ff3333';
+        ctx.fillRect(
+          enemy.x + enemy.width * 0.15,
+          enemy.y,
+          enemy.width * 0.15,
+          enemy.height * 0.05
+        );
+        ctx.fillRect(
+          enemy.x + enemy.width * 0.7,
+          enemy.y,
+          enemy.width * 0.15,
+          enemy.height * 0.05
         );
         
         ctx.restore();
@@ -401,23 +390,18 @@ export class GameEngine {
         }
       },
       render: (ctx: CanvasRenderingContext2D) => {
-        // Simplified seed drawing to match the screenshot - simple yellow square with glow
+        // Draw seed
         ctx.save();
+        ctx.fillStyle = '#ffcd3c';
         
-        // Yellow square with rounded corners
+        // Seed with pulsing effect
+        const pulseScale = 1 + 0.1 * Math.sin(Date.now() * 0.005);
         const centerX = seed.x + seed.width / 2;
         const centerY = seed.y + seed.height / 2;
-        
-        // Create square with slight pulse
-        const pulseScale = 1 + 0.1 * Math.sin(Date.now() * 0.005);
         const scaledSize = seed.width * pulseScale;
         
-        ctx.fillStyle = '#ffcd3c';
-        ctx.shadowColor = '#ffcd3c';
-        ctx.shadowBlur = 10;
-        
-        // Draw rounded rectangle
-        const radius = scaledSize / 5;
+        // Create rounded rectangle
+        const radius = scaledSize / 4;
         
         ctx.beginPath();
         ctx.moveTo(centerX - scaledSize / 2 + radius, centerY - scaledSize / 2);
@@ -431,7 +415,20 @@ export class GameEngine {
         ctx.arc(centerX - scaledSize / 2 + radius, centerY - scaledSize / 2 + radius, radius, Math.PI, 3 * Math.PI / 2);
         ctx.closePath();
         
+        // Fill with gradient
+        const gradient = ctx.createRadialGradient(
+          centerX, centerY, 0,
+          centerX, centerY, scaledSize / 2
+        );
+        gradient.addColorStop(0, '#fff9c4');
+        gradient.addColorStop(1, '#ffcd3c');
+        ctx.fillStyle = gradient;
         ctx.fill();
+        
+        // Add glow effect
+        ctx.shadowColor = '#ffcd3c';
+        ctx.shadowBlur = 10;
+        ctx.stroke();
         
         ctx.restore();
       }
@@ -630,6 +627,7 @@ export class GameEngine {
     this.onGameStateChange(this.gameState);
   }
   
+  // Changed from private to public to allow access from the Game component
   public resizeCanvas(): void {
     // Update canvas and game dimensions
     this.calculateDimensions();
@@ -876,148 +874,146 @@ export class GameEngine {
   
   private increaseDifficulty(): void {
     // Increase game speed
-    this.gameSpeed = Math.min(this.gameSpeed + 0.15, 2.5);
+    if (this.gameSpeed < 2) { // Cap at 2x speed
+      this.gameSpeed += 0.1;
+    }
     
-    // Decrease spawn intervals
-    this.enemySpawnInterval = Math.max(this.enemySpawnInterval - 200, 800);
-    this.seedSpawnInterval = Math.max(this.seedSpawnInterval - 50, 600);
-  }
-  
-  public handleTouchLeft(): void {
-    this.movePlayerLeft();
-  }
-  
-  public handleTouchRight(): void {
-    this.movePlayerRight();
-  }
-  
-  public cleanup(): void {
-    // Clean up event listeners and cancel animation frame
-    if (this.animationFrameId !== null) {
-      cancelAnimationFrame(this.animationFrameId);
-      this.animationFrameId = null;
+    // Decrease enemy spawn interval
+    if (this.enemySpawnInterval > 500) { // Min 0.5 seconds
+      this.enemySpawnInterval *= 0.9;
     }
   }
   
   private checkCollisions(): void {
-    // Check player-enemy collisions
+    // Check player collision with enemies
     for (const enemy of this.enemies) {
-      if (this.isColliding(this.player, enemy)) {
-        if (this.player.shield) {
-          // If player has shield, just destroy the enemy
-          enemy.active = false;
-          
-          // Create explosion effect
+      if (this.checkObjectCollision(this.player, enemy)) {
+        if (!this.player.shield) {
+          this.handlePlayerCrash();
           this.createExplosion(
             enemy.x + enemy.width / 2,
             enemy.y + enemy.height / 2,
-            '#ff5252'
+            enemy.width
           );
-        } else {
-          // Reduce player lives and create explosion
-          this.player.lives--;
-          this.onLivesChange(this.player.lives);
-          
-          // Create explosion effect
-          this.createExplosion(
-            enemy.x + enemy.width / 2,
-            enemy.y + enemy.height / 2,
-            '#ff5252'
-          );
-          
-          // Remove the enemy
-          enemy.active = false;
-          
-          // Check if game over
-          if (this.player.lives <= 0) {
-            this.gameOver();
-            return;
-          }
         }
+        enemy.active = false;
       }
     }
     
-    // Check player-seed collisions
+    // Check player collision with seeds
     for (const seed of this.seeds) {
-      if (this.isColliding(this.player, seed)) {
-        // Increase score and remove the seed
-        this.score += 10;
-        this.onScoreChange(this.score);
+      if (this.checkObjectCollision(this.player, seed)) {
+        this.collectSeed();
         seed.active = false;
       }
     }
     
-    // Check player-powerup collisions
+    // Check player collision with power-ups
     for (const powerUp of this.powerUps) {
-      if (this.isColliding(this.player, powerUp) && powerUp.powerUpType !== undefined) {
+      if (this.checkObjectCollision(this.player, powerUp)) {
         this.collectPowerUp(powerUp);
         powerUp.active = false;
       }
     }
   }
   
-  private collectPowerUp(powerUp: GameObject): void {
-    if (powerUp.powerUpType === undefined) return;
-    
-    // Apply power-up effects based on type
-    switch (powerUp.powerUpType) {
-      case PowerUpType.SLOW_SPEED:
-        // Activate slow mode
-        this.slowModeActive = true;
-        this.slowModeTimer = this.slowModeDuration;
-        this.onPowerUpStart(PowerUpType.SLOW_SPEED, this.slowModeDuration);
-        break;
-      case PowerUpType.SHIELD:
-        // Activate shield
-        this.player.shield = true;
-        this.player.shieldTimer = 3000; // 3 seconds
-        this.onPowerUpStart(PowerUpType.SHIELD, 3000);
-        break;
-      case PowerUpType.EXTRA_LIFE:
-        // Add extra life (up to max 5)
-        if (this.player.lives < 5) {
-          this.player.lives++;
-          this.onLivesChange(this.player.lives);
-          this.onPowerUpStart(PowerUpType.EXTRA_LIFE, 0);
-        }
-        break;
-    }
-  }
-  
-  private isColliding(a: GameObject, b: GameObject): boolean {
-    return (
-      a.x < b.x + b.width &&
-      a.x + a.width > b.x &&
-      a.y < b.y + b.height &&
-      a.y + a.height > b.y
-    );
-  }
-  
-  private createExplosion(x: number, y: number, color: string): void {
-    // Create multiple explosion particles
-    const particleCount = 30;
-    const particles: ExplosionParticle[] = [];
+  private createExplosion(x: number, y: number, size: number): void {
+    // Create explosion particles
+    const particleCount = 40; // Number of particles
+    const colors = ['#ff5252', '#ffcd3c', '#ff9500', '#ff3d00', '#ffd600'];
     
     for (let i = 0; i < particleCount; i++) {
+      // Create random angle and velocity
       const angle = Math.random() * Math.PI * 2;
-      const speed = 2 + Math.random() * 3;
-      const size = 3 + Math.random() * 7;
-      const lifetime = 500 + Math.random() * 1000;
+      const speed = Math.random() * 5 + 2;
       
-      particles.push({
+      // Calculate velocity components
+      const vx = Math.cos(angle) * speed;
+      const vy = Math.sin(angle) * speed;
+      
+      // Random particle size
+      const particleSize = Math.random() * (size / 8) + (size / 16);
+      
+      // Random color from predefined array
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      
+      // Random lifetime between 500ms and 1000ms
+      const lifetime = Math.random() * 500 + 500;
+      
+      // Create and add particle
+      this.explosions.push({
         x,
         y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        size,
+        vx,
+        vy,
+        size: particleSize,
         color,
         alpha: 1,
         lifetime,
         currentLife: lifetime
       });
     }
+  }
+  
+  private checkObjectCollision(obj1: GameObject, obj2: GameObject): boolean {
+    return (
+      obj1.x < obj2.x + obj2.width &&
+      obj1.x + obj1.width > obj2.x &&
+      obj1.y < obj2.y + obj2.height &&
+      obj1.y + obj1.height > obj2.y
+    );
+  }
+  
+  private handlePlayerCrash(): void {
+    // Decrease player lives
+    this.player.lives--;
+    this.onLivesChange(this.player.lives);
     
-    this.explosions.push(...particles);
+    // Check game over
+    if (this.player.lives <= 0) {
+      this.gameOver();
+    }
+  }
+  
+  private collectSeed(): void {
+    // Increase score
+    this.score += 10;
+    this.onScoreChange(this.score);
+    
+    // Play sound effect (to be implemented)
+  }
+  
+  private collectPowerUp(powerUp: GameObject): void {
+    if (powerUp.powerUpType === undefined) return;
+    
+    // Fix the PowerUpType comparison by using proper enum comparison
+    if (powerUp.powerUpType === PowerUpType.SLOW_SPEED) {
+      this.activateSlowMode();
+    } else if (powerUp.powerUpType === PowerUpType.SHIELD) {
+      this.activateShield();
+    } else if (powerUp.powerUpType === PowerUpType.EXTRA_LIFE) {
+      this.giveExtraLife();
+    }
+    
+    // Play sound effect (to be implemented)
+  }
+  
+  private activateSlowMode(): void {
+    this.slowModeActive = true;
+    this.slowModeTimer = this.slowModeDuration;
+    this.onPowerUpStart(PowerUpType.SLOW_SPEED, this.slowModeDuration);
+  }
+  
+  private activateShield(): void {
+    this.player.shield = true;
+    this.player.shieldTimer = 3000; // 3 seconds
+    this.onPowerUpStart(PowerUpType.SHIELD, 3000);
+  }
+  
+  private giveExtraLife(): void {
+    this.player.lives++;
+    this.onLivesChange(this.player.lives);
+    this.onPowerUpStart(PowerUpType.EXTRA_LIFE, 0);
   }
   
   private render(): void {
@@ -1027,47 +1023,46 @@ export class GameEngine {
     // Draw background
     this.drawBackground();
     
-    // Draw road
-    this.drawRoad();
+    // Draw lanes
+    this.drawLanes();
     
-    // Draw objects
-    this.drawGameObjects();
+    // Draw game objects
+    this.seeds.forEach(seed => seed.render(this.ctx));
+    this.powerUps.forEach(powerUp => powerUp.render(this.ctx));
+    this.enemies.forEach(enemy => enemy.render(this.ctx));
+    this.player.render(this.ctx);
     
     // Draw explosion particles
-    this.drawExplosions();
+    this.renderExplosions();
+  }
+  
+  private renderExplosions(): void {
+    if (this.explosions.length === 0) return;
     
-    // Draw pause overlay
-    if (this.gameState === GameState.PAUSED) {
-      this.drawPauseOverlay();
+    for (const particle of this.explosions) {
+      this.ctx.save();
+      
+      // Set transparency based on particle life
+      this.ctx.globalAlpha = particle.alpha;
+      
+      // Draw particle
+      this.ctx.fillStyle = particle.color;
+      this.ctx.beginPath();
+      this.ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+      this.ctx.fill();
+      
+      // Optional: Add glow effect
+      this.ctx.shadowColor = particle.color;
+      this.ctx.shadowBlur = 10;
+      this.ctx.fill();
+      
+      this.ctx.restore();
     }
   }
   
   private drawBackground(): void {
-    // Gradient sky background
-    const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
-    gradient.addColorStop(0, '#1a2a6c');
-    gradient.addColorStop(0.5, '#2a3a7c');
-    gradient.addColorStop(1, '#3a4a8c');
-    
-    this.ctx.fillStyle = gradient;
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    
-    // Add some stars
-    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-    for (let i = 0; i < 50; i++) {
-      const x = Math.random() * this.canvas.width;
-      const y = (Math.random() * this.canvas.height) / 2;
-      const size = Math.random() * 2;
-      
-      this.ctx.beginPath();
-      this.ctx.arc(x, y, size, 0, Math.PI * 2);
-      this.ctx.fill();
-    }
-  }
-  
-  private drawRoad(): void {
-    // Road background - darker gray to match screenshot
-    this.ctx.fillStyle = '#333333';
+    // Draw road background
+    this.ctx.fillStyle = '#1c1c1c';
     this.ctx.fillRect(
       this.roadCenterX - this.roadWidth / 2,
       0,
@@ -1075,71 +1070,66 @@ export class GameEngine {
       this.canvas.height
     );
     
-    // Lane dividers - pure white dashed lines
+    // Draw side areas
+    this.ctx.fillStyle = '#121212';
+    this.ctx.fillRect(
+      0,
+      0,
+      this.roadCenterX - this.roadWidth / 2,
+      this.canvas.height
+    );
+    this.ctx.fillRect(
+      this.roadCenterX + this.roadWidth / 2,
+      0,
+      this.canvas.width - (this.roadCenterX + this.roadWidth / 2),
+      this.canvas.height
+    );
+  }
+  
+  private drawLanes(): void {
+    // Draw lane dividers
     this.ctx.strokeStyle = '#ffffff';
-    this.ctx.setLineDash([20, 15]);
-    this.ctx.lineWidth = 3;
+    this.ctx.lineWidth = 5;
+    this.ctx.setLineDash([20, 20]); // Dashed line
+    
+    // Animate lane dividers
+    const dashOffset = (this.gameTime * 0.1) % 40;
+    this.ctx.lineDashOffset = dashOffset;
     
     // Left lane divider
     this.ctx.beginPath();
-    this.ctx.moveTo(this.roadCenterX - this.roadWidth / 3, 0);
-    this.ctx.lineTo(this.roadCenterX - this.roadWidth / 3, this.canvas.height);
+    this.ctx.moveTo(this.roadCenterX - this.laneWidth / 2, 0);
+    this.ctx.lineTo(this.roadCenterX - this.laneWidth / 2, this.canvas.height);
     this.ctx.stroke();
     
     // Right lane divider
     this.ctx.beginPath();
-    this.ctx.moveTo(this.roadCenterX + this.roadWidth / 3, 0);
-    this.ctx.lineTo(this.roadCenterX + this.roadWidth / 3, this.canvas.height);
+    this.ctx.moveTo(this.roadCenterX + this.laneWidth / 2, 0);
+    this.ctx.lineTo(this.roadCenterX + this.laneWidth / 2, this.canvas.height);
     this.ctx.stroke();
     
     // Reset line dash
     this.ctx.setLineDash([]);
   }
   
-  private drawGameObjects(): void {
-    // Draw seeds
-    this.seeds.forEach(seed => seed.render(this.ctx));
-    
-    // Draw power-ups
-    this.powerUps.forEach(powerUp => powerUp.render(this.ctx));
-    
-    // Draw enemies
-    this.enemies.forEach(enemy => enemy.render(this.ctx));
-    
-    // Draw player
-    this.player.render(this.ctx);
+  public handleTouchLeft(): void {
+    if (this.gameState === GameState.GAMEPLAY) {
+      this.movePlayerLeft();
+    }
   }
   
-  private drawExplosions(): void {
-    // Draw explosion particles
-    this.explosions.forEach(particle => {
-      this.ctx.save();
-      this.ctx.globalAlpha = particle.alpha;
-      this.ctx.fillStyle = particle.color;
-      this.ctx.beginPath();
-      this.ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-      this.ctx.fill();
-      this.ctx.restore();
-    });
+  public handleTouchRight(): void {
+    if (this.gameState === GameState.GAMEPLAY) {
+      this.movePlayerRight();
+    }
   }
   
-  private drawPauseOverlay(): void {
-    // Darkened background
-    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+  public cleanup(): void {
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
     
-    // Pause text
-    this.ctx.fillStyle = '#ffffff';
-    this.ctx.font = '36px Arial';
-    this.ctx.textAlign = 'center';
-    this.ctx.fillText('PAUSED', this.canvas.width / 2, this.canvas.height / 2);
-    
-    // Resume instruction
-    this.ctx.font = '18px Arial';
-    this.ctx.fillText(
-      'Press P or ESC to resume',
-      this.canvas.width / 2,
-      this.canvas.height / 2 + 40
-    );
+    // Remove event listeners if needed
   }
 }
