@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2 } from
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
-const DEFAULT_PLAYER_CAR = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgNjQgMTI4IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHg9IjEwIiB5PSIxMCIgd2lkdGg9IjQ0IiBoZWlnaHQ9IjEwOCIgcng9IjYiIGZpbGw9IiMzQ0JCQkIiLz48cmVjdCB4PSIxNiIgeT0iMzIiIHdpZHRoPSIzMiIgaGVpZ2h0PSIyNCIgZmlsbD0iIzIyMjgzOCIvPjxjaXJjbGUgY3g9IjIwIiBjeT0iMTAwIiByPSI4IiBmaWxsPSIjMjIyIi8+PGNpcmNsZSBjeD0iNDQiIGN5PSIxMDAiIHI9IjgiIGZpbGw9IiMyMjIiLz48Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSI0IiBmaWxsPSIjRkZGRjAwIi8+PGNpcmNsZSBjeD0iNDgiIGN5PSIxNiIgcj0iNCIgZmlsbD0iI0ZGRkYwMCIvPjwvc3ZnPg==';
+const DEFAULT_PLAYER_CAR = 'https://i.imgur.com/JtOUSct.png';
 const DEFAULT_ENEMY_CAR = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgNjQgMTI4IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHg9IjEwIiB5PSIxMCIgd2lkdGg9IjQ0IiBoZWlnaHQ9IjEwOCIgcng9IjYiIGZpbGw9IiNERDM3M0MiLz48cmVjdCB4PSIxNiIgeT0iMzIiIHdpZHRoPSIzMiIgaGVpZ2h0PSIyNCIgZmlsbD0iIzIyMjgzOCIvPjxjaXJjbGUgY3g9IjIwIiBjeT0iMTAwIiByPSI4IiBmaWxsPSIjMjIyIi8+PGNpcmNsZSBjeD0iNDQiIGN5PSIxMDAiIHI9IjgiIGZpbGw9IiMyMjIiLz48Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSI0IiBmaWxsPSIjRkZGRjAwIi8+PGNpcmNsZSBjeD0iNDgiIGN5PSIxNiIgcj0iNCIgZmlsbD0iI0ZGRkYwMCIvPjwvc3ZnPg==';
 
 const Game: React.FC = () => {
@@ -33,45 +33,25 @@ const Game: React.FC = () => {
   useEffect(() => {
     const preloadCarAssets = async () => {
       try {
-        console.log("Loading custom car assets from uploads...");
+        console.log("Loading car assets...");
         
         try {
-          const checkPlayerImage = await fetch('/lovable-uploads/e0e56876-6200-411c-bf4c-0e18962da129.png', { method: 'HEAD' })
-            .then(r => r.ok);
-          
-          const checkEnemyImage = await fetch('/lovable-uploads/97084615-c052-447d-a950-1ac8cf98cccf.png', { method: 'HEAD' })
-            .then(r => r.ok);
-            
-          if (!checkPlayerImage || !checkEnemyImage) {
-            console.log("One or both image HEAD requests failed, using default images");
-            setPlayerCarURL(DEFAULT_PLAYER_CAR);
-            setEnemyCarURL(DEFAULT_ENEMY_CAR);
-            setCarAssetsLoaded(true);
-            return;
-          }
-          
           const playerImg = new Image();
-          const enemyImg = new Image();
-          
           let playerLoaded = false;
-          let enemyLoaded = false;
-          
-          playerImg.crossOrigin = "anonymous";
-          enemyImg.crossOrigin = "anonymous";
           
           const playerPromise = new Promise<string>((resolve, reject) => {
             playerImg.onload = () => {
-              console.log("Player image fully loaded");
+              console.log("Player image from imgur fully loaded");
               playerLoaded = true;
               resolve(playerImg.src);
             };
             
             playerImg.onerror = (e) => {
-              console.error("Error loading player image:", e);
+              console.error("Error loading player image from imgur:", e);
               resolve(DEFAULT_PLAYER_CAR);
             };
             
-            playerImg.src = '/lovable-uploads/e0e56876-6200-411c-bf4c-0e18962da129.png';
+            playerImg.src = DEFAULT_PLAYER_CAR;
             
             setTimeout(() => {
               if (!playerLoaded) {
@@ -80,6 +60,9 @@ const Game: React.FC = () => {
               }
             }, 3000);
           });
+          
+          const enemyImg = new Image();
+          let enemyLoaded = false;
           
           const enemyPromise = new Promise<string>((resolve, reject) => {
             enemyImg.onload = () => {
@@ -93,7 +76,7 @@ const Game: React.FC = () => {
               resolve(DEFAULT_ENEMY_CAR);
             };
             
-            enemyImg.src = '/lovable-uploads/97084615-c052-447d-a950-1ac8cf98cccf.png';
+            enemyImg.src = DEFAULT_ENEMY_CAR;
             
             setTimeout(() => {
               if (!enemyLoaded) {
@@ -114,7 +97,7 @@ const Game: React.FC = () => {
           });
           
         } catch (error) {
-          console.error("Error loading custom car images:", error);
+          console.error("Error loading car images:", error);
           setPlayerCarURL(DEFAULT_PLAYER_CAR);
           setEnemyCarURL(DEFAULT_ENEMY_CAR);
         }
@@ -124,7 +107,7 @@ const Game: React.FC = () => {
       } catch (error) {
         console.error("Error in preloadCarAssets:", error);
         setCarAssetsLoaded(true);
-        setLoadingError("Failed to load custom car images. Using default cars instead.");
+        setLoadingError("Failed to load car images. Using default cars instead.");
       }
     };
     
