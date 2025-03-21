@@ -6,8 +6,8 @@ import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2 } from
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
-const DEFAULT_PLAYER_CAR = 'https://i.imgur.com/JtOUSct.png';
-const DEFAULT_ENEMY_CARS = ['https://i.imgur.com/h3sp6nL.png', 'https://i.imgur.com/S3rzkPt.png'];
+const DEFAULT_PLAYER_CAR = 'https://i.imgur.com/lGu5sXs.png';
+const DEFAULT_ENEMY_CARS = ['https://i.imgur.com/SlsgTeq.png', 'https://i.imgur.com/5k0TGAP.png'];
 
 const Game: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
