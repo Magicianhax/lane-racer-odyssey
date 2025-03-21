@@ -1,3 +1,4 @@
+
 // Main game engine class
 
 export enum GameState {
@@ -36,6 +37,19 @@ export interface PlayerCar extends GameObject {
   transitioning: boolean;
 }
 
+// New interface for explosion particles
+export interface ExplosionParticle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  color: string;
+  alpha: number;
+  lifetime: number;
+  currentLife: number;
+}
+
 export interface GameConfig {
   canvas: HTMLCanvasElement;
   onScoreChange: (score: number) => void;
@@ -57,6 +71,9 @@ export class GameEngine {
   private enemies: GameObject[] = [];
   private seeds: GameObject[] = [];
   private powerUps: GameObject[] = [];
+  
+  // Explosion animation
+  private explosions: ExplosionParticle[] = [];
   
   // Game parameters
   private score: number = 0;
@@ -639,6 +656,7 @@ export class GameEngine {
     this.enemies = [];
     this.seeds = [];
     this.powerUps = [];
+    this.explosions = []; // Clear any active explosions
     this.enemySpawnInterval = 2000;
     this.seedSpawnInterval = 1000;
     this.powerUpSpawnInterval = 15000;
@@ -763,8 +781,22 @@ export class GameEngine {
     this.powerUps.forEach(powerUp => powerUp.update(deltaTime));
     this.powerUps = this.powerUps.filter(powerUp => powerUp.active);
     
+    // Update explosion particles
+    this.updateExplosions(deltaTime);
+    
     // Check collisions
     this.checkCollisions();
+  }
+  
+  private updateExplosions(deltaTime: number): void {
+    // Update and filter out expired explosion particles
+    this.explosions = this.explosions.filter(particle => {
+      particle.x += particle.vx * deltaTime / 50;
+      particle.y += particle.vy * deltaTime / 50;
+      particle.currentLife -= deltaTime;
+      particle.alpha = particle.currentLife / particle.lifetime;
+      return particle.currentLife > 0;
+    });
   }
   
   private spawnEnemy(): void {
@@ -858,6 +890,11 @@ export class GameEngine {
       if (this.checkObjectCollision(this.player, enemy)) {
         if (!this.player.shield) {
           this.handlePlayerCrash();
+          this.createExplosion(
+            enemy.x + enemy.width / 2,
+            enemy.y + enemy.height / 2,
+            enemy.width
+          );
         }
         enemy.active = false;
       }
@@ -877,6 +914,44 @@ export class GameEngine {
         this.collectPowerUp(powerUp);
         powerUp.active = false;
       }
+    }
+  }
+  
+  private createExplosion(x: number, y: number, size: number): void {
+    // Create explosion particles
+    const particleCount = 40; // Number of particles
+    const colors = ['#ff5252', '#ffcd3c', '#ff9500', '#ff3d00', '#ffd600'];
+    
+    for (let i = 0; i < particleCount; i++) {
+      // Create random angle and velocity
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 5 + 2;
+      
+      // Calculate velocity components
+      const vx = Math.cos(angle) * speed;
+      const vy = Math.sin(angle) * speed;
+      
+      // Random particle size
+      const particleSize = Math.random() * (size / 8) + (size / 16);
+      
+      // Random color from predefined array
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      
+      // Random lifetime between 500ms and 1000ms
+      const lifetime = Math.random() * 500 + 500;
+      
+      // Create and add particle
+      this.explosions.push({
+        x,
+        y,
+        vx,
+        vy,
+        size: particleSize,
+        color,
+        alpha: 1,
+        lifetime,
+        currentLife: lifetime
+      });
     }
   }
   
@@ -956,6 +1031,33 @@ export class GameEngine {
     this.powerUps.forEach(powerUp => powerUp.render(this.ctx));
     this.enemies.forEach(enemy => enemy.render(this.ctx));
     this.player.render(this.ctx);
+    
+    // Draw explosion particles
+    this.renderExplosions();
+  }
+  
+  private renderExplosions(): void {
+    if (this.explosions.length === 0) return;
+    
+    for (const particle of this.explosions) {
+      this.ctx.save();
+      
+      // Set transparency based on particle life
+      this.ctx.globalAlpha = particle.alpha;
+      
+      // Draw particle
+      this.ctx.fillStyle = particle.color;
+      this.ctx.beginPath();
+      this.ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+      this.ctx.fill();
+      
+      // Optional: Add glow effect
+      this.ctx.shadowColor = particle.color;
+      this.ctx.shadowBlur = 10;
+      this.ctx.fill();
+      
+      this.ctx.restore();
+    }
   }
   
   private drawBackground(): void {
