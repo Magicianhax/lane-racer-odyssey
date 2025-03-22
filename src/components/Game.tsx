@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine, GameState, PowerUpType } from '../game/GameEngine';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2, Pause, Play, Home, RefreshCw, VolumeX, Volume2, Settings } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2, Pause, Play, Home, RefreshCw, VolumeX, Volume2, Settings, AlertTriangle } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
@@ -316,7 +316,7 @@ const Game: React.FC = () => {
     setTimeout(() => {
       setInCrashRecovery(false);
       
-      if (gameState === GameState.GAMEPLAY && carSoundRef.current) {
+      if (gameState === GameState.GAMEPLAY && carSoundRef.current && soundEnabled) {
         carSoundRef.current.play().catch(err => console.warn("Could not resume car sound:", err));
       }
     }, 2500);
@@ -443,6 +443,14 @@ const Game: React.FC = () => {
             )}
           </div>
         </div>
+        
+        {inCrashRecovery && gameState === GameState.GAMEPLAY && (
+          <div className="absolute inset-0 bg-red-500/20 animate-pulse flex items-center justify-center z-30 backdrop-blur-sm transition-all duration-300">
+            <div className="bg-black/50 rounded-full p-4 animate-bounce">
+              <AlertTriangle className="h-12 w-12 text-red-500" />
+            </div>
+          </div>
+        )}
         
         {gameState === GameState.START_SCREEN && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-black/20 to-black/80 backdrop-blur-sm transition-all duration-500 animate-fade-in">
