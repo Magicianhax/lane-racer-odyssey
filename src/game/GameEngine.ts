@@ -916,3 +916,4 @@ export class GameEngine {
               centerX + heartSize, centerY - heartSize * 1.1,
               centerX + heartSize, centerY - heartSize * 0.5
             );
+            ctx.bezier
