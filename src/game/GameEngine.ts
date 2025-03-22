@@ -59,6 +59,7 @@ export interface GameConfig {
   customAssets?: {
     playerCarURL: string;
     enemyCarURLs: string[];
+    seedImageURL?: string; // Added support for seed image
     useDefaultsIfBroken?: boolean;
   };
 }
@@ -76,11 +77,13 @@ export class GameEngine {
   private seeds: GameObject[] = [];
   private powerUps: GameObject[] = [];
   
-  // Car images
+  // Game images
   private playerCarImage: HTMLImageElement;
   private enemyCarImages: HTMLImageElement[] = [];
+  private seedImage: HTMLImageElement | null = null; // Added seed image
   private playerCarLoaded: boolean = false;
   private enemyCarLoaded: boolean = false;
+  private seedImageLoaded: boolean = false; // Added seed image loaded flag
   private imagesLoaded: boolean = false;
   private imageLoadErrors: boolean = false;
   
@@ -148,6 +151,12 @@ export class GameEngine {
     this.playerCarImage = new Image();
     this.playerCarImage.crossOrigin = "anonymous"; // Try to fix CORS issues
     
+    // Create seed image
+    if (config.customAssets?.seedImageURL) {
+      this.seedImage = new Image();
+      this.seedImage.crossOrigin = "anonymous";
+    }
+    
     // Use custom assets if provided
     if (config.customAssets) {
       console.log("Using custom car assets:", config.customAssets);
@@ -211,11 +220,34 @@ export class GameEngine {
         this.enemyCarLoaded = true;
         this.checkAllImagesLoaded();
       }
+      
+      // Load seed image if provided
+      if (config.customAssets.seedImageURL && this.seedImage) {
+        this.seedImage.onload = () => {
+          console.log("Seed image loaded successfully");
+          this.seedImageLoaded = true;
+          this.checkAllImagesLoaded();
+        };
+        
+        this.seedImage.onerror = (e) => {
+          console.error("Error loading seed image:", e);
+          this.imageLoadErrors = true;
+          this.seedImageLoaded = true; // Consider it "loaded" so we can continue with fallbacks
+          this.checkAllImagesLoaded();
+        };
+        
+        this.seedImage.src = config.customAssets.seedImageURL;
+      } else {
+        // If no seed image URL provided, consider it loaded
+        this.seedImageLoaded = true;
+        this.checkAllImagesLoaded();
+      }
     } else {
       console.error("No custom assets provided, game cannot initialize properly");
       // Mark as loaded but with errors, so we can use fallbacks
       this.playerCarLoaded = true;
       this.enemyCarLoaded = true;
+      this.seedImageLoaded = true;
       this.imageLoadErrors = true;
       this.imagesLoaded = true;
       // Initialize player after images are loaded or failed
@@ -229,7 +261,6 @@ export class GameEngine {
     this.loadHighScore();
   }
 
-  // Add the missing methods
   public resizeCanvas(): void {
     this.calculateDimensions();
     // If player exists, update its position based on new dimensions
@@ -277,7 +308,6 @@ export class GameEngine {
     this.movePlayerRight();
   }
   
-  // Helper methods for the newly added public methods
   private setupEventListeners(): void {
     window.addEventListener('keydown', this.handleKeyDown.bind(this));
   }
@@ -610,36 +640,69 @@ export class GameEngine {
       render: (ctx: CanvasRenderingContext2D) => {
         ctx.save();
         
-        // Draw seed (a small circle)
-        ctx.fillStyle = '#ffdb4d';
-        ctx.beginPath();
-        ctx.arc(
-          seed.x + seed.width / 2,
-          seed.y + seed.height / 2,
-          seed.width / 2,
-          0,
-          Math.PI * 2
-        );
-        ctx.fill();
-        
-        // Add a small glow effect
-        ctx.shadowColor = '#ffdb4d';
-        ctx.shadowBlur = 10;
-        ctx.beginPath();
-        ctx.arc(
-          seed.x + seed.width / 2,
-          seed.y + seed.height / 2,
-          seed.width / 3,
-          0,
-          Math.PI * 2
-        );
-        ctx.fill();
+        // Try to use the seed image if available
+        if (this.seedImage) {
+          try {
+            ctx.drawImage(
+              this.seedImage,
+              seed.x,
+              seed.y,
+              seed.width,
+              seed.height
+            );
+            
+            // Add a subtle glow effect behind the image
+            ctx.shadowColor = '#ffdb4d';
+            ctx.shadowBlur = 10;
+            ctx.drawImage(
+              this.seedImage,
+              seed.x,
+              seed.y,
+              seed.width,
+              seed.height
+            );
+            ctx.shadowBlur = 0;
+          } catch (e) {
+            // Fall back to drawing a circle if the image fails
+            this.drawSeedFallback(ctx, seed);
+          }
+        } else {
+          // No image available, use fallback
+          this.drawSeedFallback(ctx, seed);
+        }
         
         ctx.restore();
       }
     };
     
     this.seeds.push(seed);
+  }
+
+  private drawSeedFallback(ctx: CanvasRenderingContext2D, seed: GameObject): void {
+    // Draw seed (a small circle)
+    ctx.fillStyle = '#ffdb4d';
+    ctx.beginPath();
+    ctx.arc(
+      seed.x + seed.width / 2,
+      seed.y + seed.height / 2,
+      seed.width / 2,
+      0,
+      Math.PI * 2
+    );
+    ctx.fill();
+    
+    // Add a small glow effect
+    ctx.shadowColor = '#ffdb4d';
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.arc(
+      seed.x + seed.width / 2,
+      seed.y + seed.height / 2,
+      seed.width / 3,
+      0,
+      Math.PI * 2
+    );
+    ctx.fill();
   }
 
   private spawnPowerUp(): void {
@@ -976,8 +1039,8 @@ export class GameEngine {
   }
   
   private checkAllImagesLoaded(): void {
-    if (this.playerCarLoaded && this.enemyCarLoaded) {
-      console.log("All car images processed, can continue with game initialization");
+    if (this.playerCarLoaded && this.enemyCarLoaded && this.seedImageLoaded) {
+      console.log("All game images processed, can continue with game initialization");
       this.imagesLoaded = true;
       // Initialize player after images are loaded or failed
       this.player = this.createPlayer();
