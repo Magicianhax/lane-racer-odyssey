@@ -333,14 +333,14 @@ const Game: React.FC = () => {
           <div className="flex items-center space-x-2">
             {activeSlowMode && (
               <div className="flex items-center space-x-1 glassmorphism px-3 py-1 rounded-full">
-                <Clock className="w-4 h-4 text-purple-500" />
+                <Clock className="w-4 h-4 text-[#a170fc]" />
                 <span className="text-sm font-medium">{Math.ceil(slowModeTimer / 1000)}s</span>
               </div>
             )}
             
             {activeShield && (
               <div className="flex items-center space-x-1 glassmorphism px-3 py-1 rounded-full">
-                <Shield className="w-4 h-4 text-cyan-500" />
+                <Shield className="w-4 h-4 text-[#64d2ff]" />
                 <span className="text-sm font-medium">{Math.ceil(shieldTimer / 1000)}s</span>
               </div>
             )}
@@ -349,22 +349,22 @@ const Game: React.FC = () => {
         
         {gameState === GameState.START_SCREEN && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-black/20 to-black/80 backdrop-blur-sm transition-all duration-500 animate-fade-in">
-            <div className="glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in">
-              <h1 className="text-4xl font-bold mb-2 tracking-tight">Lane Runner</h1>
-              <div className="chip text-xs bg-primary/10 text-primary px-3 py-1 rounded-full mb-4 inline-block">FAST-PACED ACTION</div>
+            <div className="glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
+              <h1 className="text-4xl font-bold mb-2 tracking-tight text-white">Lane Runner</h1>
+              <div className="chip text-xs bg-[#91d3d1]/10 text-[#91d3d1] px-3 py-1 rounded-full mb-4 inline-block">FAST-PACED ACTION</div>
               <p className="text-gray-300 mb-6">Navigate through traffic, collect seeds, and survive as long as possible!</p>
               
               <div className="flex flex-col space-y-4 items-center">
                 <Button 
                   onClick={handleStartGame}
-                  className="game-button w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-xl py-6 text-lg font-medium"
+                  className="game-button w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 rounded-xl py-6 text-lg font-medium shadow-lg shadow-[#91d3d1]/20"
                   disabled={!gameInitialized}
                 >
                   {gameInitialized ? 'Start Game' : <Loader2 className="h-5 w-5 animate-spin" />}
                 </Button>
                 
                 {highScore > 0 && (
-                  <div className="flex items-center space-x-2 text-amber-400">
+                  <div className="flex items-center space-x-2 text-[#91d3d1]">
                     <Trophy className="w-5 h-5" />
                     <span>High Score: {highScore}</span>
                   </div>
@@ -372,7 +372,7 @@ const Game: React.FC = () => {
               </div>
               
               {isFirstTime && (
-                <div className="mt-8 text-sm text-gray-300 p-4 border border-white/10 rounded-lg bg-black/20">
+                <div className="mt-8 text-sm text-gray-300 p-4 border border-[#91d3d1]/20 rounded-lg bg-black/20">
                   <h3 className="font-bold mb-2">How to Play:</h3>
                   <ul className="text-left space-y-2">
                     <li className="flex items-start">
@@ -400,7 +400,7 @@ const Game: React.FC = () => {
         
         {gameState === GameState.GAME_OVER && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-black/20 to-black/80 backdrop-blur-sm transition-all duration-500 animate-fade-in">
-            <div className="game-over-modal glassmorphism rounded-3xl p-8 max-w-md mx-auto text-center">
+            <div className="game-over-modal glassmorphism rounded-3xl p-8 max-w-md mx-auto text-center border border-[#91d3d1]/20">
               <h2 className="text-3xl font-bold mb-2">Game Over</h2>
               
               <div className="my-6 space-y-4">
@@ -410,7 +410,7 @@ const Game: React.FC = () => {
                 </div>
                 
                 {score > highScore ? (
-                  <div className="py-2 px-4 bg-amber-500/20 text-amber-300 rounded-full inline-flex items-center space-x-2 animate-pulse">
+                  <div className="py-2 px-4 bg-[#91d3d1]/20 text-[#91d3d1] rounded-full inline-flex items-center space-x-2 animate-pulse">
                     <Trophy className="w-5 h-5" />
                     <span>New High Score!</span>
                   </div>
@@ -425,7 +425,7 @@ const Game: React.FC = () => {
               <div className="space-y-3">
                 <Button 
                   onClick={handleTryAgain}
-                  className="game-button w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-xl py-6 text-lg font-medium"
+                  className="game-button w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 rounded-xl py-6 text-lg font-medium shadow-lg shadow-[#91d3d1]/20"
                 >
                   Try Again
                 </Button>
@@ -440,31 +440,31 @@ const Game: React.FC = () => {
               variant="outline"
               size="icon"
               className={cn(
-                "w-16 h-16 rounded-full glassmorphism border-white/20 touch-control",
-                "active:bg-white/30 transition-all"
+                "w-16 h-16 rounded-full glassmorphism border-[#91d3d1]/30 touch-control",
+                "active:bg-[#91d3d1]/30 transition-all"
               )}
               onTouchStart={handleTouchLeft}
             >
-              <ChevronLeft className="h-10 w-10" />
+              <ChevronLeft className="h-10 w-10 text-[#91d3d1]" />
             </Button>
             
             <Button
               variant="outline"
               size="icon"
               className={cn(
-                "w-16 h-16 rounded-full glassmorphism border-white/20 touch-control",
-                "active:bg-white/30 transition-all"
+                "w-16 h-16 rounded-full glassmorphism border-[#91d3d1]/30 touch-control",
+                "active:bg-[#91d3d1]/30 transition-all"
               )}
               onTouchStart={handleTouchRight}
             >
-              <ChevronRight className="h-10 w-10" />
+              <ChevronRight className="h-10 w-10 text-[#91d3d1]" />
             </Button>
           </div>
         )}
         
         {(!carAssetsLoaded || !gameInitialized) && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-background">
-            <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+            <Loader2 className="h-8 w-8 animate-spin text-[#91d3d1] mb-4" />
             <p className="text-sm text-muted-foreground">Loading game assets...</p>
           </div>
         )}
