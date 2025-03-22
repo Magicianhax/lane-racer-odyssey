@@ -163,6 +163,10 @@
   to { background-position: 0 1000px; }
 }
 
+.road-animation {
+  animation: roadScroll 20s linear infinite;
+}
+
 .hud-text {
   font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -196,4 +200,15 @@
 
 .touch-control:active {
   opacity: 0.8;
+}
+
+/* Tree animation */
+@keyframes sway {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(2deg); }
+}
+
+.tree-animation {
+  animation: sway 4s ease-in-out infinite;
+  transform-origin: bottom center;
 }

@@ -49,6 +49,25 @@ export interface ExplosionParticle {
   currentLife: number;
 }
 
+// New interface for road marking
+export interface RoadMarking {
+  y: number;
+  active: boolean;
+  update: (delta: number) => void;
+  render: (ctx: CanvasRenderingContext2D) => void;
+}
+
+// New interface for decorative elements
+export interface Decoration {
+  x: number;
+  y: number;
+  type: 'tree' | 'bush';
+  size: number;
+  active: boolean;
+  update: (delta: number) => void;
+  render: (ctx: CanvasRenderingContext2D) => void;
+}
+
 export interface GameConfig {
   canvas: HTMLCanvasElement;
   onScoreChange: (score: number) => void;
@@ -76,6 +95,10 @@ export class GameEngine {
   private enemies: GameObject[] = [];
   private seeds: GameObject[] = [];
   private powerUps: GameObject[] = [];
+  
+  // Road elements
+  private roadMarkings: RoadMarking[] = [];
+  private decorations: Decoration[] = [];
   
   // Game images
   private playerCarImage: HTMLImageElement;
@@ -106,6 +129,10 @@ export class GameEngine {
   private difficultyTimer: number = 0;
   private difficultyInterval: number = 30000; // ms
   private gameTime: number = 0;
+  private decorationSpawnTimer: number = 0;
+  private decorationSpawnInterval: number = 800; // ms
+  private roadMarkingTimer: number = 0;
+  private roadMarkingInterval: number = 300; // ms
   
   // Power-up states
   private slowModeActive: boolean = false;
@@ -374,12 +401,16 @@ export class GameEngine {
     this.seeds = [];
     this.powerUps = [];
     this.explosions = [];
+    this.roadMarkings = [];
+    this.decorations = [];
     
     // Reset timers
     this.enemySpawnTimer = 0;
     this.seedSpawnTimer = 0;
     this.powerUpSpawnTimer = 0;
     this.difficultyTimer = 0;
+    this.decorationSpawnTimer = 0;
+    this.roadMarkingTimer = 0;
     
     // Reset power-up states
     this.slowModeActive = false;
@@ -401,7 +432,18 @@ export class GameEngine {
       this.player.active = true;
     }
     
+    // Initialize road markings
+    this.initRoadMarkings();
+    
     this.onLivesChange(this.player.lives);
+  }
+
+  private initRoadMarkings(): void {
+    // Add initial road markings
+    const markingsPerScreen = Math.ceil(this.canvas.height / 80) + 1;
+    for (let i = 0; i < markingsPerScreen; i++) {
+      this.createRoadMarking(i * 80);
+    }
   }
 
   private loadHighScore(): void {
@@ -467,6 +509,14 @@ export class GameEngine {
     this.powerUps.forEach(powerUp => powerUp.update(deltaTime));
     this.powerUps = this.powerUps.filter(powerUp => powerUp.active);
     
+    // Update road markings
+    this.roadMarkings.forEach(marking => marking.update(deltaTime));
+    this.roadMarkings = this.roadMarkings.filter(marking => marking.active);
+    
+    // Update decorations
+    this.decorations.forEach(decoration => decoration.update(deltaTime));
+    this.decorations = this.decorations.filter(decoration => decoration.active);
+    
     // Update explosions
     this.updateExplosions(deltaTime);
     
@@ -499,9 +549,32 @@ export class GameEngine {
   private checkCollisions(): void {
     if (!this.player || this.gameState !== GameState.GAMEPLAY) return;
     
-    // Check enemy collisions
+    // Check enemy collisions - use a smaller collision box for more precise collisions
     this.enemies.forEach(enemy => {
-      if (this.isColliding(this.player!, enemy)) {
+      const collisionMargin = 10; // Reduce collision box size by this amount on each side
+      
+      // Create tighter collision box for more precise collision detection
+      const playerBox = {
+        x: this.player!.x + collisionMargin,
+        y: this.player!.y + collisionMargin,
+        width: this.player!.width - (collisionMargin * 2),
+        height: this.player!.height - (collisionMargin * 2)
+      };
+      
+      const enemyBox = {
+        x: enemy.x + collisionMargin,
+        y: enemy.y + collisionMargin,
+        width: enemy.width - (collisionMargin * 2),
+        height: enemy.height - (collisionMargin * 2)
+      };
+      
+      // Check if the tighter boxes are colliding
+      if (
+        playerBox.x < enemyBox.x + enemyBox.width &&
+        playerBox.x + playerBox.width > enemyBox.x &&
+        playerBox.y < enemyBox.y + enemyBox.height &&
+        playerBox.y + playerBox.height > enemyBox.y
+      ) {
         if (this.player!.shield) {
           // Player has shield, destroy enemy
           enemy.active = false;
@@ -605,6 +678,20 @@ export class GameEngine {
       this.spawnPowerUp();
       this.powerUpSpawnTimer = 0;
     }
+    
+    // Spawn road markings
+    this.roadMarkingTimer += deltaTime;
+    if (this.roadMarkingTimer >= this.roadMarkingInterval) {
+      this.createRoadMarking(-80); // Start above the canvas
+      this.roadMarkingTimer = 0;
+    }
+    
+    // Spawn decorations (trees and bushes)
+    this.decorationSpawnTimer += deltaTime;
+    if (this.decorationSpawnTimer >= this.decorationSpawnInterval) {
+      this.spawnDecoration();
+      this.decorationSpawnTimer = 0;
+    }
   }
 
   private spawnEnemy(): void {
@@ -616,8 +703,8 @@ export class GameEngine {
     // Create a seed at a random lane
     const lane = Math.floor(Math.random() * 3);
     
-    // Seed size is smaller than cars
-    const width = this.laneWidth * 0.2;
+    // Seed size is DOUBLED from the original size (2x bigger)
+    const width = this.laneWidth * 0.4; // 0.2 * 2 = 0.4
     const height = width;
     
     const seed: GameObject = {
@@ -859,6 +946,173 @@ export class GameEngine {
     this.powerUps.push(powerUp);
   }
 
+  private createRoadMarking(y: number): void {
+    // Create a road marking at the specified y position
+    const marking: RoadMarking = {
+      y,
+      active: true,
+      update: (delta: number) => {
+        const speed = 0.3 * this.gameSpeed * (this.slowModeActive ? 0.5 : 1);
+        marking.y += speed * delta;
+        
+        // Check if out of bounds
+        if (marking.y > this.canvas.height) {
+          marking.active = false;
+        }
+      },
+      render: (ctx: CanvasRenderingContext2D) => {
+        ctx.save();
+        
+        // Draw lane markings
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 5;
+        
+        // Left lane divider
+        const leftX = this.lanePositions[0] + this.laneWidth / 2;
+        ctx.beginPath();
+        ctx.moveTo(leftX, marking.y);
+        ctx.lineTo(leftX, marking.y + 40);
+        ctx.stroke();
+        
+        // Right lane divider
+        const rightX = this.lanePositions[1] + this.laneWidth / 2;
+        ctx.beginPath();
+        ctx.moveTo(rightX, marking.y);
+        ctx.lineTo(rightX, marking.y + 40);
+        ctx.stroke();
+        
+        ctx.restore();
+      }
+    };
+    
+    this.roadMarkings.push(marking);
+  }
+
+  private spawnDecoration(): void {
+    // 50% chance to spawn on left or right side
+    const isLeftSide = Math.random() > 0.5;
+    
+    // Randomize decoration type (70% trees, 30% bushes)
+    const type = Math.random() > 0.3 ? 'tree' : 'bush';
+    
+    // Calculate x position (distance from road edge)
+    const roadEdge = isLeftSide ? 
+      this.roadCenterX - this.roadWidth / 2 : 
+      this.roadCenterX + this.roadWidth / 2;
+    
+    // Randomize distance from road (10-80px)
+    const distanceFromRoad = 10 + Math.random() * 70;
+    
+    // Calculate final x position
+    const x = isLeftSide ? 
+      roadEdge - distanceFromRoad : 
+      roadEdge + distanceFromRoad;
+    
+    // Randomize size based on type
+    const baseSize = type === 'tree' ? 60 : 30;
+    const sizeVariation = type === 'tree' ? 30 : 15;
+    const size = baseSize + Math.random() * sizeVariation;
+    
+    const decoration: Decoration = {
+      x: isLeftSide ? x - size : x,
+      y: -size,
+      type,
+      size,
+      active: true,
+      update: (delta: number) => {
+        const speed = 0.3 * this.gameSpeed * (this.slowModeActive ? 0.5 : 1);
+        decoration.y += speed * delta;
+        
+        // Check if out of bounds
+        if (decoration.y > this.canvas.height) {
+          decoration.active = false;
+        }
+      },
+      render: (ctx: CanvasRenderingContext2D) => {
+        ctx.save();
+        
+        if (type === 'tree') {
+          // Draw tree trunk
+          ctx.fillStyle = '#6B4226';
+          const trunkWidth = decoration.size * 0.2;
+          const trunkHeight = decoration.size * 0.5;
+          ctx.fillRect(
+            decoration.x + (decoration.size - trunkWidth) / 2,
+            decoration.y + decoration.size - trunkHeight,
+            trunkWidth,
+            trunkHeight
+          );
+          
+          // Draw tree crown (triangular shape for pine trees)
+          ctx.fillStyle = '#2D5E40';
+          
+          const crownWidth = decoration.size * 0.8;
+          const crownHeight = decoration.size * 0.8;
+          const crownX = decoration.x + (decoration.size - crownWidth) / 2;
+          const crownY = decoration.y + decoration.size * 0.2;
+          
+          ctx.beginPath();
+          ctx.moveTo(crownX + crownWidth / 2, crownY);
+          ctx.lineTo(crownX, crownY + crownHeight);
+          ctx.lineTo(crownX + crownWidth, crownY + crownHeight);
+          ctx.closePath();
+          ctx.fill();
+          
+          // Add a second layer to the pine tree
+          const layer2Width = crownWidth * 0.8;
+          const layer2Height = crownHeight * 0.7;
+          const layer2X = decoration.x + (decoration.size - layer2Width) / 2;
+          const layer2Y = crownY + crownHeight * 0.3;
+          
+          ctx.beginPath();
+          ctx.moveTo(layer2X + layer2Width / 2, layer2Y);
+          ctx.lineTo(layer2X, layer2Y + layer2Height);
+          ctx.lineTo(layer2X + layer2Width, layer2Y + layer2Height);
+          ctx.closePath();
+          ctx.fill();
+        } else {
+          // Draw bush (circular shape)
+          ctx.fillStyle = '#3A7D44';
+          ctx.beginPath();
+          ctx.arc(
+            decoration.x + decoration.size / 2,
+            decoration.y + decoration.size / 2,
+            decoration.size / 2,
+            0,
+            Math.PI * 2
+          );
+          ctx.fill();
+          
+          // Add some detail to the bush
+          ctx.fillStyle = '#2D6A3A';
+          ctx.beginPath();
+          ctx.arc(
+            decoration.x + decoration.size * 0.3,
+            decoration.y + decoration.size * 0.4,
+            decoration.size * 0.25,
+            0,
+            Math.PI * 2
+          );
+          ctx.fill();
+          
+          ctx.beginPath();
+          ctx.arc(
+            decoration.x + decoration.size * 0.7,
+            decoration.y + decoration.size * 0.5,
+            decoration.size * 0.2,
+            0,
+            Math.PI * 2
+          );
+          ctx.fill();
+        }
+        
+        ctx.restore();
+      }
+    };
+    
+    this.decorations.push(decoration);
+  }
+
   private updateDifficulty(deltaTime: number): void {
     this.difficultyTimer += deltaTime;
     if (this.difficultyTimer >= this.difficultyInterval) {
@@ -914,8 +1168,14 @@ export class GameEngine {
     // Draw background
     this.drawBackground();
     
+    // Draw grass
+    this.drawGrass();
+    
     // Draw road
     this.drawRoad();
+    
+    // Draw decorations (behind the cars)
+    this.decorations.forEach(decoration => decoration.render(this.ctx));
     
     // Draw game objects
     this.drawGameObjects();
@@ -944,47 +1204,91 @@ export class GameEngine {
     }
   }
 
+  private drawGrass(): void {
+    // Draw grass on both sides of the road
+    const roadLeft = this.roadCenterX - this.roadWidth / 2;
+    const roadRight = this.roadCenterX + this.roadWidth / 2;
+    
+    // Left side grass
+    const grassGradient = this.ctx.createLinearGradient(0, 0, roadLeft, 0);
+    grassGradient.addColorStop(0, '#1C3F1C');  // Darker at the edge
+    grassGradient.addColorStop(1, '#2A5A30');  // Lighter near the road
+    
+    this.ctx.fillStyle = grassGradient;
+    this.ctx.fillRect(0, 0, roadLeft, this.canvas.height);
+    
+    // Right side grass
+    const grassGradient2 = this.ctx.createLinearGradient(roadRight, 0, this.canvas.width, 0);
+    grassGradient2.addColorStop(0, '#2A5A30');  // Lighter near the road
+    grassGradient2.addColorStop(1, '#1C3F1C');  // Darker at the edge
+    
+    this.ctx.fillStyle = grassGradient2;
+    this.ctx.fillRect(roadRight, 0, this.canvas.width - roadRight, this.canvas.height);
+    
+    // Add grass texture
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+    
+    // Left side texture
+    for (let i = 0; i < roadLeft; i += 20) {
+      for (let j = 0; j < this.canvas.height; j += 20) {
+        if (Math.random() > 0.8) {
+          this.ctx.fillRect(i, j, 5, 5);
+        }
+      }
+    }
+    
+    // Right side texture
+    for (let i = roadRight; i < this.canvas.width; i += 20) {
+      for (let j = 0; j < this.canvas.height; j += 20) {
+        if (Math.random() > 0.8) {
+          this.ctx.fillRect(i, j, 5, 5);
+        }
+      }
+    }
+  }
+
   private drawRoad(): void {
     // Calculate road dimensions
     const roadLeft = this.roadCenterX - this.roadWidth / 2;
     const roadRight = this.roadCenterX + this.roadWidth / 2;
     
-    // Draw road background
-    this.ctx.fillStyle = '#333';
+    // Draw road background with asphalt texture
+    const roadGradient = this.ctx.createLinearGradient(roadLeft, 0, roadRight, 0);
+    roadGradient.addColorStop(0, '#333333');
+    roadGradient.addColorStop(0.5, '#444444');
+    roadGradient.addColorStop(1, '#333333');
+    
+    this.ctx.fillStyle = roadGradient;
     this.ctx.fillRect(roadLeft, 0, this.roadWidth, this.canvas.height);
     
+    // Add asphalt texture
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+    for (let i = roadLeft; i < roadRight; i += 10) {
+      for (let j = 0; j < this.canvas.height; j += 10) {
+        if (Math.random() > 0.9) {
+          this.ctx.fillRect(i, j, 2, 2);
+        }
+      }
+    }
+    
     // Draw road edges
-    this.ctx.strokeStyle = '#f6f6a3';
+    this.ctx.strokeStyle = '#f6f6a3'; // Yellow road edge
     this.ctx.lineWidth = 3;
+    
+    // Left edge
     this.ctx.beginPath();
     this.ctx.moveTo(roadLeft, 0);
     this.ctx.lineTo(roadLeft, this.canvas.height);
     this.ctx.stroke();
     
+    // Right edge
     this.ctx.beginPath();
     this.ctx.moveTo(roadRight, 0);
     this.ctx.lineTo(roadRight, this.canvas.height);
     this.ctx.stroke();
     
-    // Draw lane markings
-    this.ctx.strokeStyle = '#fff';
-    this.ctx.lineWidth = 5;
-    this.ctx.setLineDash([30, 40]);
-    
-    // Draw left lane divider
-    this.ctx.beginPath();
-    this.ctx.moveTo(this.lanePositions[0] + this.laneWidth / 2, 0);
-    this.ctx.lineTo(this.lanePositions[0] + this.laneWidth / 2, this.canvas.height);
-    this.ctx.stroke();
-    
-    // Draw right lane divider
-    this.ctx.beginPath();
-    this.ctx.moveTo(this.lanePositions[1] + this.laneWidth / 2, 0);
-    this.ctx.lineTo(this.lanePositions[1] + this.laneWidth / 2, this.canvas.height);
-    this.ctx.stroke();
-    
-    // Reset line dash
-    this.ctx.setLineDash([]);
+    // Draw lane markings from the road marking objects
+    this.roadMarkings.forEach(marking => marking.render(this.ctx));
   }
 
   private drawGameObjects(): void {
@@ -1262,4 +1566,3 @@ export class GameEngine {
     return enemy;
   }
 }
-
