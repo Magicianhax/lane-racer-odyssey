@@ -303,13 +303,13 @@ const Game: React.FC = () => {
   };
   
   const handleTouchLeft = () => {
-    if (gameEngineRef.current) {
+    if (gameEngineRef.current && gameState === GameState.GAMEPLAY) {
       gameEngineRef.current.handleTouchLeft();
     }
   };
   
   const handleTouchRight = () => {
-    if (gameEngineRef.current) {
+    if (gameEngineRef.current && gameState === GameState.GAMEPLAY) {
       gameEngineRef.current.handleTouchRight();
     }
   };
@@ -436,29 +436,25 @@ const Game: React.FC = () => {
         
         {isMobile && gameState === GameState.GAMEPLAY && (
           <div className="absolute bottom-10 left-0 right-0 flex justify-between px-8">
-            <Button
-              variant="outline"
-              size="icon"
+            <button
               className={cn(
-                "w-16 h-16 rounded-full glassmorphism border-[#91d3d1]/30 touch-control",
+                "w-16 h-16 rounded-full glassmorphism border border-[#91d3d1]/30 touch-control flex items-center justify-center",
                 "active:bg-[#91d3d1]/30 transition-all"
               )}
               onTouchStart={handleTouchLeft}
             >
               <ChevronLeft className="h-10 w-10 text-[#91d3d1]" />
-            </Button>
+            </button>
             
-            <Button
-              variant="outline"
-              size="icon"
+            <button
               className={cn(
-                "w-16 h-16 rounded-full glassmorphism border-[#91d3d1]/30 touch-control",
+                "w-16 h-16 rounded-full glassmorphism border border-[#91d3d1]/30 touch-control flex items-center justify-center",
                 "active:bg-[#91d3d1]/30 transition-all"
               )}
               onTouchStart={handleTouchRight}
             >
               <ChevronRight className="h-10 w-10 text-[#91d3d1]" />
-            </Button>
+            </button>
           </div>
         )}
         

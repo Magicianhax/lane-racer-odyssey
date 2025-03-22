@@ -297,21 +297,60 @@
 
 /* For mobile controls */
 .touch-control {
-  opacity: 0.5;
+  opacity: 0.7;
   transition: opacity 0.2s;
 }
 
 .touch-control:active {
-  opacity: 0.8;
+  opacity: 0.9;
+  transform: scale(1.05);
 }
 
-/* Tree animation */
+/* Tree animation and styling */
 @keyframes sway {
-  0%, 100% { transform: rotate(0deg); }
-  50% { transform: rotate(2deg); }
+  0%, 100% { transform: rotate(0deg) skewX(0deg); }
+  25% { transform: rotate(1deg) skewX(0.5deg); }
+  50% { transform: rotate(2deg) skewX(1deg); }
+  75% { transform: rotate(1deg) skewX(0.5deg); }
 }
 
 .tree-animation {
   animation: sway 4s ease-in-out infinite;
   transform-origin: bottom center;
+  filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.3));
+}
+
+/* For more realistic tree texture */
+.tree-texture {
+  background: linear-gradient(to bottom, #1a3b15, #29632b);
+  opacity: 0.9;
+  position: relative;
+}
+
+.tree-texture::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath d='M1 3h1v1H1V3zm2-2h1v1H3V1z' fill='rgba(0,0,0,0.2)'/%3E%3C/svg%3E");
+  opacity: 0.4;
+  mix-blend-mode: overlay;
+}
+
+.tree-trunk {
+  background: linear-gradient(to right, #5e3b14, #8b5a2b, #5e3b14);
+  position: relative;
+}
+
+.tree-trunk::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Cpath d='M0 0h4v4H0V0zm4 4h4v4H4V4z' fill='rgba(0,0,0,0.1)'/%3E%3C/svg%3E");
+  opacity: 0.3;
 }
