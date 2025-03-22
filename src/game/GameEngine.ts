@@ -1,92 +1,18 @@
-// Main game engine class
 
-export enum GameState {
-  START_SCREEN,
-  GAMEPLAY,
-  PAUSED,
-  GAME_OVER
-}
+import { GameState, PowerUpType, PlayerCar, GameObject, RoadMarking, Decoration, ExplosionParticle, GameConfig } from './types';
+import { createPlayer, createEnemy, createRoadMarking, createDecoration, createPowerUp, createSeed } from './factories';
+import { isColliding, createExplosionParticles, drawSeedFallback, updateExplosionParticles } from './utils';
+import { GameRenderer } from './renderer';
 
-export enum PowerUpType {
-  SLOW_SPEED,
-  SHIELD,
-  EXTRA_LIFE
-}
-
-// Extended GameObject interface to include powerUpType for power-ups
-export interface GameObject {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  lane: number;
-  active: boolean;
-  type?: string;
-  powerUpType?: PowerUpType; // Ensure this is defined in the interface
-  update: (delta: number) => void;
-  render: (ctx: CanvasRenderingContext2D) => void;
-}
-
-export interface PlayerCar extends GameObject {
-  lives: number;
-  shield: boolean;
-  shieldTimer: number;
-  lanePosition: number;
-  targetLane: number;
-  transitioning: boolean;
-}
-
-// New interface for explosion particles
-export interface ExplosionParticle {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  size: number;
-  color: string;
-  alpha: number;
-  lifetime: number;
-  currentLife: number;
-}
-
-// New interface for road marking
-export interface RoadMarking {
-  y: number;
-  active: boolean;
-  update: (delta: number) => void;
-  render: (ctx: CanvasRenderingContext2D) => void;
-}
-
-// New interface for decorative elements
-export interface Decoration {
-  x: number;
-  y: number;
-  type: 'tree' | 'bush';
-  size: number;
-  active: boolean;
-  update: (delta: number) => void;
-  render: (ctx: CanvasRenderingContext2D) => void;
-}
-
-export interface GameConfig {
-  canvas: HTMLCanvasElement;
-  onScoreChange: (score: number) => void;
-  onLivesChange: (lives: number) => void;
-  onGameStateChange: (state: GameState) => void;
-  onSeedCollected: (count: number) => void;
-  onPowerUpStart: (type: PowerUpType, duration: number) => void;
-  onPowerUpEnd: (type: PowerUpType) => void;
-  customAssets?: {
-    playerCarURL: string;
-    enemyCarURLs: string[];
-    seedImageURL?: string;
-    useDefaultsIfBroken?: boolean;
-  };
-}
+export { GameState, PowerUpType } from './types';
 
 export class GameEngine {
+  // Canvas and context
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
+  private renderer: GameRenderer;
+  
+  // Game state
   private gameState: GameState = GameState.START_SCREEN;
   private lastFrameTime: number = 0;
   private accumulatedTime: number = 0;
@@ -96,23 +22,19 @@ export class GameEngine {
   private enemies: GameObject[] = [];
   private seeds: GameObject[] = [];
   private powerUps: GameObject[] = [];
-  
-  // Road elements
   private roadMarkings: RoadMarking[] = [];
   private decorations: Decoration[] = [];
+  private explosions: ExplosionParticle[] = [];
   
   // Game images
   private playerCarImage: HTMLImageElement;
   private enemyCarImages: HTMLImageElement[] = [];
-  private seedImage: HTMLImageElement | null = null; // Added seed image
+  private seedImage: HTMLImageElement | null = null;
   private playerCarLoaded: boolean = false;
   private enemyCarLoaded: boolean = false;
-  private seedImageLoaded: boolean = false; // Added seed image loaded flag
+  private seedImageLoaded: boolean = false;
   private imagesLoaded: boolean = false;
   private imageLoadErrors: boolean = false;
-  
-  // Explosion animation
-  private explosions: ExplosionParticle[] = [];
   
   // Game parameters
   private score: number = 0;
@@ -122,6 +44,8 @@ export class GameEngine {
   private roadWidth: number = 0;
   private roadCenterX: number = 0;
   private lanePositions: number[] = [];
+  
+  // Spawn timers
   private enemySpawnTimer: number = 0;
   private enemySpawnInterval: number = 2000; // ms
   private seedSpawnTimer: number = 0;
@@ -173,11 +97,25 @@ export class GameEngine {
     // Initialize game dimensions
     this.calculateDimensions();
     
+    // Create renderer
+    this.renderer = new GameRenderer(this.canvas, this.roadWidth, this.roadCenterX);
+    
     // Set flag for fallbacks
     if (config.customAssets?.useDefaultsIfBroken) {
       this.useDefaultsIfBroken = true;
     }
     
+    // Load assets
+    this.loadAssets(config);
+    
+    // Set up event listeners
+    this.setupEventListeners();
+
+    // Load high score from local storage
+    this.loadHighScore();
+  }
+  
+  private loadAssets(config: GameConfig): void {
     // Load car images with proper error handling
     this.playerCarImage = new Image();
     this.playerCarImage.crossOrigin = "anonymous"; // Try to fix CORS issues
@@ -281,26 +219,155 @@ export class GameEngine {
       this.seedImageLoaded = true;
       this.imageLoadErrors = true;
       this.imagesLoaded = true;
+      
       // Initialize player after images are loaded or failed
       this.player = this.createPlayer();
     }
-    
-    // Set up event listeners
-    this.setupEventListeners();
-
-    // Load high score from local storage
-    this.loadHighScore();
   }
-
+  
+  private checkAllImagesLoaded(): void {
+    if (this.playerCarLoaded && this.enemyCarLoaded && this.seedImageLoaded) {
+      console.log("All images loaded, initializing game");
+      this.imagesLoaded = true;
+      
+      // Initialize player after images are loaded or failed
+      this.player = this.createPlayer();
+    }
+  }
+  
   public resizeCanvas(): void {
     this.calculateDimensions();
+    
+    // Update renderer with new dimensions
+    this.renderer = new GameRenderer(this.canvas, this.roadWidth, this.roadCenterX);
+    
     // If player exists, update its position based on new dimensions
     if (this.player) {
       this.player.lanePosition = this.lanePositions[this.player.lane];
       this.player.x = this.player.lanePosition - (this.player.width / 2);
     }
   }
-
+  
+  private calculateDimensions(): void {
+    // Calculate road and lane dimensions
+    this.roadWidth = this.canvas.width * 0.6;
+    this.roadCenterX = this.canvas.width / 2;
+    this.laneWidth = this.roadWidth / 3;
+    
+    // Calculate lane center positions
+    this.lanePositions = [
+      this.roadCenterX - this.laneWidth,  // Left lane
+      this.roadCenterX,                   // Center lane
+      this.roadCenterX + this.laneWidth   // Right lane
+    ];
+  }
+  
+  private createPlayer(): PlayerCar {
+    // Player car dimensions
+    const width = this.laneWidth * 0.7;
+    const height = width * 2; // Car is twice as long as it is wide
+    
+    // Start in the middle lane (lane 1)
+    const lane = 1;
+    const lanePosition = this.lanePositions[lane];
+    
+    // Position car at the bottom of the screen
+    const x = lanePosition - (width / 2);
+    const y = this.canvas.height - height - 20; // 20px buffer from bottom
+    
+    return {
+      x,
+      y,
+      width,
+      height,
+      lane,
+      lanePosition,
+      targetLane: lane,
+      transitioning: false,
+      active: true,
+      lives: 3,
+      shield: false,
+      shieldTimer: 0,
+      update: (delta: number) => {
+        // Handle lane transitions
+        if (this.player!.transitioning) {
+          const targetLanePos = this.lanePositions[this.player!.targetLane];
+          const distance = targetLanePos - this.player!.lanePosition;
+          const moveSpeed = 0.01 * delta;
+          
+          if (Math.abs(distance) <= moveSpeed) {
+            // We've arrived at the target lane
+            this.player!.lanePosition = targetLanePos;
+            this.player!.lane = this.player!.targetLane;
+            this.player!.transitioning = false;
+          } else {
+            // Move towards target lane
+            this.player!.lanePosition += (distance > 0 ? moveSpeed : -moveSpeed);
+          }
+          
+          // Update x position based on lane position
+          this.player!.x = this.player!.lanePosition - (this.player!.width / 2);
+        }
+        
+        // Update shield timer
+        if (this.player!.shield && this.player!.shieldTimer > 0) {
+          this.player!.shieldTimer -= delta;
+          if (this.player!.shieldTimer <= 0) {
+            this.player!.shield = false;
+            this.onPowerUpEnd(PowerUpType.SHIELD);
+          }
+        }
+      },
+      render: (ctx: CanvasRenderingContext2D) => {
+        ctx.save();
+        
+        // If the player has a shield, draw it
+        if (this.player!.shield) {
+          const glow = ctx.createRadialGradient(
+            this.player!.x + this.player!.width / 2, this.player!.y + this.player!.height / 2, this.player!.width * 0.4,
+            this.player!.x + this.player!.width / 2, this.player!.y + this.player!.height / 2, this.player!.width * 0.8
+          );
+          glow.addColorStop(0, 'rgba(76, 201, 240, 0.3)');
+          glow.addColorStop(1, 'rgba(76, 201, 240, 0)');
+          
+          ctx.fillStyle = glow;
+          ctx.beginPath();
+          ctx.ellipse(
+            this.player!.x + this.player!.width / 2, 
+            this.player!.y + this.player!.height / 2, 
+            this.player!.width * 0.8, 
+            this.player!.height * 0.6, 
+            0, 0, Math.PI * 2
+          );
+          ctx.fill();
+        }
+        
+        // Draw the player car image
+        try {
+          ctx.drawImage(this.playerCarImage, this.player!.x, this.player!.y, this.player!.width, this.player!.height);
+        } catch (e) {
+          console.error("Error rendering player car:", e);
+          // Fallback to a basic car shape if image fails
+          ctx.fillStyle = '#4cc9f0';
+          ctx.fillRect(this.player!.x, this.player!.y, this.player!.width, this.player!.height);
+          
+          // Windows
+          ctx.fillStyle = '#1a1a2e';
+          ctx.fillRect(this.player!.x + this.player!.width * 0.2, this.player!.y + this.player!.height * 0.2, this.player!.width * 0.6, this.player!.height * 0.25);
+          
+          // Wheels
+          ctx.fillStyle = '#000';
+          ctx.fillRect(this.player!.x - 2, this.player!.y + this.player!.height * 0.2, 4, this.player!.height * 0.15);
+          ctx.fillRect(this.player!.x + this.player!.width - 2, this.player!.y + this.player!.height * 0.2, 4, this.player!.height * 0.15);
+          ctx.fillRect(this.player!.x - 2, this.player!.y + this.player!.height * 0.65, 4, this.player!.height * 0.15);
+          ctx.fillRect(this.player!.x + this.player!.width - 2, this.player!.y + this.player!.height * 0.65, 4, this.player!.height * 0.15);
+        }
+        
+        ctx.restore();
+      }
+    };
+  }
+  
   public getHighScore(): number {
     return this.highScore;
   }
@@ -330,7 +397,16 @@ export class GameEngine {
       this.gameLoop();
     }
   }
-
+  
+  // Game over handler
+  private gameOver(): void {
+    this.gameState = GameState.GAME_OVER;
+    this.onGameStateChange(GameState.GAME_OVER);
+    
+    // Save high score
+    this.saveHighScore();
+  }
+  
   public handleTouchLeft(): void {
     this.movePlayerLeft();
   }
@@ -524,7 +600,7 @@ export class GameEngine {
     this.decorations = this.decorations.filter(decoration => decoration.active);
     
     // Update explosions
-    this.updateExplosions(deltaTime);
+    this.explosions = updateExplosionParticles(this.explosions, deltaTime);
     
     // Check collisions
     this.checkCollisions();
@@ -539,17 +615,25 @@ export class GameEngine {
     this.updateDifficulty(deltaTime);
   }
 
-  private updateExplosions(deltaTime: number): void {
-    // Update explosion particles
-    this.explosions.forEach(particle => {
-      particle.x += particle.vx * deltaTime * 0.05;
-      particle.y += particle.vy * deltaTime * 0.05;
-      particle.currentLife -= deltaTime;
-      particle.alpha = particle.currentLife / particle.lifetime;
-    });
-    
-    // Remove expired particles
-    this.explosions = this.explosions.filter(particle => particle.currentLife > 0);
+  private updatePowerUps(deltaTime: number): void {
+    // Update slow mode timer
+    if (this.slowModeActive) {
+      this.slowModeTimer -= deltaTime;
+      if (this.slowModeTimer <= 0) {
+        this.slowModeActive = false;
+        this.onPowerUpEnd(PowerUpType.SLOW_SPEED);
+      }
+    }
+  }
+
+  private updateDifficulty(deltaTime: number): void {
+    // Increase difficulty over time
+    this.difficultyTimer += deltaTime;
+    if (this.difficultyTimer >= this.difficultyInterval) {
+      this.gameSpeed += 0.1;
+      this.enemySpawnInterval = Math.max(500, this.enemySpawnInterval - 100);
+      this.difficultyTimer = 0;
+    }
   }
 
   private checkCollisions(): void {
@@ -602,7 +686,7 @@ export class GameEngine {
     
     // Check seed collisions
     this.seeds.forEach(seed => {
-      if (this.isColliding(this.player!, seed)) {
+      if (isColliding(this.player!, seed)) {
         seed.active = false;
         this.score += 10;
         this.seedCount++;
@@ -613,7 +697,7 @@ export class GameEngine {
     
     // Check power-up collisions
     this.powerUps.forEach(powerUp => {
-      if (this.isColliding(this.player!, powerUp) && powerUp.powerUpType !== undefined) {
+      if (isColliding(this.player!, powerUp) && powerUp.powerUpType !== undefined) {
         powerUp.active = false;
         
         switch (powerUp.powerUpType) {
@@ -630,39 +714,33 @@ export class GameEngine {
       }
     });
   }
-
-  private isColliding(obj1: GameObject, obj2: GameObject): boolean {
-    return (
-      obj1.x < obj2.x + obj2.width &&
-      obj1.x + obj1.width > obj2.x &&
-      obj1.y < obj2.y + obj2.height &&
-      obj1.y + obj1.height > obj2.y
-    );
+  
+  private activateSlowMode(): void {
+    this.slowModeActive = true;
+    this.slowModeTimer = this.slowModeDuration;
+    this.onPowerUpStart(PowerUpType.SLOW_SPEED, this.slowModeDuration);
+  }
+  
+  private activateShield(): void {
+    if (this.player) {
+      this.player.shield = true;
+      this.player.shieldTimer = 5000; // 5 seconds shield
+      this.onPowerUpStart(PowerUpType.SHIELD, 5000);
+    }
+  }
+  
+  private addExtraLife(): void {
+    if (this.player) {
+      this.player.lives = Math.min(this.player.lives + 1, 5); // Max 5 lives
+      this.onLivesChange(this.player.lives);
+      this.onPowerUpStart(PowerUpType.EXTRA_LIFE, 0);
+    }
   }
 
   private createExplosion(x: number, y: number): void {
-    const particleCount = 20;
-    const colors = ['#ff6600', '#ffcc00', '#ff3300', '#ff9900'];
-    
-    for (let i = 0; i < particleCount; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 1 + Math.random() * 3;
-      const size = 2 + Math.random() * 6;
-      const lifetime = 500 + Math.random() * 1000;
-      const color = colors[Math.floor(Math.random() * colors.length)];
-      
-      this.explosions.push({
-        x,
-        y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        size,
-        color,
-        alpha: 1,
-        lifetime,
-        currentLife: lifetime
-      });
-    }
+    // Generate explosion particles
+    const newParticles = createExplosionParticles(x, y);
+    this.explosions = [...this.explosions, ...newParticles];
   }
 
   private updateSpawns(deltaTime: number): void {
@@ -704,14 +782,79 @@ export class GameEngine {
 
   private spawnEnemy(): void {
     const lane = Math.floor(Math.random() * 3);
-    this.enemies.push(this.createEnemy(lane));
+    
+    // Create dimensions that fit the lane
+    const width = this.laneWidth * 0.7;
+    const height = width * 2;
+    
+    // Position on the specified lane
+    const lanePosition = this.lanePositions[lane];
+    const x = lanePosition - (width / 2);
+    
+    // Start above the canvas
+    const y = -height * 2;
+    
+    // Choose a random enemy car image
+    const imageIndex = Math.floor(Math.random() * this.enemyCarImages.length);
+    
+    const enemy: GameObject = {
+      x,
+      y,
+      width,
+      height,
+      lane,
+      active: true,
+      type: 'enemy',
+      update: (delta: number) => {
+        // Move the enemy car downward
+        const speed = 0.3 * this.gameSpeed * (this.slowModeActive ? 0.5 : 1);
+        enemy.y += speed * delta;
+        
+        // Check if out of bounds
+        if (enemy.y > this.canvas.height) {
+          enemy.active = false;
+        }
+      },
+      render: (ctx: CanvasRenderingContext2D) => {
+        ctx.save();
+        
+        // Draw the enemy car image
+        try {
+          if (this.enemyCarImages.length > 0 && this.enemyCarImages[imageIndex]) {
+            ctx.drawImage(this.enemyCarImages[imageIndex], enemy.x, enemy.y, enemy.width, enemy.height);
+          } else {
+            throw new Error("Enemy car image not available");
+          }
+        } catch (e) {
+          console.error("Error rendering enemy car:", e);
+          // Fallback to a basic car shape if image fails
+          ctx.fillStyle = '#ff5e5e';
+          ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+          
+          // Windows
+          ctx.fillStyle = '#1a1a2e';
+          ctx.fillRect(enemy.x + enemy.width * 0.2, enemy.y + enemy.height * 0.2, enemy.width * 0.6, enemy.height * 0.25);
+          
+          // Wheels
+          ctx.fillStyle = '#000';
+          ctx.fillRect(enemy.x - 2, enemy.y + enemy.height * 0.2, 4, enemy.height * 0.15);
+          ctx.fillRect(enemy.x + enemy.width - 2, enemy.y + enemy.height * 0.2, 4, enemy.height * 0.15);
+          ctx.fillRect(enemy.x - 2, enemy.y + enemy.height * 0.65, 4, enemy.height * 0.15);
+          ctx.fillRect(enemy.x + enemy.width - 2, enemy.y + enemy.height * 0.65, 4, enemy.height * 0.15);
+        }
+        
+        ctx.restore();
+      }
+    };
+    
+    this.enemies.push(enemy);
   }
 
   private spawnSeed(): void {
     // Create a seed at a random lane
     const lane = Math.floor(Math.random() * 3);
     
-    // Seed size is DOUBLED from the original size (2x bigger)
+    // Seed size is doubled from the original size (2x bigger)
     const width = this.laneWidth * 0.4; // 0.2 * 2 = 0.4
     const height = width;
     
@@ -759,11 +902,11 @@ export class GameEngine {
             ctx.shadowBlur = 0;
           } catch (e) {
             // Fall back to drawing a circle if the image fails
-            this.drawSeedFallback(ctx, seed);
+            drawSeedFallback(ctx, seed);
           }
         } else {
           // No image available, use fallback
-          this.drawSeedFallback(ctx, seed);
+          drawSeedFallback(ctx, seed);
         }
         
         ctx.restore();
@@ -773,147 +916,67 @@ export class GameEngine {
     this.seeds.push(seed);
   }
 
-  private drawSeedFallback(ctx: CanvasRenderingContext2D, seed: GameObject): void {
-    // Draw seed (a small circle)
-    ctx.fillStyle = '#ffdb4d';
-    ctx.beginPath();
-    ctx.arc(
-      seed.x + seed.width / 2,
-      seed.y + seed.height / 2,
-      seed.width / 2,
-      0,
-      Math.PI * 2
-    );
-    ctx.fill();
-    
-    // Add a small glow effect
-    ctx.shadowColor = '#ffdb4d';
-    ctx.shadowBlur = 10;
-    ctx.beginPath();
-    ctx.arc(
-      seed.x + seed.width / 2,
-      seed.y + seed.height / 2,
-      seed.width / 3,
-      0,
-      Math.PI * 2
-    );
-    ctx.fill();
-  }
-
   private spawnPowerUp(): void {
     // Create a power-up at a random lane
     const lane = Math.floor(Math.random() * 3);
     
     // Randomly choose power-up type
-    const powerUpType = Math.floor(Math.random() * 3);
+    const powerUpType = Math.floor(Math.random() * 3) as PowerUpType;
     
     // Power-up size is medium (between seed and car)
     const width = this.laneWidth * 0.3;
     const height = width;
     
-    const powerUp: GameObject = {
-      x: this.lanePositions[lane] - (width / 2),
-      y: -height,
-      width,
-      height,
+    const powerUp = createPowerUp(
       lane,
-      active: true,
-      type: 'powerUp',
-      powerUpType: powerUpType as PowerUpType,
-      update: (delta: number) => {
-        const speed = 0.25 * this.gameSpeed * (this.slowModeActive ? 0.5 : 1);
-        powerUp.y += speed * delta;
-        
-        // Check if out of bounds
-        if (powerUp.y > this.canvas.height) {
-          powerUp.active = false;
-        }
-      },
-      render: (ctx: CanvasRenderingContext2D) => {
-        ctx.save();
-        
-        let color = '#ffffff';
-        
-        // Set color based on power-up type
-        switch (powerUp.powerUpType) {
-          case PowerUpType.SLOW_SPEED:
-            color = '#9b87f5'; // Purple
-            break;
-          case PowerUpType.SHIELD:
-            color = '#4cc9f0'; // Cyan
-            break;
-          case PowerUpType.EXTRA_LIFE:
-            color = '#ff5e5e'; // Red
-            break;
-        }
-        
-        // Draw power-up shape (circled hexagon)
-        ctx.fillStyle = color;
-        
-        // Draw circle
-        ctx.beginPath();
-        ctx.arc(
-          powerUp.x + powerUp.width / 2,
-          powerUp.y + powerUp.height / 2,
-          powerUp.width / 2,
-          0,
-          Math.PI * 2
-        );
-        ctx.fill();
-        
-        // Draw icon based on power-up type
-        ctx.fillStyle = '#ffffff';
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
-        
-        const centerX = powerUp.x + powerUp.width / 2;
-        const centerY = powerUp.y + powerUp.height / 2;
-        const iconSize = powerUp.width * 0.35;
-        
-        switch (powerUp.powerUpType) {
-          case PowerUpType.SLOW_SPEED:
-            // Draw clock icon
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, iconSize, 0, Math.PI * 2);
-            ctx.stroke();
-            
-            // Draw clock hands
-            ctx.beginPath();
-            ctx.moveTo(centerX, centerY);
-            ctx.lineTo(centerX, centerY - iconSize * 0.7);
-            ctx.stroke();
-            
-            ctx.beginPath();
-            ctx.moveTo(centerX, centerY);
-            ctx.lineTo(centerX + iconSize * 0.5, centerY + iconSize * 0.3);
-            ctx.stroke();
-            break;
-            
-          case PowerUpType.SHIELD:
-            // Draw shield icon
-            ctx.beginPath();
-            ctx.moveTo(centerX, centerY - iconSize);
-            ctx.quadraticCurveTo(
-              centerX + iconSize * 1.2, centerY - iconSize * 0.6,
-              centerX, centerY + iconSize
-            );
-            ctx.quadraticCurveTo(
-              centerX - iconSize * 1.2, centerY - iconSize * 0.6,
-              centerX, centerY - iconSize
-            );
-            ctx.stroke();
-            break;
-            
-          case PowerUpType.EXTRA_LIFE:
-            // Draw heart icon
-            const heartSize = iconSize * 0.8;
-            ctx.beginPath();
-            ctx.moveTo(centerX, centerY + heartSize * 0.3);
-            ctx.bezierCurveTo(
-              centerX, centerY, 
-              centerX - heartSize, centerY, 
-              centerX - heartSize, centerY - heartSize * 0.5
-            );
-            ctx.bezierCurveTo(
-              centerX - heartSize, centerY - heartSize * 1.1,
-              centerX,
+      this.lanePositions,
+      this.laneWidth,
+      this.gameSpeed,
+      this.slowModeActive,
+      this.canvas.height,
+      powerUpType
+    );
+    
+    this.powerUps.push(powerUp);
+  }
+
+  private createRoadMarking(y: number): void {
+    const roadMarking = createRoadMarking(
+      y,
+      this.roadWidth,
+      this.roadCenterX,
+      this.gameSpeed,
+      this.slowModeActive,
+      this.canvas.height
+    );
+    
+    this.roadMarkings.push(roadMarking);
+  }
+
+  private spawnDecoration(): void {
+    const decoration = createDecoration(
+      this.canvas.width,
+      this.roadWidth,
+      this.roadCenterX,
+      this.gameSpeed,
+      this.slowModeActive,
+      this.canvas.height
+    );
+    
+    this.decorations.push(decoration);
+  }
+
+  private render(): void {
+    // Use the renderer to draw the game
+    this.renderer.render(
+      this.gameState,
+      this.player,
+      this.enemies,
+      this.seeds,
+      this.powerUps,
+      this.roadMarkings,
+      this.decorations,
+      this.explosions
+    );
+  }
+}
