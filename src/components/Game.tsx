@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine, GameState, PowerUpType } from '../game/GameEngine';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2, Pause, Play } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
@@ -286,12 +286,19 @@ const Game: React.FC = () => {
     console.log("Start game clicked, gameEngine exists:", !!gameEngineRef.current);
     if (gameEngineRef.current) {
       gameEngineRef.current.startGame();
-      toast.success('GAME STARTED', {
-        description: 'Use arrows to move'
+      toast("GAME STARTED", {
+        description: 'Use arrows to move',
+        position: 'top-center',
+        className: 'game-toast-centered',
+        duration: 1500,
       });
     } else {
       console.error("Game engine not initialized");
-      toast.error('Engine not ready');
+      toast.error('Engine not ready', {
+        position: 'top-center',
+        className: 'game-toast-centered',
+        duration: 1500,
+      });
     }
   };
   
@@ -311,6 +318,12 @@ const Game: React.FC = () => {
   const handleTouchRight = () => {
     if (gameEngineRef.current && gameState === GameState.GAMEPLAY) {
       gameEngineRef.current.handleTouchRight();
+    }
+  };
+
+  const handleTogglePause = () => {
+    if (gameEngineRef.current && (gameState === GameState.GAMEPLAY || gameState === GameState.PAUSED)) {
+      gameEngineRef.current.togglePause();
     }
   };
   
@@ -346,6 +359,20 @@ const Game: React.FC = () => {
             )}
           </div>
         </div>
+
+        {gameState === GameState.GAMEPLAY || gameState === GameState.PAUSED ? (
+          <button 
+            className="absolute top-4 left-1/2 transform -translate-x-1/2 glassmorphism rounded-full p-2 z-20 border border-[#91d3d1]/30"
+            onClick={handleTogglePause}
+            aria-label={gameState === GameState.PAUSED ? "Resume game" : "Pause game"}
+          >
+            {gameState === GameState.PAUSED ? (
+              <Play className="h-5 w-5 text-[#91d3d1]" />
+            ) : (
+              <Pause className="h-5 w-5 text-[#91d3d1]" />
+            )}
+          </button>
+        ) : null}
         
         {gameState === GameState.START_SCREEN && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-black/20 to-black/80 backdrop-blur-sm transition-all duration-500 animate-fade-in">
@@ -434,6 +461,21 @@ const Game: React.FC = () => {
           </div>
         )}
         
+        {gameState === GameState.PAUSED && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm transition-all duration-300 animate-fade-in z-10">
+            <div className="glassmorphism rounded-3xl p-8 max-w-md mx-auto text-center border border-[#91d3d1]/20">
+              <h2 className="text-3xl font-bold mb-4">Game Paused</h2>
+              <p className="text-gray-300 mb-6">Take a break, then click resume to continue</p>
+              <Button 
+                onClick={handleTogglePause}
+                className="game-button w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 rounded-xl py-6 text-lg font-medium shadow-lg shadow-[#91d3d1]/20"
+              >
+                Resume Game
+              </Button>
+            </div>
+          </div>
+        )}
+        
         {isMobile && gameState === GameState.GAMEPLAY && (
           <div className="absolute bottom-10 left-0 right-0 flex justify-between px-8">
             <button
@@ -472,3 +514,4 @@ const Game: React.FC = () => {
 };
 
 export default Game;
+

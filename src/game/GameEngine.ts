@@ -155,6 +155,10 @@ export class GameEngine {
   // High score tracking
   private highScore: number = 0;
   
+  private collisionRecoveryTimer: number = 0;
+  private collisionRecoveryDuration: number = 2500; // 2.5 seconds delay
+  private isInCollisionRecovery: boolean = false;
+  
   constructor(config: GameConfig) {
     this.canvas = config.canvas;
     this.ctx = this.canvas.getContext('2d')!;
@@ -492,6 +496,14 @@ export class GameEngine {
   }
 
   private updateGameState(deltaTime: number): void {
+    // Update collision recovery timer if active
+    if (this.isInCollisionRecovery) {
+      this.collisionRecoveryTimer -= deltaTime;
+      if (this.collisionRecoveryTimer <= 0) {
+        this.isInCollisionRecovery = false;
+      }
+    }
+    
     // Update player
     if (this.player) {
       this.player.update(deltaTime);
@@ -547,7 +559,7 @@ export class GameEngine {
   }
 
   private checkCollisions(): void {
-    if (!this.player || this.gameState !== GameState.GAMEPLAY) return;
+    if (!this.player || this.gameState !== GameState.GAMEPLAY || this.isInCollisionRecovery) return;
     
     // Check enemy collisions - use a smaller collision box for more precise collisions
     this.enemies.forEach(enemy => {
@@ -585,6 +597,10 @@ export class GameEngine {
           this.onLivesChange(this.player!.lives);
           enemy.active = false;
           this.createExplosion(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2);
+          
+          // Activate collision recovery period
+          this.isInCollisionRecovery = true;
+          this.collisionRecoveryTimer = this.collisionRecoveryDuration;
           
           // Check game over
           if (this.player!.lives <= 0) {
