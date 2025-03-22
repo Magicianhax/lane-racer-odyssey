@@ -16,7 +16,6 @@ const Game: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>(GameState.START_SCREEN);
   const [score, setScore] = useState<number>(0);
   const [lives, setLives] = useState<number>(3);
-  const [seedCount, setSeedCount] = useState<number>(0);
   const [highScore, setHighScore] = useState<number>(0);
   const [isFirstTime, setIsFirstTime] = useState<boolean>(true);
   const [activeSlowMode, setActiveSlowMode] = useState<boolean>(false);
@@ -198,36 +197,27 @@ const Game: React.FC = () => {
         onScoreChange: (newScore) => setScore(newScore),
         onLivesChange: (newLives) => setLives(newLives),
         onGameStateChange: (newState) => setGameState(newState),
-        onSeedCollected: (count) => {
-          setSeedCount(count);
-        },
         onPowerUpStart: (type, duration) => {
           switch (type) {
             case PowerUpType.SLOW_SPEED:
               setActiveSlowMode(true);
               setSlowModeTimer(duration);
               toast.success('Slow mode activated!', {
-                description: `Traffic speed reduced for ${Math.ceil(duration/1000)} seconds`,
-                icon: <Clock className="h-5 w-5 text-blue-500" />,
-                position: 'top-center',
-                duration: 3000,
+                description: 'Traffic speed reduced for 5 seconds',
+                icon: <Clock className="h-5 w-5 text-blue-500" />
               });
               break;
             case PowerUpType.SHIELD:
               setActiveShield(true);
               setShieldTimer(duration);
               toast.success('Shield activated!', {
-                description: `Invulnerable for ${Math.ceil(duration/1000)} seconds`,
-                icon: <Shield className="h-5 w-5 text-cyan-500" />,
-                position: 'top-center',
-                duration: 3000,
+                description: 'Invulnerable for 3 seconds',
+                icon: <Shield className="h-5 w-5 text-cyan-500" />
               });
               break;
             case PowerUpType.EXTRA_LIFE:
               toast.success('Extra life collected!', {
-                icon: <Heart className="h-5 w-5 text-red-500" />,
-                position: 'top-center',
-                duration: 3000,
+                icon: <Heart className="h-5 w-5 text-red-500" />
               });
               break;
           }
@@ -237,18 +227,12 @@ const Game: React.FC = () => {
             case PowerUpType.SLOW_SPEED:
               setActiveSlowMode(false);
               setSlowModeTimer(0);
-              toast.info('Slow mode ended', {
-                position: 'top-center',
-                duration: 2000,
-              });
+              toast.info('Slow mode ended');
               break;
             case PowerUpType.SHIELD:
               setActiveShield(false);
               setShieldTimer(0);
-              toast.info('Shield deactivated', {
-                position: 'top-center',
-                duration: 2000,
-              });
+              toast.info('Shield deactivated');
               break;
           }
         },
@@ -342,17 +326,8 @@ const Game: React.FC = () => {
             ))}
           </div>
           
-          <div className="flex items-center space-x-3">
-            <div className="flex items-center space-x-1 glassmorphism px-3 py-1 rounded-full">
-              <div className="w-5 h-5 rounded-full bg-amber-300 flex items-center justify-center">
-                <span className="text-[10px] text-amber-800 font-bold">S</span>
-              </div>
-              <span className="text-sm font-medium">{seedCount}</span>
-            </div>
-            
-            <div className="glassmorphism px-4 py-1 rounded-full">
-              <div className="hud-text text-xl font-medium">{score}</div>
-            </div>
+          <div className="glassmorphism px-4 py-1 rounded-full">
+            <div className="hud-text text-xl font-medium">{score}</div>
           </div>
           
           <div className="flex items-center space-x-2">
