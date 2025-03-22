@@ -335,6 +335,17 @@ export class GameEngine {
     this.movePlayerRight();
   }
   
+  public togglePause(): void {
+    if (this.gameState === GameState.GAMEPLAY) {
+      this.gameState = GameState.PAUSED;
+      this.onGameStateChange(GameState.PAUSED);
+    } else if (this.gameState === GameState.PAUSED) {
+      this.gameState = GameState.GAMEPLAY;
+      this.onGameStateChange(GameState.GAMEPLAY);
+      this.lastFrameTime = performance.now();
+    }
+  }
+
   private setupEventListeners(): void {
     window.addEventListener('keydown', this.handleKeyDown.bind(this));
   }
@@ -375,17 +386,6 @@ export class GameEngine {
     if (this.player.lane < 2) {
       this.player.targetLane = this.player.lane + 1;
       this.player.transitioning = true;
-    }
-  }
-
-  private togglePause(): void {
-    if (this.gameState === GameState.GAMEPLAY) {
-      this.gameState = GameState.PAUSED;
-      this.onGameStateChange(GameState.PAUSED);
-    } else if (this.gameState === GameState.PAUSED) {
-      this.gameState = GameState.GAMEPLAY;
-      this.onGameStateChange(GameState.GAMEPLAY);
-      this.lastFrameTime = performance.now();
     }
   }
 
