@@ -202,22 +202,22 @@ const Game: React.FC = () => {
             case PowerUpType.SLOW_SPEED:
               setActiveSlowMode(true);
               setSlowModeTimer(duration);
-              toast.success('Slow mode activated!', {
-                description: 'Traffic speed reduced for 5 seconds',
-                icon: <Clock className="h-5 w-5 text-blue-500" />
+              toast.success('SLOW MODE ACTIVATED', {
+                description: 'Traffic speed reduced',
+                icon: <Clock className="h-5 w-5 text-blue-500" />,
               });
               break;
             case PowerUpType.SHIELD:
               setActiveShield(true);
               setShieldTimer(duration);
-              toast.success('Shield activated!', {
-                description: 'Invulnerable for 3 seconds',
-                icon: <Shield className="h-5 w-5 text-cyan-500" />
+              toast.success('SHIELD ACTIVATED', {
+                description: 'Invulnerable for 3s',
+                icon: <Shield className="h-5 w-5 text-cyan-500" />,
               });
               break;
             case PowerUpType.EXTRA_LIFE:
-              toast.success('Extra life collected!', {
-                icon: <Heart className="h-5 w-5 text-red-500" />
+              toast.success('EXTRA LIFE', {
+                icon: <Heart className="h-5 w-5 text-red-500" />,
               });
               break;
           }
@@ -227,12 +227,12 @@ const Game: React.FC = () => {
             case PowerUpType.SLOW_SPEED:
               setActiveSlowMode(false);
               setSlowModeTimer(0);
-              toast.info('Slow mode ended');
+              toast.info('SLOW MODE ENDED');
               break;
             case PowerUpType.SHIELD:
               setActiveShield(false);
               setShieldTimer(0);
-              toast.info('Shield deactivated');
+              toast.info('SHIELD DEACTIVATED');
               break;
           }
         },
@@ -253,7 +253,7 @@ const Game: React.FC = () => {
       }
     } catch (err) {
       console.error("Error initializing game engine:", err);
-      toast.error("Error initializing game. Please refresh the page.");
+      toast.error("Game initialization failed");
     }
     
     return () => {
@@ -286,12 +286,12 @@ const Game: React.FC = () => {
     console.log("Start game clicked, gameEngine exists:", !!gameEngineRef.current);
     if (gameEngineRef.current) {
       gameEngineRef.current.startGame();
-      toast.success('Game started!', {
-        description: 'Use left and right arrow keys to move'
+      toast.success('GAME STARTED', {
+        description: 'Use arrows to move'
       });
     } else {
       console.error("Game engine not initialized");
-      toast.error('Game engine not ready. Please refresh the page.');
+      toast.error('Engine not ready');
     }
   };
   

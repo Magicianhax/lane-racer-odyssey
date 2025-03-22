@@ -354,3 +354,53 @@
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Cpath d='M0 0h4v4H0V0zm4 4h4v4H4V4z' fill='rgba(0,0,0,0.1)'/%3E%3C/svg%3E");
   opacity: 0.3;
 }
+
+/* Game toast styles */
+[data-sonner-toast] {
+  margin: 0 auto !important;
+  width: auto !important;
+  max-width: 80% !important;
+}
+
+[data-sonner-toast] [data-description] {
+  margin-top: 0 !important;
+}
+
+[data-sonner-toast] [data-icon] {
+  background: transparent !important;
+}
+
+[data-sonner-toaster][data-theme="dark"] [data-sonner-toast],
+[data-sonner-toaster][data-theme="light"] [data-sonner-toast] {
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2) !important;
+  padding: 8px 16px !important;
+  border-radius: 12px !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+}
+
+[data-sonner-toast][data-styled="true"] {
+  font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, system-ui, sans-serif !important;
+  letter-spacing: 0.5px !important;
+  font-weight: 500 !important;
+  --font-size: 0.875rem !important;
+}
+
+/* Toast animations */
+@keyframes toast-in {
+  0% { opacity: 0; transform: translateY(-20px) scale(0.9); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes toast-out {
+  0% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.9); }
+}
+
+[data-sonner-toast][data-state="open"] {
+  animation: toast-in 0.3s cubic-bezier(0.21, 1.02, 0.73, 1) forwards !important;
+}
+
+[data-sonner-toast][data-state="closing"] {
+  animation: toast-out 0.2s cubic-bezier(0.21, 1.02, 0.73, 1) forwards !important;
+}
