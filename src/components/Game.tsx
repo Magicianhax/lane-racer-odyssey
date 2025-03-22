@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine, GameState, PowerUpType } from '../game/GameEngine';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2, Pause, Play } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2, Pause, Play, Home, RefreshCw, VolumeX, Volume2, Settings } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
@@ -32,21 +32,19 @@ const Game: React.FC = () => {
   const [seedImageURL, setSeedImageURL] = useState<string>(SEED_IMAGE);
   const [loadingError, setLoadingError] = useState<string | null>(null);
   const [inCrashRecovery, setInCrashRecovery] = useState<boolean>(false);
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   
-  // Sound references
   const crashSoundRef = useRef<HTMLAudioElement | null>(null);
   const carSoundRef = useRef<HTMLAudioElement | null>(null);
   
   const isMobile = useIsMobile();
   
   useEffect(() => {
-    // Initialize audio elements
     crashSoundRef.current = new Audio(CRASH_SOUND);
     carSoundRef.current = new Audio(CAR_SOUND);
     carSoundRef.current.loop = true;
     
     return () => {
-      // Clean up audio on unmount
       if (carSoundRef.current) {
         carSoundRef.current.pause();
         carSoundRef.current = null;
@@ -58,14 +56,13 @@ const Game: React.FC = () => {
     };
   }, []);
   
-  // Handle car sound based on game state
   useEffect(() => {
-    if (gameState === GameState.GAMEPLAY && !inCrashRecovery) {
+    if (gameState === GameState.GAMEPLAY && !inCrashRecovery && soundEnabled) {
       carSoundRef.current?.play().catch(err => console.warn("Could not play car sound:", err));
     } else {
       carSoundRef.current?.pause();
     }
-  }, [gameState, inCrashRecovery]);
+  }, [gameState, inCrashRecovery, soundEnabled]);
 
   useEffect(() => {
     const preloadCarAssets = async () => {
@@ -231,7 +228,6 @@ const Game: React.FC = () => {
         canvas: canvasRef.current,
         onScoreChange: (newScore) => setScore(newScore),
         onLivesChange: (newLives) => {
-          // Check if lives decreased (indicating a crash)
           if (newLives < lives && lives > 0) {
             handleCarCrash();
           }
@@ -305,27 +301,21 @@ const Game: React.FC = () => {
     };
   }, [carAssetsLoaded, playerCarURL, enemyCarURLs, seedImageURL, loadingError, lives]);
   
-  // Handle crash recovery
   const handleCarCrash = () => {
-    // Play crash sound
     if (crashSoundRef.current) {
       crashSoundRef.current.currentTime = 0;
       crashSoundRef.current.play().catch(err => console.warn("Could not play crash sound:", err));
     }
     
-    // Pause car sound during crash
     if (carSoundRef.current) {
       carSoundRef.current.pause();
     }
     
-    // Set crash recovery state
     setInCrashRecovery(true);
     
-    // Resume after 2.5 seconds
     setTimeout(() => {
       setInCrashRecovery(false);
       
-      // Resume car sound if game is still in gameplay state
       if (gameState === GameState.GAMEPLAY && carSoundRef.current) {
         carSoundRef.current.play().catch(err => console.warn("Could not resume car sound:", err));
       }
@@ -374,10 +364,9 @@ const Game: React.FC = () => {
     if (gameEngineRef.current && gameState !== GameState.START_SCREEN && gameState !== GameState.GAME_OVER) {
       gameEngineRef.current.togglePause();
       
-      // Handle audio based on new state (will be updated in the state change effect)
       if (gameState === GameState.GAMEPLAY) {
         carSoundRef.current?.pause();
-      } else if (gameState === GameState.PAUSED && !inCrashRecovery) {
+      } else if (gameState === GameState.PAUSED && !inCrashRecovery && soundEnabled) {
         carSoundRef.current?.play().catch(err => console.warn("Could not resume car sound:", err));
       }
     }
@@ -395,12 +384,21 @@ const Game: React.FC = () => {
     }
   };
   
+  const handleToggleSound = () => {
+    setSoundEnabled(!soundEnabled);
+    
+    if (!soundEnabled && gameState === GameState.GAMEPLAY && !inCrashRecovery) {
+      carSoundRef.current?.play().catch(err => console.warn("Could not play car sound:", err));
+    } else {
+      carSoundRef.current?.pause();
+    }
+  };
+  
   return (
     <div className="flex flex-col items-center justify-center w-full h-full">
       <div className="game-canvas-container relative w-full max-w-[600px]">
         <canvas ref={canvasRef} className="w-full h-full"></canvas>
         
-        {/* Pause/Resume Button near notch */}
         {gameState !== GameState.START_SCREEN && gameState !== GameState.GAME_OVER && (
           <div className="absolute top-2 right-2 z-20">
             <Button 
@@ -493,6 +491,71 @@ const Game: React.FC = () => {
                   </ul>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+        
+        {gameState === GameState.PAUSED && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-black/20 to-black/80 backdrop-blur-sm transition-all duration-500 animate-fade-in">
+            <div className="glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
+              <h1 className="text-4xl font-bold mb-2 tracking-tight text-white">Paused</h1>
+              <div className="chip text-xs bg-[#91d3d1]/10 text-[#91d3d1] px-3 py-1 rounded-full mb-4 inline-block">GAME PAUSED</div>
+              <p className="text-gray-300 mb-6">Take a breath, then continue your journey!</p>
+              
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-3">
+                  <Button 
+                    onClick={handleTogglePause}
+                    className="game-button w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 rounded-xl py-4 text-lg font-medium shadow-lg shadow-[#91d3d1]/20 flex items-center justify-center space-x-2"
+                  >
+                    <Play className="h-5 w-5" />
+                    <span>Resume Game</span>
+                  </Button>
+                  
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-gradient-to-r from-[#91d3d1]/10 to-[#7ec7c5]/10 rounded-xl opacity-30"></div>
+                    <Button 
+                      onClick={handleTryAgain}
+                      variant="outline"
+                      className="w-full border-[#91d3d1]/30 text-[#91d3d1] rounded-xl py-4 text-lg font-medium hover:bg-[#91d3d1]/10 flex items-center justify-center space-x-2 relative"
+                    >
+                      <RefreshCw className="h-5 w-5" />
+                      <span>Restart Game</span>
+                    </Button>
+                  </div>
+                  
+                  <Button 
+                    onClick={handleToggleSound}
+                    variant="outline"
+                    className="w-full border-[#91d3d1]/30 text-[#91d3d1] rounded-xl py-4 text-lg font-medium hover:bg-[#91d3d1]/10 flex items-center justify-center space-x-2"
+                  >
+                    {soundEnabled ? (
+                      <>
+                        <Volume2 className="h-5 w-5" />
+                        <span>Sound: On</span>
+                      </>
+                    ) : (
+                      <>
+                        <VolumeX className="h-5 w-5" />
+                        <span>Sound: Off</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="mt-6 flex flex-col space-y-3">
+                <div className="flex items-center justify-center space-x-2 text-[#91d3d1]">
+                  <Trophy className="w-5 h-5" />
+                  <span>Current Score: {score}</span>
+                </div>
+                
+                {highScore > 0 && (
+                  <div className="flex items-center justify-center space-x-2 text-gray-400">
+                    <span>High Score: {highScore}</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
