@@ -19,7 +19,7 @@ export function createPlayer(
   const x = lanePosition - (width / 2);
   const y = canvas.height - height - 20; // 20px buffer from bottom
   
-  return {
+  const player: PlayerCar = {
     x,
     y,
     width,
@@ -32,42 +32,45 @@ export function createPlayer(
     lives: 3,
     shield: false,
     shieldTimer: 0,
-    update: (delta: number) => {
+    update: function(delta: number) {
       // Handle lane transitions
-      if (lane !== lanePosition) {
-        const targetLanePos = lanePositions[lanePosition];
-        const distance = targetLanePos - lanePosition;
+      if (this.lane !== this.targetLane) {
+        const targetLanePos = lanePositions[this.targetLane];
+        const distance = targetLanePos - this.lanePosition;
         const moveSpeed = 0.01 * delta;
         
         if (Math.abs(distance) <= moveSpeed) {
           // We've arrived at the target lane
-          lanePosition = targetLanePos;
-          transitioning = false;
+          this.lanePosition = targetLanePos;
+          this.transitioning = false;
+          this.lane = this.targetLane;
         } else {
           // Move towards target lane
-          lanePosition += (distance > 0 ? moveSpeed : -moveSpeed);
+          this.lanePosition += (distance > 0 ? moveSpeed : -moveSpeed);
+          this.transitioning = true;
         }
         
         // Update x position based on lane position
-        x = lanePosition - (width / 2);
+        this.x = this.lanePosition - (this.width / 2);
       }
       
       // Update shield timer
-      if (shieldTimer > 0) {
-        shieldTimer -= delta;
-        if (shieldTimer <= 0) {
-          shield = false;
+      if (this.shieldTimer > 0) {
+        this.shieldTimer -= delta;
+        if (this.shieldTimer <= 0) {
+          this.shield = false;
+          this.shieldTimer = 0;
         }
       }
     },
-    render: (ctx: CanvasRenderingContext2D) => {
+    render: function(ctx: CanvasRenderingContext2D) {
       ctx.save();
       
       // If the player has a shield, draw it
-      if (shield) {
+      if (this.shield) {
         const glow = ctx.createRadialGradient(
-          x + width / 2, y + height / 2, width * 0.4,
-          x + width / 2, y + height / 2, width * 0.8
+          this.x + this.width / 2, this.y + this.height / 2, this.width * 0.4,
+          this.x + this.width / 2, this.y + this.height / 2, this.width * 0.8
         );
         glow.addColorStop(0, 'rgba(76, 201, 240, 0.3)');
         glow.addColorStop(1, 'rgba(76, 201, 240, 0)');
@@ -75,10 +78,10 @@ export function createPlayer(
         ctx.fillStyle = glow;
         ctx.beginPath();
         ctx.ellipse(
-          x + width / 2, 
-          y + height / 2, 
-          width * 0.8, 
-          height * 0.6, 
+          this.x + this.width / 2, 
+          this.y + this.height / 2, 
+          this.width * 0.8, 
+          this.height * 0.6, 
           0, 0, Math.PI * 2
         );
         ctx.fill();
@@ -86,28 +89,30 @@ export function createPlayer(
       
       // Draw the player car image
       try {
-        ctx.drawImage(playerCarImage, x, y, width, height);
+        ctx.drawImage(playerCarImage, this.x, this.y, this.width, this.height);
       } catch (e) {
         console.error("Error rendering player car:", e);
         // Fallback to a basic car shape if image fails
         ctx.fillStyle = '#4cc9f0';
-        ctx.fillRect(x, y, width, height);
+        ctx.fillRect(this.x, this.y, this.width, this.height);
         
         // Windows
         ctx.fillStyle = '#1a1a2e';
-        ctx.fillRect(x + width * 0.2, y + height * 0.2, width * 0.6, height * 0.25);
+        ctx.fillRect(this.x + this.width * 0.2, this.y + this.height * 0.2, this.width * 0.6, this.height * 0.25);
         
         // Wheels
         ctx.fillStyle = '#000';
-        ctx.fillRect(x - 2, y + height * 0.2, 4, height * 0.15);
-        ctx.fillRect(x + width - 2, y + height * 0.2, 4, height * 0.15);
-        ctx.fillRect(x - 2, y + height * 0.65, 4, height * 0.15);
-        ctx.fillRect(x + width - 2, y + height * 0.65, 4, height * 0.15);
+        ctx.fillRect(this.x - 2, this.y + this.height * 0.2, 4, this.height * 0.15);
+        ctx.fillRect(this.x + this.width - 2, this.y + this.height * 0.2, 4, this.height * 0.15);
+        ctx.fillRect(this.x - 2, this.y + this.height * 0.65, 4, this.height * 0.15);
+        ctx.fillRect(this.x + this.width - 2, this.y + this.height * 0.65, 4, this.height * 0.15);
       }
       
       ctx.restore();
     }
   };
+  
+  return player;
 }
 
 export function createEnemy(
@@ -133,7 +138,7 @@ export function createEnemy(
   // Choose a random enemy car image
   const imageIndex = Math.floor(Math.random() * enemyCarImages.length);
   
-  return {
+  const enemy: GameObject = {
     x,
     y,
     width,
@@ -141,23 +146,23 @@ export function createEnemy(
     lane,
     active: true,
     type: 'enemy',
-    update: (delta: number) => {
+    update: function(delta: number) {
       // Move the enemy car downward
       const speed = 0.3 * gameSpeed * (slowModeActive ? 0.5 : 1);
-      y += speed * delta;
+      this.y += speed * delta;
       
       // Check if out of bounds
-      if (y > canvasHeight) {
-        active = false;
+      if (this.y > canvasHeight) {
+        this.active = false;
       }
     },
-    render: (ctx: CanvasRenderingContext2D) => {
+    render: function(ctx: CanvasRenderingContext2D) {
       ctx.save();
       
       // Draw the enemy car image
       try {
         if (enemyCarImages.length > 0 && enemyCarImages[imageIndex]) {
-          ctx.drawImage(enemyCarImages[imageIndex], x, y, width, height);
+          ctx.drawImage(enemyCarImages[imageIndex], this.x, this.y, this.width, this.height);
         } else {
           throw new Error("Enemy car image not available");
         }
@@ -165,23 +170,25 @@ export function createEnemy(
         console.error("Error rendering enemy car:", e);
         // Fallback to a basic car shape if image fails
         ctx.fillStyle = '#ff5e5e';
-        ctx.fillRect(x, y, width, height);
+        ctx.fillRect(this.x, this.y, this.width, this.height);
         
         // Windows
         ctx.fillStyle = '#1a1a2e';
-        ctx.fillRect(x + width * 0.2, y + height * 0.2, width * 0.6, height * 0.25);
+        ctx.fillRect(this.x + this.width * 0.2, this.y + this.height * 0.2, this.width * 0.6, this.height * 0.25);
         
         // Wheels
         ctx.fillStyle = '#000';
-        ctx.fillRect(x - 2, y + height * 0.2, 4, height * 0.15);
-        ctx.fillRect(x + width - 2, y + height * 0.2, 4, height * 0.15);
-        ctx.fillRect(x - 2, y + height * 0.65, 4, height * 0.15);
-        ctx.fillRect(x + width - 2, y + height * 0.65, 4, height * 0.15);
+        ctx.fillRect(this.x - 2, this.y + this.height * 0.2, 4, this.height * 0.15);
+        ctx.fillRect(this.x + this.width - 2, this.y + this.height * 0.2, 4, this.height * 0.15);
+        ctx.fillRect(this.x - 2, this.y + this.height * 0.65, 4, this.height * 0.15);
+        ctx.fillRect(this.x + this.width - 2, this.y + this.height * 0.65, 4, this.height * 0.15);
       }
       
       ctx.restore();
     }
   };
+  
+  return enemy;
 }
 
 export function createRoadMarking(
@@ -192,20 +199,20 @@ export function createRoadMarking(
   slowModeActive: boolean,
   canvasHeight: number
 ): RoadMarking {
-  return {
+  const marking: RoadMarking = {
     y,
     active: true,
-    update: (delta: number) => {
+    update: function(delta: number) {
       // Move the road marking downward
       const speed = 0.5 * gameSpeed * (slowModeActive ? 0.5 : 1);
-      y += speed * delta;
+      this.y += speed * delta;
       
       // Check if out of bounds
-      if (y > canvasHeight + 80) {
-        active = false;
+      if (this.y > canvasHeight + 80) {
+        this.active = false;
       }
     },
-    render: (ctx: CanvasRenderingContext2D) => {
+    render: function(ctx: CanvasRenderingContext2D) {
       ctx.save();
       
       // Set white color for road markings
@@ -214,7 +221,7 @@ export function createRoadMarking(
       // Draw left lane divider
       ctx.fillRect(
         roadCenterX - roadWidth / 6 - 5,
-        y,
+        this.y,
         10,
         60
       );
@@ -222,7 +229,7 @@ export function createRoadMarking(
       // Draw right lane divider
       ctx.fillRect(
         roadCenterX + roadWidth / 6 - 5,
-        y,
+        this.y,
         10,
         60
       );
@@ -230,6 +237,8 @@ export function createRoadMarking(
       ctx.restore();
     }
   };
+  
+  return marking;
 }
 
 export function createDecoration(
@@ -257,46 +266,48 @@ export function createDecoration(
   const type = Math.random() > 0.7 ? 'tree' : 'bush';
   const size = type === 'tree' ? 40 + Math.random() * 20 : 15 + Math.random() * 15;
   
-  return {
+  const decoration: Decoration = {
     x,
     y,
     type,
     size,
     active: true,
-    update: (delta: number) => {
+    update: function(delta: number) {
       // Move the decoration downward
       const speed = 0.4 * gameSpeed * (slowModeActive ? 0.5 : 1);
-      y += speed * delta;
+      this.y += speed * delta;
       
       // Check if out of bounds
-      if (y > canvasHeight + size) {
-        active = false;
+      if (this.y > canvasHeight + size) {
+        this.active = false;
       }
     },
-    render: (ctx: CanvasRenderingContext2D) => {
+    render: function(ctx: CanvasRenderingContext2D) {
       ctx.save();
       
-      if (type === 'tree') {
+      if (this.type === 'tree') {
         // Draw tree trunk
         ctx.fillStyle = '#8B4513';
-        ctx.fillRect(x - size / 8, y + size / 3, size / 4, size * 2 / 3);
+        ctx.fillRect(this.x - this.size / 8, this.y + this.size / 3, this.size / 4, this.size * 2 / 3);
         
         // Draw tree crown
         ctx.fillStyle = '#2e8b57';
         ctx.beginPath();
-        ctx.arc(x, y + size / 3, size / 2, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y + this.size / 3, this.size / 2, 0, Math.PI * 2);
         ctx.fill();
       } else {
         // Draw bush
         ctx.fillStyle = '#3a9a3a';
         ctx.beginPath();
-        ctx.arc(x, y + size / 2, size / 1.5, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y + this.size / 2, this.size / 1.5, 0, Math.PI * 2);
         ctx.fill();
       }
       
       ctx.restore();
     }
   };
+  
+  return decoration;
 }
 
 export function createPowerUp(
@@ -318,7 +329,7 @@ export function createPowerUp(
   // Start above the canvas
   const y = -height;
   
-  return {
+  const powerUp: GameObject = {
     x,
     y,
     width,
@@ -327,23 +338,23 @@ export function createPowerUp(
     active: true,
     type: 'powerUp',
     powerUpType,
-    update: (delta: number) => {
+    update: function(delta: number) {
       // Move the power-up downward
       const speed = 0.25 * gameSpeed * (slowModeActive ? 0.5 : 1);
-      y += speed * delta;
+      this.y += speed * delta;
       
       // Check if out of bounds
-      if (y > canvasHeight) {
-        active = false;
+      if (this.y > canvasHeight) {
+        this.active = false;
       }
     },
-    render: (ctx: CanvasRenderingContext2D) => {
+    render: function(ctx: CanvasRenderingContext2D) {
       ctx.save();
       
       let color = '#ffffff';
       
       // Set color based on power-up type
-      switch (powerUpType) {
+      switch (this.powerUpType) {
         case PowerUpType.SLOW_SPEED:
           color = '#9b87f5'; // Purple
           break;
@@ -361,9 +372,9 @@ export function createPowerUp(
       // Draw circle
       ctx.beginPath();
       ctx.arc(
-        x + width / 2,
-        y + height / 2,
-        width / 2,
+        this.x + this.width / 2,
+        this.y + this.height / 2,
+        this.width / 2,
         0,
         Math.PI * 2
       );
@@ -374,11 +385,11 @@ export function createPowerUp(
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 2;
       
-      const centerX = x + width / 2;
-      const centerY = y + height / 2;
-      const iconSize = width * 0.35;
+      const centerX = this.x + this.width / 2;
+      const centerY = this.y + this.height / 2;
+      const iconSize = this.width * 0.35;
       
-      switch (powerUpType) {
+      switch (this.powerUpType) {
         case PowerUpType.SLOW_SPEED:
           // Draw clock icon
           ctx.beginPath();
@@ -444,6 +455,8 @@ export function createPowerUp(
       ctx.restore();
     }
   };
+  
+  return powerUp;
 }
 
 export function createSeed(
@@ -466,7 +479,7 @@ export function createSeed(
   // Start above the canvas
   const y = -height;
   
-  return {
+  const seed: GameObject = {
     x,
     y,
     width,
@@ -474,17 +487,17 @@ export function createSeed(
     lane,
     active: true,
     type: 'seed',
-    update: (delta: number) => {
+    update: function(delta: number) {
       // Move the seed downward
       const speed = 0.25 * gameSpeed * (slowModeActive ? 0.5 : 1);
-      y += speed * delta;
+      this.y += speed * delta;
       
       // Check if out of bounds
-      if (y > canvasHeight) {
-        active = false;
+      if (this.y > canvasHeight) {
+        this.active = false;
       }
     },
-    render: (ctx: CanvasRenderingContext2D) => {
+    render: function(ctx: CanvasRenderingContext2D) {
       ctx.save();
       
       // Try to use the seed image if available
@@ -492,10 +505,10 @@ export function createSeed(
         try {
           ctx.drawImage(
             seedImage,
-            x,
-            y,
-            width,
-            height
+            this.x,
+            this.y,
+            this.width,
+            this.height
           );
           
           // Add a subtle glow effect behind the image
@@ -503,22 +516,24 @@ export function createSeed(
           ctx.shadowBlur = 10;
           ctx.drawImage(
             seedImage,
-            x,
-            y,
-            width,
-            height
+            this.x,
+            this.y,
+            this.width,
+            this.height
           );
           ctx.shadowBlur = 0;
         } catch (e) {
           // Fall back to drawing a circle if the image fails
-          drawSeedFallback(ctx, { x, y, width, height, lane, active, type: 'seed', update: () => {}, render: () => {} });
+          drawSeedFallback(ctx, this);
         }
       } else {
         // No image available, use fallback
-        drawSeedFallback(ctx, { x, y, width, height, lane, active, type: 'seed', update: () => {}, render: () => {} });
+        drawSeedFallback(ctx, this);
       }
       
       ctx.restore();
     }
   };
+  
+  return seed;
 }
