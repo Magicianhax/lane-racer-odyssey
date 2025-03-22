@@ -2,13 +2,15 @@ import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine, GameState, PowerUpType } from '../game/GameEngine';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2, Pause, Play } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
 const DEFAULT_PLAYER_CAR = '/playercar.png';
 const DEFAULT_ENEMY_CARS = ['/enemycar1.png', '/enemycar2.png', '/enemycar3.png'];
 const SEED_IMAGE = '/seed.png';
+const CRASH_SOUND = '/crash.m4a';
+const CAR_SOUND = '/car.m4a';
 
 const Game: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -29,9 +31,42 @@ const Game: React.FC = () => {
   const [enemyCarURLs, setEnemyCarURLs] = useState<string[]>(DEFAULT_ENEMY_CARS);
   const [seedImageURL, setSeedImageURL] = useState<string>(SEED_IMAGE);
   const [loadingError, setLoadingError] = useState<string | null>(null);
+  const [inCrashRecovery, setInCrashRecovery] = useState<boolean>(false);
+  
+  // Sound references
+  const crashSoundRef = useRef<HTMLAudioElement | null>(null);
+  const carSoundRef = useRef<HTMLAudioElement | null>(null);
   
   const isMobile = useIsMobile();
   
+  useEffect(() => {
+    // Initialize audio elements
+    crashSoundRef.current = new Audio(CRASH_SOUND);
+    carSoundRef.current = new Audio(CAR_SOUND);
+    carSoundRef.current.loop = true;
+    
+    return () => {
+      // Clean up audio on unmount
+      if (carSoundRef.current) {
+        carSoundRef.current.pause();
+        carSoundRef.current = null;
+      }
+      if (crashSoundRef.current) {
+        crashSoundRef.current.pause();
+        crashSoundRef.current = null;
+      }
+    };
+  }, []);
+  
+  // Handle car sound based on game state
+  useEffect(() => {
+    if (gameState === GameState.GAMEPLAY && !inCrashRecovery) {
+      carSoundRef.current?.play().catch(err => console.warn("Could not play car sound:", err));
+    } else {
+      carSoundRef.current?.pause();
+    }
+  }, [gameState, inCrashRecovery]);
+
   useEffect(() => {
     const preloadCarAssets = async () => {
       try {
@@ -195,7 +230,13 @@ const Game: React.FC = () => {
       const gameEngine = new GameEngine({
         canvas: canvasRef.current,
         onScoreChange: (newScore) => setScore(newScore),
-        onLivesChange: (newLives) => setLives(newLives),
+        onLivesChange: (newLives) => {
+          // Check if lives decreased (indicating a crash)
+          if (newLives < lives && lives > 0) {
+            handleCarCrash();
+          }
+          setLives(newLives);
+        },
         onGameStateChange: (newState) => setGameState(newState),
         onPowerUpStart: (type, duration) => {
           switch (type) {
@@ -262,7 +303,34 @@ const Game: React.FC = () => {
         gameEngineRef.current.cleanup();
       }
     };
-  }, [carAssetsLoaded, playerCarURL, enemyCarURLs, seedImageURL, loadingError]);
+  }, [carAssetsLoaded, playerCarURL, enemyCarURLs, seedImageURL, loadingError, lives]);
+  
+  // Handle crash recovery
+  const handleCarCrash = () => {
+    // Play crash sound
+    if (crashSoundRef.current) {
+      crashSoundRef.current.currentTime = 0;
+      crashSoundRef.current.play().catch(err => console.warn("Could not play crash sound:", err));
+    }
+    
+    // Pause car sound during crash
+    if (carSoundRef.current) {
+      carSoundRef.current.pause();
+    }
+    
+    // Set crash recovery state
+    setInCrashRecovery(true);
+    
+    // Resume after 2.5 seconds
+    setTimeout(() => {
+      setInCrashRecovery(false);
+      
+      // Resume car sound if game is still in gameplay state
+      if (gameState === GameState.GAMEPLAY && carSoundRef.current) {
+        carSoundRef.current.play().catch(err => console.warn("Could not resume car sound:", err));
+      }
+    }, 2500);
+  };
   
   useEffect(() => {
     if (slowModeTimer > 0) {
@@ -302,6 +370,19 @@ const Game: React.FC = () => {
     }
   };
   
+  const handleTogglePause = () => {
+    if (gameEngineRef.current && gameState !== GameState.START_SCREEN && gameState !== GameState.GAME_OVER) {
+      gameEngineRef.current.togglePause();
+      
+      // Handle audio based on new state (will be updated in the state change effect)
+      if (gameState === GameState.GAMEPLAY) {
+        carSoundRef.current?.pause();
+      } else if (gameState === GameState.PAUSED && !inCrashRecovery) {
+        carSoundRef.current?.play().catch(err => console.warn("Could not resume car sound:", err));
+      }
+    }
+  };
+  
   const handleTouchLeft = () => {
     if (gameEngineRef.current && gameState === GameState.GAMEPLAY) {
       gameEngineRef.current.handleTouchLeft();
@@ -318,6 +399,24 @@ const Game: React.FC = () => {
     <div className="flex flex-col items-center justify-center w-full h-full">
       <div className="game-canvas-container relative w-full max-w-[600px]">
         <canvas ref={canvasRef} className="w-full h-full"></canvas>
+        
+        {/* Pause/Resume Button near notch */}
+        {gameState !== GameState.START_SCREEN && gameState !== GameState.GAME_OVER && (
+          <div className="absolute top-2 right-2 z-20">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={handleTogglePause}
+              className="w-10 h-10 rounded-full glassmorphism border border-[#91d3d1]/30"
+            >
+              {gameState === GameState.PAUSED ? (
+                <Play className="h-5 w-5 text-[#91d3d1]" />
+              ) : (
+                <Pause className="h-5 w-5 text-[#91d3d1]" />
+              )}
+            </Button>
+          </div>
+        )}
         
         <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10">
           <div className="flex items-center space-x-2 glassmorphism px-3 py-1 rounded-full">
