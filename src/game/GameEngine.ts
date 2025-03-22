@@ -229,7 +229,7 @@ export class GameEngine {
           
           // Create a backup image
           const backupImg = new Image();
-          backupImg.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgNjQgMTI4IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHg9IjEwIiB5PSIxMCIgd2lkdGg9IjQ0IiBoZWlnaHQ9IjEwOCIgcng9IjYiIGZpbGw9IiNERDM3M0MiLz48cmVjdCB4PSIxNiIgeT0iMzIiIHdpZHRoPSIzzIiBoZWlnaHQ9IjI0IiBmaWxsPSIjMjIyODM4Ii8+PGNpcmNsZSBjeD0iMjAiIGN5PSIxMDAiIHI9IjgiIGZpbGw9IiMyMjIiLz48Y2lyY2xlIGN4PSI0NCIiIGN5PSIxMDAiIHI9IjgiIGZpbGw9IiMyMjIiLz48Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSI0IiBmaWxsPSIjRkZGRjAwIi8+PGNpcmNsZSBjeD0iNDgiIGN5PSIxNiIgcj0iNCIgZmlsbD0iI0ZGRkYwMCIvPjwvc3ZnPg==';
+          backupImg.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgNjQgMTI4IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHg9IjEwIiB5PSIxMCIgd2lkdGg9IjQ0IiBoZWlnaHQ9IjEwOCIgcng9IjYiIGZpbGw9IiNERDM3M0MiLz48cmVjdCB4PSIxNiIgeT0iMzIiIHdpZHRoPSIzMiIgaGVpZ2h0PSIyNCIgZmlsbD0iIzIyMjgzOCIvPjxjaXJjbGUgY3g9IjIwIiBjeT0iMTAwIiByPSI4IiBmaWxsPSIjMjIyIi8+PGNpcmNsZSBjeD0iNDQiIGN5PSIxMDAiIHI9IjgiIGZpbGw9IiMyMjIiLz48Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSI0IiBmaWxsPSIjRkZGRjAwIi8+PGNpcmNsZSBjeD0iNDgiIGN5PSIxNiIgcj0iNCIgZmlsbD0iI0ZGRkYwMCIvPjwvc3ZnPg==';
           this.enemyCarImages[index] = backupImg;
           
           enemyImagesLoaded++;
@@ -335,17 +335,6 @@ export class GameEngine {
     this.movePlayerRight();
   }
   
-  public togglePause(): void {
-    if (this.gameState === GameState.GAMEPLAY) {
-      this.gameState = GameState.PAUSED;
-      this.onGameStateChange(GameState.PAUSED);
-    } else if (this.gameState === GameState.PAUSED) {
-      this.gameState = GameState.GAMEPLAY;
-      this.onGameStateChange(GameState.GAMEPLAY);
-      this.lastFrameTime = performance.now();
-    }
-  }
-
   private setupEventListeners(): void {
     window.addEventListener('keydown', this.handleKeyDown.bind(this));
   }
@@ -386,6 +375,17 @@ export class GameEngine {
     if (this.player.lane < 2) {
       this.player.targetLane = this.player.lane + 1;
       this.player.transitioning = true;
+    }
+  }
+
+  private togglePause(): void {
+    if (this.gameState === GameState.GAMEPLAY) {
+      this.gameState = GameState.PAUSED;
+      this.onGameStateChange(GameState.PAUSED);
+    } else if (this.gameState === GameState.PAUSED) {
+      this.gameState = GameState.GAMEPLAY;
+      this.onGameStateChange(GameState.GAMEPLAY);
+      this.lastFrameTime = performance.now();
     }
   }
 
@@ -586,7 +586,7 @@ export class GameEngine {
           enemy.active = false;
           this.createExplosion(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2);
           
-          // Check game over ONLY if lives are depleted
+          // Check game over
           if (this.player!.lives <= 0) {
             this.gameOver();
           }
@@ -917,29 +917,27 @@ export class GameEngine {
               centerX + heartSize, centerY - heartSize * 0.5
             );
             ctx.bezierCurveTo(
-              centerX + heartSize, centerY,
-              centerX, centerY,
+              centerX + heartSize, centerY, 
+              centerX, centerY, 
               centerX, centerY + heartSize * 0.3
             );
             ctx.fill();
             break;
         }
         
-        // Add a pulsing effect
-        ctx.globalAlpha = 0.5 + Math.sin(this.gameTime / 200) * 0.5;
+        // Add a glow effect
         ctx.shadowColor = color;
         ctx.shadowBlur = 10;
         ctx.beginPath();
         ctx.arc(
           powerUp.x + powerUp.width / 2,
           powerUp.y + powerUp.height / 2,
-          powerUp.width / 2 + 5,
+          powerUp.width / 3,
           0,
           Math.PI * 2
         );
-        ctx.stroke();
-        ctx.globalAlpha = 1;
-        ctx.shadowBlur = 0;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.fill();
         
         ctx.restore();
       }
@@ -948,26 +946,84 @@ export class GameEngine {
     this.powerUps.push(powerUp);
   }
 
-  private spawnDecoration(): void {
-    // Choose whether to place decoration on left or right side
-    const isLeft = Math.random() > 0.5;
-    const distanceFromRoad = 20 + Math.random() * 100; // Distance from road edge
-    const x = isLeft ? 
-      this.roadCenterX - (this.roadWidth / 2) - distanceFromRoad : 
-      this.roadCenterX + (this.roadWidth / 2) + distanceFromRoad;
+  private createRoadMarking(y: number): void {
+    // Create a road marking at the specified y position
+    const marking: RoadMarking = {
+      y,
+      active: true,
+      update: (delta: number) => {
+        const speed = 0.3 * this.gameSpeed * (this.slowModeActive ? 0.5 : 1);
+        marking.y += speed * delta;
+        
+        // Check if out of bounds
+        if (marking.y > this.canvas.height) {
+          marking.active = false;
+        }
+      },
+      render: (ctx: CanvasRenderingContext2D) => {
+        ctx.save();
+        
+        // Draw lane markings
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 5;
+        
+        // Left lane divider
+        const leftX = this.lanePositions[0] + this.laneWidth / 2;
+        ctx.beginPath();
+        ctx.moveTo(leftX, marking.y);
+        ctx.lineTo(leftX, marking.y + 40);
+        ctx.stroke();
+        
+        // Right lane divider
+        const rightX = this.lanePositions[1] + this.laneWidth / 2;
+        ctx.beginPath();
+        ctx.moveTo(rightX, marking.y);
+        ctx.lineTo(rightX, marking.y + 40);
+        ctx.stroke();
+        
+        ctx.restore();
+      }
+    };
     
-    // Choose decoration type (tree or bush)
-    const type = Math.random() > 0.7 ? 'tree' : 'bush';
-    const size = type === 'tree' ? 30 + Math.random() * 20 : 15 + Math.random() * 10;
+    this.roadMarkings.push(marking);
+  }
+
+  private spawnDecoration(): void {
+    // 50% chance to spawn on left or right side
+    const isLeftSide = Math.random() > 0.5;
+    
+    // Randomize decoration type (70% trees, 30% bushes)
+    const type = Math.random() > 0.3 ? 'tree' : 'bush';
+    
+    // Calculate x position (distance from road edge)
+    const roadEdge = isLeftSide ? 
+      this.roadCenterX - this.roadWidth / 2 : 
+      this.roadCenterX + this.roadWidth / 2;
+    
+    // Randomize distance from road (10-80px)
+    const distanceFromRoad = 10 + Math.random() * 70;
+    
+    // Calculate final x position
+    const x = isLeftSide ? 
+      roadEdge - distanceFromRoad : 
+      roadEdge + distanceFromRoad;
+    
+    // Randomize size based on type
+    const baseSize = type === 'tree' ? 60 : 30;
+    const sizeVariation = type === 'tree' ? 30 : 15;
+    const size = baseSize + Math.random() * sizeVariation;
+    
+    // Randomize tree type - 70% pine, 30% oak
+    const treeType = type === 'tree' ? (Math.random() > 0.3 ? 'pine' : 'oak') : null;
     
     const decoration: Decoration = {
-      x: x - size / 2,
+      x: isLeftSide ? x - size : x,
       y: -size,
       type,
       size,
       active: true,
       update: (delta: number) => {
-        const speed = 0.25 * this.gameSpeed * (this.slowModeActive ? 0.5 : 1);
+        const speed = 0.3 * this.gameSpeed * (this.slowModeActive ? 0.5 : 1);
         decoration.y += speed * delta;
         
         // Check if out of bounds
@@ -976,33 +1032,230 @@ export class GameEngine {
         }
       },
       render: (ctx: CanvasRenderingContext2D) => {
+        ctx.save();
+        
         if (type === 'tree') {
-          // Draw tree
-          // Tree trunk
-          ctx.fillStyle = '#8d6e63';
+          // Create slight shadow beneath the tree
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+          ctx.beginPath();
+          ctx.ellipse(
+            decoration.x + decoration.size / 2,
+            decoration.y + decoration.size * 0.95,
+            decoration.size * 0.4,
+            decoration.size * 0.1,
+            0, 0, Math.PI * 2
+          );
+          ctx.fill();
+          
+          // Draw tree trunk with texture
+          ctx.fillStyle = '#6B4226';
+          const trunkWidth = decoration.size * 0.2;
+          const trunkHeight = decoration.size * 0.5;
+          
+          // Trunk base color
           ctx.fillRect(
-            decoration.x + decoration.size * 0.4,
-            decoration.y + decoration.size * 0.6,
-            decoration.size * 0.2,
-            decoration.size * 0.4
+            decoration.x + (decoration.size - trunkWidth) / 2,
+            decoration.y + decoration.size - trunkHeight,
+            trunkWidth,
+            trunkHeight
           );
           
-          // Tree top
-          ctx.fillStyle = '#4caf50';
+          // Trunk texture/details
+          ctx.fillStyle = '#5e3b14';
+          ctx.fillRect(
+            decoration.x + (decoration.size - trunkWidth) / 2 + trunkWidth * 0.2,
+            decoration.y + decoration.size - trunkHeight,
+            trunkWidth * 0.2,
+            trunkHeight
+          );
+          
+          ctx.fillStyle = '#8b5a2b';
+          ctx.fillRect(
+            decoration.x + (decoration.size - trunkWidth) / 2 + trunkWidth * 0.6,
+            decoration.y + decoration.size - trunkHeight,
+            trunkWidth * 0.3,
+            trunkHeight
+          );
+          
+          if (treeType === 'pine') {
+            // Pine tree (triangular shape)
+            
+            // Create darker shadow beneath for depth
+            ctx.fillStyle = '#1C3F1C';
+            
+            const crownWidth = decoration.size * 0.8;
+            const crownHeight = decoration.size * 0.8;
+            const crownX = decoration.x + (decoration.size - crownWidth) / 2;
+            const crownY = decoration.y + decoration.size * 0.2;
+            
+            // Bottom layer shadow
+            ctx.beginPath();
+            ctx.moveTo(crownX + crownWidth / 2, crownY + crownHeight * 0.1);
+            ctx.lineTo(crownX - crownWidth * 0.1, crownY + crownHeight);
+            ctx.lineTo(crownX + crownWidth * 1.1, crownY + crownHeight);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Main tree layers with gradient
+            const gradient = ctx.createLinearGradient(
+              crownX, crownY, 
+              crownX + crownWidth, crownY + crownHeight
+            );
+            gradient.addColorStop(0, '#1a3b15');
+            gradient.addColorStop(0.5, '#29632b');
+            gradient.addColorStop(1, '#2D5E40');
+            ctx.fillStyle = gradient;
+            
+            // Bottom layer
+            ctx.beginPath();
+            ctx.moveTo(crownX + crownWidth / 2, crownY + crownHeight * 0.1);
+            ctx.lineTo(crownX, crownY + crownHeight);
+            ctx.lineTo(crownX + crownWidth, crownY + crownHeight);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Add a second layer to the pine tree
+            const layer2Width = crownWidth * 0.8;
+            const layer2Height = crownHeight * 0.7;
+            const layer2X = decoration.x + (decoration.size - layer2Width) / 2;
+            const layer2Y = crownY + crownHeight * 0.3;
+            
+            ctx.beginPath();
+            ctx.moveTo(layer2X + layer2Width / 2, layer2Y);
+            ctx.lineTo(layer2X, layer2Y + layer2Height);
+            ctx.lineTo(layer2X + layer2Width, layer2Y + layer2Height);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Add a third, smaller layer for more detail
+            const layer3Width = layer2Width * 0.7;
+            const layer3Height = layer2Height * 0.6;
+            const layer3X = decoration.x + (decoration.size - layer3Width) / 2;
+            const layer3Y = layer2Y + layer2Height * 0.2;
+            
+            ctx.beginPath();
+            ctx.moveTo(layer3X + layer3Width / 2, layer3Y);
+            ctx.lineTo(layer3X, layer3Y + layer3Height);
+            ctx.lineTo(layer3X + layer3Width, layer3Y + layer3Height);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Add some texture/detail
+            ctx.fillStyle = '#1a3b15';
+            ctx.globalAlpha = 0.3;
+            
+            // Random spots
+            for (let i = 0; i < 8; i++) {
+              const spotX = crownX + Math.random() * crownWidth;
+              const spotY = crownY + Math.random() * crownHeight;
+              const spotSize = 2 + Math.random() * 4;
+              
+              ctx.beginPath();
+              ctx.arc(spotX, spotY, spotSize, 0, Math.PI * 2);
+              ctx.fill();
+            }
+            
+            ctx.globalAlpha = 1;
+          } else {
+            // Oak tree (round shape)
+            
+            // Draw tree crown (circular shape with variations)
+            const centerX = decoration.x + decoration.size / 2;
+            const centerY = decoration.y + decoration.size * 0.4;
+            const radius = decoration.size * 0.4;
+            
+            // Draw shadow
+            ctx.fillStyle = '#1C3F1C';
+            ctx.beginPath();
+            ctx.arc(
+              centerX + radius * 0.1,
+              centerY + radius * 0.1,
+              radius * 1.05,
+              0,
+              Math.PI * 2
+            );
+            ctx.fill();
+            
+            // Main foliage gradient
+            const gradient = ctx.createRadialGradient(
+              centerX - radius * 0.2, centerY - radius * 0.2, radius * 0.1,
+              centerX, centerY, radius
+            );
+            gradient.addColorStop(0, '#3A7D44');
+            gradient.addColorStop(0.7, '#2A5A30');
+            gradient.addColorStop(1, '#1C3F1C');
+            
+            // Draw main crown
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Add smaller circles for texture/foliage detail
+            ctx.fillStyle = '#3A7D44';
+            
+            // Create variations in the foliage
+            for (let i = 0; i < 6; i++) {
+              const angle = Math.random() * Math.PI * 2;
+              const distance = radius * 0.5 * Math.random();
+              const blobRadius = radius * (0.4 + Math.random() * 0.3);
+              
+              ctx.beginPath();
+              ctx.arc(
+                centerX + Math.cos(angle) * distance,
+                centerY + Math.sin(angle) * distance,
+                blobRadius,
+                0,
+                Math.PI * 2
+              );
+              ctx.fill();
+            }
+            
+            // Add highlights
+            ctx.fillStyle = '#4A8D54';
+            ctx.globalAlpha = 0.3;
+            
+            ctx.beginPath();
+            ctx.arc(
+              centerX - radius * 0.3,
+              centerY - radius * 0.3,
+              radius * 0.5,
+              0,
+              Math.PI * 2
+            );
+            ctx.fill();
+            
+            ctx.globalAlpha = 1;
+          }
+        } else {
+          // Draw bush (circular shape with improved texture)
+          
+          // Draw shadow beneath bush
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
           ctx.beginPath();
-          ctx.moveTo(decoration.x, decoration.y + decoration.size * 0.6);
-          ctx.lineTo(decoration.x + decoration.size, decoration.y + decoration.size * 0.6);
-          ctx.lineTo(decoration.x + decoration.size / 2, decoration.y);
+          ctx.ellipse(
+            decoration.x + decoration.size / 2,
+            decoration.y + decoration.size * 0.95,
+            decoration.size * 0.4,
+            decoration.size * 0.1,
+            0, 0, Math.PI * 2
+          );
           ctx.fill();
           
-          ctx.beginPath();
-          ctx.moveTo(decoration.x + decoration.size * 0.1, decoration.y + decoration.size * 0.4);
-          ctx.lineTo(decoration.x + decoration.size * 0.9, decoration.y + decoration.size * 0.4);
-          ctx.lineTo(decoration.x + decoration.size / 2, decoration.y + decoration.size * 0.1);
-          ctx.fill();
-        } else {
-          // Draw bush
-          ctx.fillStyle = '#66bb6a';
+          // Create gradient for more realistic bush
+          const gradient = ctx.createRadialGradient(
+            decoration.x + decoration.size * 0.3,
+            decoration.y + decoration.size * 0.3,
+            decoration.size * 0.1,
+            decoration.x + decoration.size / 2,
+            decoration.y + decoration.size / 2,
+            decoration.size / 2
+          );
+          gradient.addColorStop(0, '#4A8D54');
+          gradient.addColorStop(0.6, '#3A7D44');
+          gradient.addColorStop(1, '#2D6A3A');
+          
+          ctx.fillStyle = gradient;
           ctx.beginPath();
           ctx.arc(
             decoration.x + decoration.size / 2,
@@ -1012,104 +1265,88 @@ export class GameEngine {
             Math.PI * 2
           );
           ctx.fill();
+          
+          // Add some detail to the bush
+          ctx.fillStyle = '#2D6A3A';
+          ctx.globalAlpha = 0.5;
+          
+          // First blob
+          ctx.beginPath();
+          ctx.arc(
+            decoration.x + decoration.size * 0.3,
+            decoration.y + decoration.size * 0.4,
+            decoration.size * 0.25,
+            0,
+            Math.PI * 2
+          );
+          ctx.fill();
+          
+          // Second blob
+          ctx.beginPath();
+          ctx.arc(
+            decoration.x + decoration.size * 0.7,
+            decoration.y + decoration.size * 0.5,
+            decoration.size * 0.2,
+            0,
+            Math.PI * 2
+          );
+          ctx.fill();
+          
+          // Add highlights
+          ctx.fillStyle = '#5A9D64';
+          ctx.globalAlpha = 0.3;
+          
+          ctx.beginPath();
+          ctx.arc(
+            decoration.x + decoration.size * 0.4,
+            decoration.y + decoration.size * 0.3,
+            decoration.size * 0.15,
+            0,
+            Math.PI * 2
+          );
+          ctx.fill();
+          
+          ctx.globalAlpha = 1;
         }
+        
+        ctx.restore();
       }
     };
     
     this.decorations.push(decoration);
   }
 
-  private createRoadMarking(y: number): void {
-    const marking: RoadMarking = {
-      y,
-      active: true,
-      update: (delta: number) => {
-        const speed = 0.25 * this.gameSpeed * (this.slowModeActive ? 0.5 : 1);
-        marking.y += speed * delta;
-        
-        // Check if out of bounds
-        if (marking.y > this.canvas.height) {
-          marking.active = false;
-        }
-      },
-      render: (ctx: CanvasRenderingContext2D) => {
-        // Draw road lane marking
-        ctx.fillStyle = '#ffffff';
-        
-        // Left lane marking
-        ctx.fillRect(
-          this.roadCenterX - (this.laneWidth / 2),
-          marking.y,
-          10,
-          40
-        );
-        
-        // Right lane marking
-        ctx.fillRect(
-          this.roadCenterX + (this.laneWidth / 2) - 10,
-          marking.y,
-          10,
-          40
-        );
-      }
-    };
-    
-    this.roadMarkings.push(marking);
+  private updateDifficulty(deltaTime: number): void {
+    this.difficultyTimer += deltaTime;
+    if (this.difficultyTimer >= this.difficultyInterval) {
+      this.gameSpeed = Math.min(this.gameSpeed + 0.2, 2.5);
+      this.enemySpawnInterval = Math.max(this.enemySpawnInterval - 100, 1000);
+      this.difficultyTimer = 0;
+    }
   }
 
   private updatePowerUps(deltaTime: number): void {
     // Update slow mode
     if (this.slowModeActive) {
-      this.slowModeTimer += deltaTime;
-      
-      // Check if slow mode has expired
-      if (this.slowModeTimer >= this.slowModeDuration) {
+      this.slowModeTimer -= deltaTime;
+      if (this.slowModeTimer <= 0) {
         this.slowModeActive = false;
-        this.slowModeTimer = 0;
         this.onPowerUpEnd(PowerUpType.SLOW_SPEED);
       }
-    }
-    
-    // Update shield
-    if (this.player && this.player.shield) {
-      this.player.shieldTimer += deltaTime;
-      
-      // Check if shield has expired (10 seconds)
-      if (this.player.shieldTimer >= 10000) {
-        this.player.shield = false;
-        this.player.shieldTimer = 0;
-        this.onPowerUpEnd(PowerUpType.SHIELD);
-      }
-    }
-  }
-
-  private updateDifficulty(deltaTime: number): void {
-    // Increase difficulty over time
-    this.difficultyTimer += deltaTime;
-    
-    if (this.difficultyTimer >= this.difficultyInterval) {
-      // Increase game speed
-      this.gameSpeed += 0.1;
-      
-      // Decrease enemy spawn interval (min 500ms)
-      this.enemySpawnInterval = Math.max(500, this.enemySpawnInterval - 200);
-      
-      // Reset timer
-      this.difficultyTimer = 0;
     }
   }
 
   private activateSlowMode(): void {
     this.slowModeActive = true;
-    this.slowModeTimer = 0;
+    this.slowModeTimer = this.slowModeDuration;
     this.onPowerUpStart(PowerUpType.SLOW_SPEED, this.slowModeDuration);
   }
 
   private activateShield(): void {
     if (this.player) {
       this.player.shield = true;
-      this.player.shieldTimer = 0;
-      this.onPowerUpStart(PowerUpType.SHIELD, 10000);
+      this.player.shieldTimer = 3000; // 3 seconds
+      this.onPowerUpStart(PowerUpType.SHIELD, 3000);
     }
   }
 
@@ -1117,6 +1354,7 @@ export class GameEngine {
     if (this.player) {
       this.player.lives = Math.min(this.player.lives + 1, 5); // Max 5 lives
       this.onLivesChange(this.player.lives);
+      this.onPowerUpStart(PowerUpType.EXTRA_LIFE, 0);
     }
   }
 
@@ -1130,61 +1368,140 @@ export class GameEngine {
     // Clear canvas
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     
-    // Render different screens based on game state
-    switch (this.gameState) {
-      case GameState.START_SCREEN:
-        this.renderStartScreen();
-        break;
-      case GameState.GAMEPLAY:
-      case GameState.PAUSED:
-        this.renderGame();
-        if (this.gameState === GameState.PAUSED) {
-          this.renderPauseOverlay();
-        }
-        break;
-      case GameState.GAME_OVER:
-        this.renderGame();
-        this.renderGameOverOverlay();
-        break;
-    }
-  }
-
-  private renderStartScreen(): void {
-    // Draw road background
+    // Draw background
+    this.drawBackground();
+    
+    // Draw grass
+    this.drawGrass();
+    
+    // Draw road
     this.drawRoad();
     
-    // Draw title
-    this.ctx.fillStyle = '#ffffff';
-    this.ctx.font = 'bold 36px Arial';
-    this.ctx.textAlign = 'center';
-    this.ctx.fillText('Speedy Racer', this.canvas.width / 2, this.canvas.height / 3);
-    
-    // Draw instructions
-    this.ctx.font = '18px Arial';
-    this.ctx.fillText('Use Left/Right Arrow Keys to drive', this.canvas.width / 2, this.canvas.height / 2);
-    this.ctx.fillText('Collect seeds and power-ups', this.canvas.width / 2, this.canvas.height / 2 + 30);
-    this.ctx.fillText('Avoid other cars', this.canvas.width / 2, this.canvas.height / 2 + 60);
-    
-    // Draw start message
-    this.ctx.font = 'bold 24px Arial';
-    this.ctx.fillText('Press any key to Start', this.canvas.width / 2, this.canvas.height * 3 / 4);
-    
-    // Draw high score
-    if (this.highScore > 0) {
-      this.ctx.font = '18px Arial';
-      this.ctx.fillText(`High Score: ${this.highScore}`, this.canvas.width / 2, this.canvas.height - 50);
-    }
-  }
-
-  private renderGame(): void {
-    // Draw road and background
-    this.drawRoad();
-    
-    // Draw road markings
-    this.roadMarkings.forEach(marking => marking.render(this.ctx));
-    
-    // Draw decorations
+    // Draw decorations (behind the cars)
     this.decorations.forEach(decoration => decoration.render(this.ctx));
+    
+    // Draw game objects
+    this.drawGameObjects();
+    
+    // Draw UI
+    this.drawUI();
+  }
+
+  private drawBackground(): void {
+    // Draw sky gradient
+    const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+    gradient.addColorStop(0, '#1a2b45');
+    gradient.addColorStop(1, '#2d4b6e');
+    this.ctx.fillStyle = gradient;
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    
+    // Draw some stars in the background
+    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    for (let i = 0; i < 50; i++) {
+      const x = Math.random() * this.canvas.width;
+      const y = Math.random() * this.canvas.height * 0.7;
+      const size = Math.random() * 2 + 1;
+      this.ctx.beginPath();
+      this.ctx.arc(x, y, size, 0, Math.PI * 2);
+      this.ctx.fill();
+    }
+  }
+
+  private drawGrass(): void {
+    // Draw grass on both sides of the road
+    const roadLeft = this.roadCenterX - this.roadWidth / 2;
+    const roadRight = this.roadCenterX + this.roadWidth / 2;
+    
+    // Left side grass
+    const grassGradient = this.ctx.createLinearGradient(0, 0, roadLeft, 0);
+    grassGradient.addColorStop(0, '#1C3F1C');  // Darker at the edge
+    grassGradient.addColorStop(1, '#2A5A30');  // Lighter near the road
+    
+    this.ctx.fillStyle = grassGradient;
+    this.ctx.fillRect(0, 0, roadLeft, this.canvas.height);
+    
+    // Right side grass
+    const grassGradient2 = this.ctx.createLinearGradient(roadRight, 0, this.canvas.width, 0);
+    grassGradient2.addColorStop(0, '#2A5A30');  // Lighter near the road
+    grassGradient2.addColorStop(1, '#1C3F1C');  // Darker at the edge
+    
+    this.ctx.fillStyle = grassGradient2;
+    this.ctx.fillRect(roadRight, 0, this.canvas.width - roadRight, this.canvas.height);
+    
+    // Add grass texture
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+    
+    // Left side texture
+    for (let i = 0; i < roadLeft; i += 20) {
+      for (let j = 0; j < this.canvas.height; j += 20) {
+        if (Math.random() > 0.8) {
+          this.ctx.fillRect(i, j, 5, 5);
+        }
+      }
+    }
+    
+    // Right side texture
+    for (let i = roadRight; i < this.canvas.width; i += 20) {
+      for (let j = 0; j < this.canvas.height; j += 20) {
+        if (Math.random() > 0.8) {
+          this.ctx.fillRect(i, j, 5, 5);
+        }
+      }
+    }
+  }
+
+  private drawRoad(): void {
+    // Calculate road dimensions
+    const roadLeft = this.roadCenterX - this.roadWidth / 2;
+    const roadRight = this.roadCenterX + this.roadWidth / 2;
+    
+    // Draw road background with asphalt texture
+    const roadGradient = this.ctx.createLinearGradient(roadLeft, 0, roadRight, 0);
+    roadGradient.addColorStop(0, '#333333');
+    roadGradient.addColorStop(0.5, '#444444');
+    roadGradient.addColorStop(1, '#333333');
+    
+    this.ctx.fillStyle = roadGradient;
+    this.ctx.fillRect(roadLeft, 0, this.roadWidth, this.canvas.height);
+    
+    // Add asphalt texture
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+    for (let i = roadLeft; i < roadRight; i += 10) {
+      for (let j = 0; j < this.canvas.height; j += 10) {
+        if (Math.random() > 0.9) {
+          this.ctx.fillRect(i, j, 2, 2);
+        }
+      }
+    }
+    
+    // Draw road edges
+    this.ctx.strokeStyle = '#f6f6a3'; // Yellow road edge
+    this.ctx.lineWidth = 3;
+    
+    // Left edge
+    this.ctx.beginPath();
+    this.ctx.moveTo(roadLeft, 0);
+    this.ctx.lineTo(roadLeft, this.canvas.height);
+    this.ctx.stroke();
+    
+    // Right edge
+    this.ctx.beginPath();
+    this.ctx.moveTo(roadRight, 0);
+    this.ctx.lineTo(roadRight, this.canvas.height);
+    this.ctx.stroke();
+    
+    // Draw lane markings from the road marking objects
+    this.roadMarkings.forEach(marking => marking.render(this.ctx));
+  }
+
+  private drawGameObjects(): void {
+    // Draw player
+    if (this.player) {
+      this.player.render(this.ctx);
+    }
+    
+    // Draw enemies
+    this.enemies.forEach(enemy => enemy.render(this.ctx));
     
     // Draw seeds
     this.seeds.forEach(seed => seed.render(this.ctx));
@@ -1192,23 +1509,11 @@ export class GameEngine {
     // Draw power-ups
     this.powerUps.forEach(powerUp => powerUp.render(this.ctx));
     
-    // Draw enemies
-    this.enemies.forEach(enemy => enemy.render(this.ctx));
-    
-    // Draw player
-    if (this.player) {
-      this.player.render(this.ctx);
-    }
-    
     // Draw explosions
-    this.renderExplosions();
-    
-    // Draw HUD
-    this.renderHUD();
+    this.drawExplosions();
   }
 
-  private renderExplosions(): void {
-    // Draw all explosion particles
+  private drawExplosions(): void {
     this.explosions.forEach(particle => {
       this.ctx.save();
       this.ctx.globalAlpha = particle.alpha;
@@ -1220,267 +1525,193 @@ export class GameEngine {
     });
   }
 
-  private renderHUD(): void {
-    // Draw score
-    this.ctx.fillStyle = '#ffffff';
-    this.ctx.font = '18px Arial';
-    this.ctx.textAlign = 'left';
-    this.ctx.fillText(`Score: ${this.score}`, 20, 30);
-    
-    // Draw lives
-    this.ctx.textAlign = 'right';
-    this.ctx.fillText(`Lives: ${this.player ? this.player.lives : 0}`, this.canvas.width - 20, 30);
-    
-    // Draw power-up indicators
-    if (this.slowModeActive) {
+  private drawUI(): void {
+    // Draw game state UI
+    if (this.gameState === GameState.START_SCREEN) {
+      // Start screen UI is handled in the React component
+    } else if (this.gameState === GameState.PAUSED) {
+      // Draw pause screen
+      this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+      
+      this.ctx.fillStyle = '#fff';
+      this.ctx.font = '30px Arial';
       this.ctx.textAlign = 'center';
-      this.ctx.fillStyle = '#9b87f5';
-      this.ctx.fillText('SLOW MODE', this.canvas.width / 2, 30);
-    }
-    
-    if (this.player && this.player.shield) {
-      this.ctx.textAlign = 'center';
-      this.ctx.fillStyle = '#4cc9f0';
-      this.ctx.fillText('SHIELD ACTIVE', this.canvas.width / 2, this.slowModeActive ? 60 : 30);
+      this.ctx.fillText('PAUSED', this.canvas.width / 2, this.canvas.height / 2);
+      this.ctx.font = '18px Arial';
+      this.ctx.fillText('Press P to resume', this.canvas.width / 2, this.canvas.height / 2 + 40);
+    } else if (this.gameState === GameState.GAME_OVER) {
+      // Game over UI is handled in the React component
     }
   }
-
-  private renderPauseOverlay(): void {
-    // Semi-transparent overlay
-    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    
-    // Pause message
-    this.ctx.fillStyle = '#ffffff';
-    this.ctx.font = 'bold 36px Arial';
-    this.ctx.textAlign = 'center';
-    this.ctx.fillText('PAUSED', this.canvas.width / 2, this.canvas.height / 2);
-    
-    this.ctx.font = '18px Arial';
-    this.ctx.fillText('Press P to resume', this.canvas.width / 2, this.canvas.height / 2 + 40);
-  }
-
-  private renderGameOverOverlay(): void {
-    // Semi-transparent overlay
-    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    
-    // Game over message
-    this.ctx.fillStyle = '#ffffff';
-    this.ctx.font = 'bold 36px Arial';
-    this.ctx.textAlign = 'center';
-    this.ctx.fillText('GAME OVER', this.canvas.width / 2, this.canvas.height / 3);
-    
-    // Final score
-    this.ctx.font = '24px Arial';
-    this.ctx.fillText(`Final Score: ${this.score}`, this.canvas.width / 2, this.canvas.height / 2);
-    
-    // High score
-    if (this.score >= this.highScore) {
-      this.ctx.fillStyle = '#ffcc00';
-      this.ctx.fillText('NEW HIGH SCORE!', this.canvas.width / 2, this.canvas.height / 2 + 40);
-    } else {
-      this.ctx.fillText(`High Score: ${this.highScore}`, this.canvas.width / 2, this.canvas.height / 2 + 40);
+  
+  private checkAllImagesLoaded(): void {
+    if (this.playerCarLoaded && this.enemyCarLoaded && this.seedImageLoaded) {
+      console.log("All game images processed, can continue with game initialization");
+      this.imagesLoaded = true;
+      // Initialize player after images are loaded or failed
+      this.player = this.createPlayer();
     }
-    
-    // Restart message
-    this.ctx.fillStyle = '#ffffff';
-    this.ctx.font = '18px Arial';
-    this.ctx.fillText('Click to restart', this.canvas.width / 2, this.canvas.height * 3 / 4);
   }
-
-  private drawRoad(): void {
-    // Draw grass background
-    this.ctx.fillStyle = '#4CAF50';
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    
-    // Draw road
-    this.ctx.fillStyle = '#424242';
-    this.ctx.fillRect(
-      this.roadCenterX - (this.roadWidth / 2),
-      0,
-      this.roadWidth,
-      this.canvas.height
-    );
-    
-    // Draw road edges
-    this.ctx.fillStyle = '#f5f5f5';
-    
-    // Left edge
-    this.ctx.fillRect(
-      this.roadCenterX - (this.roadWidth / 2),
-      0,
-      5,
-      this.canvas.height
-    );
-    
-    // Right edge
-    this.ctx.fillRect(
-      this.roadCenterX + (this.roadWidth / 2) - 5,
-      0,
-      5,
-      this.canvas.height
-    );
-  }
-
+  
   private calculateDimensions(): void {
-    const screenWidth = this.canvas.width = window.innerWidth;
-    const screenHeight = this.canvas.height = window.innerHeight;
-    
-    this.roadWidth = Math.min(screenWidth * 0.8, 500);
-    this.roadCenterX = screenWidth / 2;
+    // Calculate lane and road dimensions based on canvas size
+    this.roadWidth = this.canvas.width * 0.6;
+    this.roadCenterX = this.canvas.width / 2;
     this.laneWidth = this.roadWidth / 3;
     
-    // Calculate lane positions (center of each lane)
+    // Calculate lane positions (center x of each lane)
     this.lanePositions = [
-      this.roadCenterX - this.roadWidth / 3,
+      this.roadCenterX - this.laneWidth,
       this.roadCenterX,
-      this.roadCenterX + this.roadWidth / 3
+      this.roadCenterX + this.laneWidth
     ];
   }
-
+  
   private createPlayer(): PlayerCar {
-    const width = this.laneWidth * 0.8;
-    const height = width * 2; // Cars are taller than they are wide
+    // Use the same aspect ratio for all cars (0.7 is a balanced ratio)
+    const aspectRatio = 0.7; 
+    const width = this.laneWidth * 0.9; // 90% of lane width
+    const height = width / aspectRatio;
+    const lane = 1; // Start in middle lane
     
-    const player: PlayerCar = {
-      x: this.lanePositions[1] - (width / 2), // Start in middle lane
-      y: this.canvas.height - height - 20, // Place near bottom
+    return {
+      x: this.lanePositions[lane] - (width / 2),
+      y: this.canvas.height - height - 20,
       width,
       height,
-      lane: 1, // Middle lane
-      lanePosition: this.lanePositions[1],
-      targetLane: 1,
+      lane,
+      lanePosition: this.lanePositions[lane],
+      targetLane: lane,
       transitioning: false,
-      active: true,
       lives: 3,
       shield: false,
       shieldTimer: 0,
+      active: true,
       update: (delta: number) => {
+        if (!this.player) return;
+        
         // Handle lane transitions
-        if (player.transitioning) {
-          const targetPosition = this.lanePositions[player.targetLane];
-          const moveSpeed = 0.4 * delta;
-          const distanceToTarget = targetPosition - player.lanePosition;
+        if (this.player.transitioning) {
+          const transitionSpeed = 0.01 * delta;
+          const target = this.lanePositions[this.player.targetLane];
+          const diff = target - this.player.lanePosition;
           
-          if (Math.abs(distanceToTarget) < 5) {
-            // Close enough, snap to position
-            player.lanePosition = targetPosition;
-            player.lane = player.targetLane;
-            player.transitioning = false;
+          if (Math.abs(diff) < 2) {
+            this.player.lanePosition = target;
+            this.player.transitioning = false;
+            this.player.lane = this.player.targetLane;
           } else {
-            // Move toward target lane
-            player.lanePosition += Math.sign(distanceToTarget) * moveSpeed;
+            this.player.lanePosition += diff * transitionSpeed;
           }
-          
-          // Update x position
-          player.x = player.lanePosition - (player.width / 2);
         }
         
-        // Draw shield effect if active
-        if (player.shield) {
-          // Shield animation logic
+        this.player.x = this.player.lanePosition - (this.player.width / 2);
+        
+        // Update shield timer if active
+        if (this.player.shield) {
+          this.player.shieldTimer -= delta;
+          if (this.player.shieldTimer <= 0) {
+            this.player.shield = false;
+            this.onPowerUpEnd(PowerUpType.SHIELD);
+          }
         }
       },
       render: (ctx: CanvasRenderingContext2D) => {
+        if (!this.player) return;
+        
         ctx.save();
         
-        // Draw shield if active
-        if (player.shield) {
-          const pulseSize = 5 * Math.sin(this.gameTime / 100);
-          ctx.strokeStyle = 'rgba(76, 201, 240, 0.7)';
-          ctx.lineWidth = 3;
+        // Draw shield effect if active
+        if (this.player.shield) {
           ctx.beginPath();
-          ctx.roundRect(
-            player.x - 10 - pulseSize,
-            player.y - 10 - pulseSize,
-            player.width + 20 + pulseSize * 2,
-            player.height + 20 + pulseSize * 2,
-            10
+          ctx.fillStyle = 'rgba(100, 210, 255, 0.3)';
+          ctx.ellipse(
+            this.player.x + this.player.width / 2, 
+            this.player.y + this.player.height / 2,
+            this.player.width * 0.8, 
+            this.player.height * 0.8, 
+            0, 0, Math.PI * 2
+          );
+          ctx.fill();
+          
+          // Shield border
+          ctx.beginPath();
+          ctx.strokeStyle = 'rgba(100, 210, 255, 0.8)';
+          ctx.lineWidth = 2;
+          ctx.ellipse(
+            this.player.x + this.player.width / 2, 
+            this.player.y + this.player.height / 2,
+            this.player.width * 0.8, 
+            this.player.height * 0.8, 
+            0, 0, Math.PI * 2
           );
           ctx.stroke();
-          
-          // Add glow effect
-          ctx.shadowColor = '#4cc9f0';
-          ctx.shadowBlur = 15;
         }
         
-        // Draw player car
-        if (this.playerCarImage && this.playerCarLoaded) {
-          try {
-            ctx.drawImage(
-              this.playerCarImage,
-              player.x,
-              player.y,
-              player.width,
-              player.height
-            );
-          } catch (e) {
-            // Fall back to drawing a rectangle if the image fails
-            this.drawPlayerFallback(ctx, player);
-          }
-        } else {
-          // No image or not loaded, use fallback
-          this.drawPlayerFallback(ctx, player);
+        try {
+          // Draw the player car image
+          ctx.drawImage(
+            this.playerCarImage, 
+            this.player.x, 
+            this.player.y, 
+            this.player.width, 
+            this.player.height
+          );
+        } catch (e) {
+          // Fallback to drawing a simple car if image fails
+          console.warn("Error drawing player car image, using fallback:", e);
+          this.drawCarFallback(
+            ctx, 
+            this.player.x, 
+            this.player.y, 
+            this.player.width, 
+            this.player.height, 
+            '#3cbbbb'
+          );
         }
         
         ctx.restore();
       }
     };
-    
-    return player;
   }
-
-  private drawPlayerFallback(ctx: CanvasRenderingContext2D, player: PlayerCar): void {
-    // Draw a simple car as fallback
-    ctx.fillStyle = '#3498db';
-    ctx.fillRect(player.x, player.y, player.width, player.height);
+  
+  private drawCarFallback(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, color: string): void {
+    // Draw car body
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, width, height);
     
-    // Draw windshield
+    // Draw car details (windows, etc.)
     ctx.fillStyle = '#222';
-    ctx.fillRect(
-      player.x + player.width * 0.25,
-      player.y + player.height * 0.1,
-      player.width * 0.5,
-      player.height * 0.3
-    );
     
-    // Draw wheels
-    ctx.fillStyle = '#333';
-    // Left wheels
-    ctx.fillRect(
-      player.x - 5,
-      player.y + player.height * 0.2,
-      5,
-      player.height * 0.2
-    );
-    ctx.fillRect(
-      player.x - 5,
-      player.y + player.height * 0.6,
-      5,
-      player.height * 0.2
-    );
+    // Draw windows (top part of car)
+    const windowHeight = height * 0.3;
+    const windowWidth = width * 0.7;
+    const windowX = x + (width - windowWidth) / 2;
+    const windowY = y + height * 0.15;
+    ctx.fillRect(windowX, windowY, windowWidth, windowHeight);
     
-    // Right wheels
-    ctx.fillRect(
-      player.x + player.width,
-      player.y + player.height * 0.2,
-      5,
-      player.height * 0.2
-    );
-    ctx.fillRect(
-      player.x + player.width,
-      player.y + player.height * 0.6,
-      5,
-      player.height * 0.2
-    );
+    // Draw headlights or taillights
+    ctx.fillStyle = '#ffdd00';
+    
+    // Front lights
+    const lightSize = width * 0.15;
+    ctx.fillRect(x + width * 0.1, y + height * 0.1, lightSize, lightSize);
+    ctx.fillRect(x + width - width * 0.1 - lightSize, y + height * 0.1, lightSize, lightSize);
   }
-
+  
   private createEnemy(lane: number): GameObject {
-    const width = this.laneWidth * 0.8;
-    const height = width * 2; // Cars are taller than they are wide
+    // Use the same aspect ratio as the player car
+    const aspectRatio = 0.7; 
+    const width = this.laneWidth * 0.9; // 90% of lane width
+    const height = width / aspectRatio;
     
-    const enemy: GameObject = {
+    // Choose a random enemy car image if multiple are available
+    const enemyImageIndex = this.enemyCarImages.length > 0 
+      ? Math.floor(Math.random() * this.enemyCarImages.length) 
+      : 0;
+    
+    const enemy = {
       x: this.lanePositions[lane] - (width / 2),
       y: -height,
       width,
@@ -1488,96 +1719,53 @@ export class GameEngine {
       lane,
       active: true,
       type: 'enemy',
+      imageIndex: enemyImageIndex,
       update: (delta: number) => {
-        // Move the enemy down
+        // Move downward
         const speed = 0.3 * this.gameSpeed * (this.slowModeActive ? 0.5 : 1);
+        // Use a direct reference to the enemy object instead of this
         enemy.y += speed * delta;
         
         // Check if out of bounds
         if (enemy.y > this.canvas.height) {
           enemy.active = false;
-          
-          // Add score for successfully passing an enemy
-          this.score += 5;
-          this.onScoreChange(this.score);
         }
       },
       render: (ctx: CanvasRenderingContext2D) => {
-        // Draw enemy car using images
-        if (this.enemyCarImages.length > 0 && this.enemyCarLoaded) {
-          // Select a random enemy car image from the loaded ones
-          const imageIndex = Math.floor(Math.random() * this.enemyCarImages.length);
-          if (this.enemyCarImages[imageIndex]) {
-            try {
-              ctx.drawImage(
-                this.enemyCarImages[imageIndex],
-                enemy.x,
-                enemy.y,
-                enemy.width,
-                enemy.height
-              );
-              return;
-            } catch (e) {
-              // Fall back to drawing a rectangle if the image fails
-              console.error("Failed to draw enemy car image", e);
-            }
+        ctx.save();
+        
+        try {
+          // Get the specific enemy car image to use
+          const enemyImage = this.enemyCarImages[enemy.imageIndex];
+          if (enemyImage) {
+            // Draw the enemy car image
+            ctx.drawImage(
+              enemyImage, 
+              enemy.x, 
+              enemy.y, 
+              enemy.width, 
+              enemy.height
+            );
+          } else {
+            throw new Error("Enemy car image not available");
           }
+        } catch (e) {
+          // Fallback to drawing a simple car if image fails
+          console.warn("Error drawing enemy car image, using fallback");
+          this.drawCarFallback(
+            ctx, 
+            enemy.x, 
+            enemy.y, 
+            enemy.width, 
+            enemy.height, 
+            '#dd373c'
+          );
         }
         
-        // Fallback to drawing a rectangle
-        this.drawEnemyFallback(ctx, enemy);
+        ctx.restore();
       }
     };
     
     return enemy;
-  }
-
-  private drawEnemyFallback(ctx: CanvasRenderingContext2D, enemy: GameObject): void {
-    // Draw a simple car as fallback
-    // Base color will be random for different enemy cars
-    const colors = ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71'];
-    const colorIndex = Math.floor(Math.random() * colors.length);
-    
-    ctx.fillStyle = colors[colorIndex];
-    ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
-    
-    // Draw windshield
-    ctx.fillStyle = '#222';
-    ctx.fillRect(
-      enemy.x + enemy.width * 0.25,
-      enemy.y + enemy.height * 0.6,
-      enemy.width * 0.5,
-      enemy.height * 0.3
-    );
-    
-    // Draw wheels
-    ctx.fillStyle = '#333';
-    // Left wheels
-    ctx.fillRect(
-      enemy.x - 5,
-      enemy.y + enemy.height * 0.2,
-      5,
-      enemy.height * 0.2
-    );
-    ctx.fillRect(
-      enemy.x - 5,
-      enemy.y + enemy.height * 0.6,
-      5,
-      enemy.height * 0.2
-    );
-    
-    // Right wheels
-    ctx.fillRect(
-      enemy.x + enemy.width,
-      enemy.y + enemy.height * 0.2,
-      5,
-      enemy.height * 0.2
-    );
-    ctx.fillRect(
-      enemy.x + enemy.width,
-      enemy.y + enemy.height * 0.6,
-      5,
-      enemy.height * 0.2
-    );
   }
 }
