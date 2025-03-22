@@ -445,7 +445,7 @@ const Game: React.FC = () => {
         </div>
         
         {inCrashRecovery && gameState === GameState.GAMEPLAY && (
-          <div className="absolute inset-0 bg-red-500/20 animate-pulse flex items-center justify-center z-30 backdrop-blur-sm transition-all duration-300">
+          <div className="absolute inset-0 bg-red-500/20 animate-pulse flex items-center justify-center z-30 backdrop-blur-[2px] transition-all duration-300 pointer-events-none">
             <div className="bg-black/50 rounded-full p-4 animate-bounce">
               <AlertTriangle className="h-12 w-12 text-red-500" />
             </div>
