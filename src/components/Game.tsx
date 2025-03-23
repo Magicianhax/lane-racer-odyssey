@@ -54,9 +54,10 @@ const Game: React.FC = () => {
         crashSoundRef.current = crashSound;
         
         crashSound.addEventListener('ended', () => {
-          console.log("Crash sound ended, restarting engine sound");
+          console.log("Crash sound ended, restarting engine sound from beginning");
           if (gameState === GameState.GAMEPLAY && carSoundRef.current) {
-            carSoundRef.current.play().catch(e => console.error("Error resuming car sound after crash:", e));
+            carSoundRef.current.currentTime = 0;
+            carSoundRef.current.play().catch(e => console.error("Error restarting car sound after crash:", e));
           }
         });
         
@@ -281,7 +282,7 @@ const Game: React.FC = () => {
           setGameState(newState);
           
           if (newState === GameState.GAMEPLAY) {
-            console.log("Starting car sound");
+            console.log("Starting car sound from beginning");
             if (carSoundRef.current) {
               carSoundRef.current.currentTime = 0;
               carSoundRef.current.play().catch(e => console.error("Error playing car sound:", e));
