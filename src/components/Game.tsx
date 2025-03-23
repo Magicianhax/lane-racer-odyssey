@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine, GameState, PowerUpType } from '../game/GameEngine';
 import { Button } from '@/components/ui/button';
@@ -194,7 +195,7 @@ const Game: React.FC = () => {
     if (!isSoundEnabled || !carSoundRef.current) return;
     
     try {
-      carSoundRef.current.currentTime = 0;
+      carSoundRef.current.currentTime = 0; // Always start from the beginning
       const playPromise = carSoundRef.current.play();
       
       if (playPromise !== undefined) {
@@ -248,20 +249,26 @@ const Game: React.FC = () => {
     if (!isSoundEnabled || !crashSoundRef.current) return;
     
     try {
-      pauseEngineSound();
+      // Stop engine sound completely (not just pause)
+      stopEngineSound();
       
+      // Play crash sound and wait for it to finish
       crashSoundRef.current.currentTime = 0;
       await crashSoundRef.current.play();
       
+      // Wait for the crash sound to finish, then restart engine sound
+      // Use a fixed timeout rather than depending on sound duration which can be unreliable
       setTimeout(() => {
         if (gameState === GameState.GAMEPLAY) {
-          resumeEngineSound();
+          // Start the engine sound from the beginning
+          startEngineSound();
         }
-      }, 1000);
+      }, 1000); // Fixed 1 second delay
+      
     } catch (err) {
       console.error("Could not play collision sound:", err);
       if (gameState === GameState.GAMEPLAY) {
-        resumeEngineSound();
+        startEngineSound();
       }
     }
   };
@@ -300,7 +307,7 @@ const Game: React.FC = () => {
       case GameState.GAMEPLAY:
         if (isSoundEnabled) {
           console.log("Starting engine sound due to GAMEPLAY state");
-          startEngineSound();
+          startEngineSound(); // Always start from the beginning
         }
         break;
       case GameState.PAUSED:
