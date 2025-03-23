@@ -2,13 +2,15 @@ import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine, GameState, PowerUpType } from '../game/GameEngine';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2, Pause, Play, RefreshCw, HelpCircle, ArrowLeft } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2, Pause, Play, RefreshCw, HelpCircle, ArrowLeft, Volume2, VolumeX } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
 const DEFAULT_PLAYER_CAR = '/playercar.png';
 const DEFAULT_ENEMY_CARS = ['/enemycar1.png', '/enemycar2.png', '/enemycar3.png'];
 const SEED_IMAGE = '/seed.png';
+const CAR_SOUND = '/car.m4a';
+const CRASH_SOUND = '/crash.m4a';
 
 const Game: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -31,126 +33,196 @@ const Game: React.FC = () => {
   const [loadingError, setLoadingError] = useState<string | null>(null);
   const [showHowToPlay, setShowHowToPlay] = useState<boolean>(false);
   const [currentHowToPlayPage, setCurrentHowToPlayPage] = useState<number>(0);
+  const [isSoundEnabled, setIsSoundEnabled] = useState<boolean>(true);
+  
+  const carSoundRef = useRef<HTMLAudioElement | null>(null);
+  const crashSoundRef = useRef<HTMLAudioElement | null>(null);
+  const soundsLoadedRef = useRef<boolean>(false);
   
   const isMobile = useIsMobile();
   
   useEffect(() => {
-    const preloadCarAssets = async () => {
+    const preloadSounds = async () => {
       try {
-        console.log("Loading car assets...");
+        console.log("Loading sound assets...");
         
-        try {
-          const playerImg = new Image();
-          let playerLoaded = false;
-          
-          const playerPromise = new Promise<string>((resolve, reject) => {
-            playerImg.onload = () => {
-              console.log("Player image fully loaded");
-              playerLoaded = true;
-              resolve(playerImg.src);
-            };
+        const carSound = new Audio(CAR_SOUND);
+        carSound.loop = true;
+        carSound.volume = 0.3;
+        carSoundRef.current = carSound;
+        
+        const crashSound = new Audio(CRASH_SOUND);
+        crashSound.volume = 0.7;
+        crashSoundRef.current = crashSound;
+        
+        await Promise.all([
+          new Promise<void>((resolve) => {
+            carSound.addEventListener('canplaythrough', () => {
+              console.log("Car sound loaded successfully");
+              resolve();
+            }, { once: true });
             
-            playerImg.onerror = (e) => {
-              console.error("Error loading player image:", e);
-              resolve(DEFAULT_PLAYER_CAR);
-            };
-            
-            playerImg.src = DEFAULT_PLAYER_CAR;
-            
-            setTimeout(() => {
-              if (!playerLoaded) {
-                console.warn("Player image loading timed out");
-                resolve(DEFAULT_PLAYER_CAR);
-              }
-            }, 3000);
-          });
-          
-          const enemyPromises = DEFAULT_ENEMY_CARS.map(url => {
-            const enemyImg = new Image();
-            let enemyLoaded = false;
-            
-            return new Promise<string>((resolve, reject) => {
-              enemyImg.onload = () => {
-                console.log(`Enemy image ${url} fully loaded`);
-                enemyLoaded = true;
-                resolve(url);
-              };
-              
-              enemyImg.onerror = (e) => {
-                console.error(`Error loading enemy image ${url}:`, e);
-                resolve(DEFAULT_ENEMY_CARS[0]); // Use first car as fallback
-              };
-              
-              enemyImg.src = url;
-              
-              setTimeout(() => {
-                if (!enemyLoaded) {
-                  console.warn(`Enemy image ${url} loading timed out`);
-                  resolve(DEFAULT_ENEMY_CARS[0]);
-                }
-              }, 3000);
+            carSound.addEventListener('error', (e) => {
+              console.error("Error loading car sound:", e);
+              resolve();
             });
-          });
-          
-          const seedImg = new Image();
-          let seedLoaded = false;
-          
-          const seedPromise = new Promise<string>((resolve, reject) => {
-            seedImg.onload = () => {
-              console.log("Seed image fully loaded");
-              seedLoaded = true;
-              resolve(seedImg.src);
-            };
             
-            seedImg.onerror = (e) => {
-              console.error("Error loading seed image:", e);
-              resolve(SEED_IMAGE);
-            };
+            carSound.load();
+          }),
+          
+          new Promise<void>((resolve) => {
+            crashSound.addEventListener('canplaythrough', () => {
+              console.log("Crash sound loaded successfully");
+              resolve();
+            }, { once: true });
             
-            seedImg.src = SEED_IMAGE;
+            crashSound.addEventListener('error', (e) => {
+              console.error("Error loading crash sound:", e);
+              resolve();
+            });
             
-            setTimeout(() => {
-              if (!seedLoaded) {
-                console.warn("Seed image loading timed out");
-                resolve(SEED_IMAGE);
-              }
-            }, 3000);
-          });
-          
-          const [playerSrc, seedSrc, ...enemySrcs] = await Promise.all([
-            playerPromise, 
-            seedPromise,
-            ...enemyPromises
-          ]);
-          
-          setPlayerCarURL(playerSrc);
-          setSeedImageURL(seedSrc);
-          setEnemyCarURLs(enemySrcs.length > 0 ? enemySrcs : DEFAULT_ENEMY_CARS);
-          
-          console.log("All images processed successfully, using sources:", {
-            playerSrc,
-            seedSrc,
-            enemySrcs
-          });
-          
-        } catch (error) {
-          console.error("Error loading images:", error);
-          setPlayerCarURL(DEFAULT_PLAYER_CAR);
-          setSeedImageURL(SEED_IMAGE);
-          setEnemyCarURLs(DEFAULT_ENEMY_CARS);
-        }
+            crashSound.load();
+          })
+        ]);
         
-        setCarAssetsLoaded(true);
-        setLoadingError(null);
-      } catch (error) {
-        console.error("Error in preloadCarAssets:", error);
-        setCarAssetsLoaded(true);
-        setLoadingError("Failed to load game images. Using default images instead.");
+        console.log("All sound assets loaded");
+        soundsLoadedRef.current = true;
+      } catch (err) {
+        console.error("Error preloading sounds:", err);
+        soundsLoadedRef.current = true;
       }
     };
     
-    preloadCarAssets();
+    preloadSounds();
+    
+    return () => {
+      stopAllSounds();
+    };
   }, []);
+  
+  const startEngineSound = () => {
+    if (!isSoundEnabled || !carSoundRef.current) return;
+    
+    try {
+      carSoundRef.current.currentTime = 0;
+      const playPromise = carSoundRef.current.play();
+      
+      if (playPromise !== undefined) {
+        playPromise.catch(err => {
+          console.error("Error playing engine sound:", err);
+        });
+      }
+    } catch (err) {
+      console.error("Could not start engine sound:", err);
+    }
+  };
+  
+  const stopEngineSound = () => {
+    if (!carSoundRef.current) return;
+    
+    try {
+      carSoundRef.current.pause();
+      carSoundRef.current.currentTime = 0;
+    } catch (err) {
+      console.error("Could not stop engine sound:", err);
+    }
+  };
+  
+  const pauseEngineSound = () => {
+    if (!carSoundRef.current) return;
+    
+    try {
+      carSoundRef.current.pause();
+    } catch (err) {
+      console.error("Could not pause engine sound:", err);
+    }
+  };
+  
+  const resumeEngineSound = () => {
+    if (!isSoundEnabled || !carSoundRef.current) return;
+    
+    try {
+      const playPromise = carSoundRef.current.play();
+      
+      if (playPromise !== undefined) {
+        playPromise.catch(err => {
+          console.error("Error resuming engine sound:", err);
+        });
+      }
+    } catch (err) {
+      console.error("Could not resume engine sound:", err);
+    }
+  };
+  
+  const playCollisionSound = async () => {
+    if (!isSoundEnabled || !crashSoundRef.current) return;
+    
+    try {
+      pauseEngineSound();
+      
+      crashSoundRef.current.currentTime = 0;
+      const playPromise = crashSoundRef.current.play();
+      
+      if (playPromise !== undefined) {
+        await playPromise;
+        
+        const crashSoundDuration = crashSoundRef.current.duration * 1000 || 1000;
+        
+        setTimeout(() => {
+          if (gameState === GameState.GAMEPLAY) {
+            resumeEngineSound();
+          }
+        }, Math.min(crashSoundDuration, 1000));
+      }
+    } catch (err) {
+      console.error("Could not play collision sound:", err);
+      resumeEngineSound();
+    }
+  };
+  
+  const stopAllSounds = () => {
+    stopEngineSound();
+    
+    if (crashSoundRef.current) {
+      crashSoundRef.current.pause();
+      crashSoundRef.current.currentTime = 0;
+    }
+  };
+  
+  const toggleSound = () => {
+    setIsSoundEnabled(prev => {
+      const newState = !prev;
+      
+      if (newState) {
+        if (gameState === GameState.GAMEPLAY) {
+          startEngineSound();
+        }
+      } else {
+        stopAllSounds();
+      }
+      
+      return newState;
+    });
+  };
+  
+  useEffect(() => {
+    if (!soundsLoadedRef.current) return;
+    
+    switch (gameState) {
+      case GameState.GAMEPLAY:
+        if (isSoundEnabled) {
+          startEngineSound();
+        }
+        break;
+      case GameState.PAUSED:
+        pauseEngineSound();
+        break;
+      case GameState.GAME_OVER:
+      case GameState.START_SCREEN:
+        stopAllSounds();
+        break;
+    }
+  }, [gameState, isSoundEnabled]);
   
   useEffect(() => {
     if (!canvasRef.current || !carAssetsLoaded) return;
@@ -237,6 +309,9 @@ const Game: React.FC = () => {
               toast.info('SHIELD DEACTIVATED');
               break;
           }
+        },
+        onCollision: () => {
+          playCollisionSound();
         },
         customAssets: {
           playerCarURL,
@@ -518,6 +593,16 @@ const Game: React.FC = () => {
               )}
               
               <Button 
+                variant="ghost" 
+                size="icon" 
+                className="rounded-full bg-black/20 backdrop-blur-sm hover:bg-black/30"
+                onClick={toggleSound}
+                aria-label={isSoundEnabled ? "Mute sound" : "Enable sound"}
+              >
+                {isSoundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+              </Button>
+              
+              <Button 
                 variant="teal" 
                 size="icon" 
                 className="rounded-full hover:bg-[#7ec7c5] transition-colors"
@@ -555,12 +640,24 @@ const Game: React.FC = () => {
                   How to Play
                 </Button>
                 
-                {highScore > 0 && (
-                  <div className="flex items-center space-x-2 text-[#91d3d1] mt-2">
-                    <Trophy className="w-5 h-5" />
-                    <span>High Score: {highScore}</span>
-                  </div>
-                )}
+                <div className="flex items-center space-x-4 mt-2">
+                  {highScore > 0 && (
+                    <div className="flex items-center space-x-2 text-[#91d3d1]">
+                      <Trophy className="w-5 h-5" />
+                      <span>High Score: {highScore}</span>
+                    </div>
+                  )}
+                  
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="rounded-full bg-black/20 backdrop-blur-sm hover:bg-black/30"
+                    onClick={toggleSound}
+                    aria-label={isSoundEnabled ? "Mute sound" : "Enable sound"}
+                  >
+                    {isSoundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                  </Button>
+                </div>
               </div>
             </div>
             
@@ -655,8 +752,20 @@ const Game: React.FC = () => {
                   Restart Game
                 </Button>
                 
-                <div className="text-sm text-gray-300 mt-4">
-                  Current Score: <span className="font-bold text-white">{score}</span>
+                <div className="flex items-center mt-4 space-x-3">
+                  <div className="text-sm text-gray-300">
+                    Current Score: <span className="font-bold text-white">{score}</span>
+                  </div>
+                  
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="rounded-full bg-black/20 backdrop-blur-sm hover:bg-black/30"
+                    onClick={toggleSound}
+                    aria-label={isSoundEnabled ? "Mute sound" : "Enable sound"}
+                  >
+                    {isSoundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                  </Button>
                 </div>
               </div>
             </div>
@@ -693,6 +802,16 @@ const Game: React.FC = () => {
                   className="game-button w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 rounded-xl py-6 text-lg font-medium shadow-lg shadow-[#91d3d1]/20"
                 >
                   Try Again
+                </Button>
+                
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="mt-4 rounded-full bg-black/20 backdrop-blur-sm hover:bg-black/30"
+                  onClick={toggleSound}
+                  aria-label={isSoundEnabled ? "Mute sound" : "Enable sound"}
+                >
+                  {isSoundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
                 </Button>
               </div>
             </div>

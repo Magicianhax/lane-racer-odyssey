@@ -75,6 +75,7 @@ export interface GameConfig {
   onGameStateChange: (state: GameState) => void;
   onPowerUpStart: (type: PowerUpType, duration: number) => void;
   onPowerUpEnd: (type: PowerUpType) => void;
+  onCollision?: () => void; // New collision callback
   customAssets?: {
     playerCarURL: string;
     enemyCarURLs: string[];
@@ -146,6 +147,9 @@ export class GameEngine {
   private onPowerUpStart: (type: PowerUpType, duration: number) => void;
   private onPowerUpEnd: (type: PowerUpType) => void;
   
+  // Add new collision callback
+  private onCollision?: () => void;
+  
   // Animation frame id for cleanup
   private animationFrameId: number | null = null;
   
@@ -165,6 +169,7 @@ export class GameEngine {
     this.onGameStateChange = config.onGameStateChange;
     this.onPowerUpStart = config.onPowerUpStart;
     this.onPowerUpEnd = config.onPowerUpEnd;
+    this.onCollision = config.onCollision; // Set collision callback
     
     // Initialize game dimensions
     this.calculateDimensions();
@@ -611,6 +616,11 @@ export class GameEngine {
           this.onLivesChange(this.player!.lives);
           enemy.active = false;
           this.createExplosion(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2);
+          
+          // Call collision callback for sound effect
+          if (this.onCollision) {
+            this.onCollision();
+          }
           
           // Check game over
           if (this.player!.lives <= 0) {
