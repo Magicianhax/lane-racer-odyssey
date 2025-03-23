@@ -1,9 +1,8 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine, GameState, PowerUpType } from '../game/GameEngine';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2, Pause, Play, RefreshCw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2, Pause, Play, RefreshCw, HelpCircle, ArrowLeft } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
@@ -30,6 +29,8 @@ const Game: React.FC = () => {
   const [enemyCarURLs, setEnemyCarURLs] = useState<string[]>(DEFAULT_ENEMY_CARS);
   const [seedImageURL, setSeedImageURL] = useState<string>(SEED_IMAGE);
   const [loadingError, setLoadingError] = useState<string | null>(null);
+  const [showHowToPlay, setShowHowToPlay] = useState<boolean>(false);
+  const [currentHowToPlayPage, setCurrentHowToPlayPage] = useState<number>(0);
   
   const isMobile = useIsMobile();
   
@@ -296,6 +297,23 @@ const Game: React.FC = () => {
     }
   };
   
+  const handleShowHowToPlay = () => {
+    setShowHowToPlay(true);
+    setCurrentHowToPlayPage(0);
+  };
+  
+  const handleBackToMenu = () => {
+    setShowHowToPlay(false);
+  };
+  
+  const handleNextPage = () => {
+    setCurrentHowToPlayPage(prev => Math.min(prev + 1, howToPlayContent.length - 1));
+  };
+  
+  const handlePrevPage = () => {
+    setCurrentHowToPlayPage(prev => Math.max(prev - 1, 0));
+  };
+  
   const handleTryAgain = () => {
     if (gameEngineRef.current) {
       setHighScore(gameEngineRef.current.getHighScore());
@@ -333,6 +351,139 @@ const Game: React.FC = () => {
       gameEngineRef.current.restartGame();
     }
   };
+  
+  const howToPlayContent = [
+    {
+      title: "Basic Controls",
+      content: (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <h3 className="text-lg font-medium">Keyboard Controls:</h3>
+            <div className="flex items-center space-x-3 mb-2">
+              <div className="px-3 py-1 bg-black/30 rounded">←</div>
+              <span>Move left</span>
+            </div>
+            <div className="flex items-center space-x-3">
+              <div className="px-3 py-1 bg-black/30 rounded">→</div>
+              <span>Move right</span>
+            </div>
+          </div>
+          
+          {isMobile && (
+            <div className="space-y-2 mt-4">
+              <h3 className="text-lg font-medium">Mobile Controls:</h3>
+              <p>Tap left side of screen to move left</p>
+              <p>Tap right side of screen to move right</p>
+            </div>
+          )}
+          
+          <div className="mt-4">
+            <p>Pause button is located at the top right of the screen</p>
+          </div>
+        </div>
+      )
+    },
+    {
+      title: "Game Objectives",
+      content: (
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-lg font-medium mb-2">Main Goal:</h3>
+            <p>Drive through traffic while avoiding crashes and collect seeds to increase your score!</p>
+          </div>
+          
+          <div className="mt-4">
+            <h3 className="text-lg font-medium mb-2">Scoring:</h3>
+            <ul className="space-y-2">
+              <li className="flex items-start">
+                <span className="mr-2">•</span>
+                <div>
+                  <span className="font-medium">Seeds:</span> +10 points each
+                </div>
+              </li>
+              <li className="flex items-start">
+                <span className="mr-2">•</span>
+                <div>
+                  <span className="font-medium">Survival:</span> The longer you survive, the higher your score!
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+      )
+    },
+    {
+      title: "Power-Ups",
+      content: (
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium mb-2">Special Power-Ups:</h3>
+          
+          <div className="space-y-4 mt-2">
+            <div className="p-3 bg-black/20 rounded-lg flex items-center space-x-3">
+              <div className="bg-[#9b87f5] rounded-full p-2">
+                <Clock className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <div className="font-medium">Slow Mode</div>
+                <div className="text-sm text-gray-300">Slows down all traffic for 5 seconds</div>
+              </div>
+            </div>
+            
+            <div className="p-3 bg-black/20 rounded-lg flex items-center space-x-3">
+              <div className="bg-[#4cc9f0] rounded-full p-2">
+                <Shield className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <div className="font-medium">Shield</div>
+                <div className="text-sm text-gray-300">Makes you invulnerable for 3 seconds</div>
+              </div>
+            </div>
+            
+            <div className="p-3 bg-black/20 rounded-lg flex items-center space-x-3">
+              <div className="bg-[#ff5e5e] rounded-full p-2">
+                <Heart className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <div className="font-medium">Extra Life</div>
+                <div className="text-sm text-gray-300">Gives you an additional life</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      title: "Tips & Tricks",
+      content: (
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium mb-2">Pro Tips:</h3>
+          
+          <ul className="space-y-3">
+            <li className="flex items-start">
+              <span className="mr-2">•</span>
+              <div>Plan your moves in advance to avoid getting boxed in by cars</div>
+            </li>
+            <li className="flex items-start">
+              <span className="mr-2">•</span>
+              <div>Prioritize collecting power-ups when traffic gets heavy</div>
+            </li>
+            <li className="flex items-start">
+              <span className="mr-2">•</span>
+              <div>Shield power-ups can be used offensively to intentionally crash through cars</div>
+            </li>
+            <li className="flex items-start">
+              <span className="mr-2">•</span>
+              <div>Look ahead for upcoming obstacles and plan your route</div>
+            </li>
+            <li className="flex items-start">
+              <span className="mr-2">•</span>
+              <div>The game gets faster over time - be prepared!</div>
+            </li>
+          </ul>
+        </div>
+      )
+    }
+  ];
   
   return (
     <div className="flex flex-col items-center justify-center w-full h-full">
@@ -379,10 +530,10 @@ const Game: React.FC = () => {
           </div>
         </div>
         
-        {gameState === GameState.START_SCREEN && (
+        {gameState === GameState.START_SCREEN && !showHowToPlay && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-black/20 to-black/80 backdrop-blur-sm transition-all duration-500 animate-fade-in">
             <div className="glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
-              <h1 className="text-4xl font-bold mb-2 tracking-tight text-white">Lane Runner</h1>
+              <h1 className="text-4xl font-bold mb-2 tracking-tight text-white">Superseed Lane Runner</h1>
               <div className="chip text-xs bg-[#91d3d1]/10 text-[#91d3d1] px-3 py-1 rounded-full mb-4 inline-block">FAST-PACED ACTION</div>
               <p className="text-gray-300 mb-6">Navigate through traffic, collect seeds, and survive as long as possible!</p>
               
@@ -395,37 +546,81 @@ const Game: React.FC = () => {
                   {gameInitialized ? 'Start Game' : <Loader2 className="h-5 w-5 animate-spin" />}
                 </Button>
                 
+                <Button 
+                  onClick={handleShowHowToPlay}
+                  variant="teal-outline"
+                  className="w-full rounded-xl py-6 text-lg font-medium"
+                >
+                  <HelpCircle className="mr-2 h-5 w-5" />
+                  How to Play
+                </Button>
+                
                 {highScore > 0 && (
-                  <div className="flex items-center space-x-2 text-[#91d3d1]">
+                  <div className="flex items-center space-x-2 text-[#91d3d1] mt-2">
                     <Trophy className="w-5 h-5" />
                     <span>High Score: {highScore}</span>
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        )}
+        
+        {gameState === GameState.START_SCREEN && showHowToPlay && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-black/20 to-black/80 backdrop-blur-sm transition-all duration-500 animate-fade-in">
+            <div className="glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
+              <div className="flex items-center justify-between mb-4">
+                <Button 
+                  variant="teal-outline" 
+                  size="icon" 
+                  className="rounded-full"
+                  onClick={handleBackToMenu}
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <h2 className="text-2xl font-bold tracking-tight text-white">How to Play</h2>
+                <div className="w-9"></div> {/* Spacer for centering */}
+              </div>
               
-              {isFirstTime && (
-                <div className="mt-8 text-sm text-gray-300 p-4 border border-[#91d3d1]/20 rounded-lg bg-black/20">
-                  <h3 className="font-bold mb-2">How to Play:</h3>
-                  <ul className="text-left space-y-2">
-                    <li className="flex items-start">
-                      <span className="mr-2">•</span>
-                      Use <span className="px-2 py-0.5 mx-1 rounded bg-black/30">←</span> and <span className="px-2 py-0.5 mx-1 rounded bg-black/30">→</span> keys to switch lanes
-                    </li>
-                    <li className="flex items-start">
-                      <span className="mr-2">•</span>
-                      Collect seeds to increase your score
-                    </li>
-                    <li className="flex items-start">
-                      <span className="mr-2">•</span>
-                      Avoid crashing into other cars
-                    </li>
-                    <li className="flex items-start">
-                      <span className="mr-2">•</span>
-                      Look for special power-ups to help you survive
-                    </li>
-                  </ul>
-                </div>
-              )}
+              <div className="chip text-xs bg-[#91d3d1]/10 text-[#91d3d1] px-3 py-1 rounded-full mb-6 inline-block">
+                {currentHowToPlayPage + 1} of {howToPlayContent.length}
+              </div>
+              
+              <h3 className="text-xl font-medium mb-4 text-[#91d3d1]">{howToPlayContent[currentHowToPlayPage].title}</h3>
+              
+              <div className="text-left mb-6 min-h-[200px]">
+                {howToPlayContent[currentHowToPlayPage].content}
+              </div>
+              
+              <div className="flex justify-between">
+                <Button
+                  variant="teal-outline"
+                  size="sm"
+                  onClick={handlePrevPage}
+                  disabled={currentHowToPlayPage === 0}
+                  className={cn(
+                    "rounded-full px-4",
+                    currentHowToPlayPage === 0 && "opacity-50 cursor-not-allowed"
+                  )}
+                >
+                  <ChevronLeft className="h-5 w-5 mr-1" />
+                  Previous
+                </Button>
+                
+                <Button
+                  variant="teal-outline"
+                  size="sm"
+                  onClick={handleNextPage}
+                  disabled={currentHowToPlayPage === howToPlayContent.length - 1}
+                  className={cn(
+                    "rounded-full px-4",
+                    currentHowToPlayPage === howToPlayContent.length - 1 && "opacity-50 cursor-not-allowed"
+                  )}
+                >
+                  Next
+                  <ChevronRight className="h-5 w-5 ml-1" />
+                </Button>
+              </div>
             </div>
           </div>
         )}
