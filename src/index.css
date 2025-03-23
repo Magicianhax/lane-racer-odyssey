@@ -109,7 +109,7 @@
   }
 
   .right-button-top {
-    @apply right-0 top-1/5;
+    @apply right-0 top-[20%];
   }
 
   .right-button-bottom {
