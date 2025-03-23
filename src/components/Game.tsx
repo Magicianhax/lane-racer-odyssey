@@ -927,6 +927,6 @@ const Game: React.FC = () => {
               </Button>
               
               <Button 
-                variant="teal" 
+                variant="ghost" 
                 size="icon" 
-                className="rounded-full hover
+                className="rounded-full bg
