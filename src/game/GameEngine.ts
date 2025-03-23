@@ -923,3 +923,55 @@ export class GameEngine {
             ctx.moveTo(centerX, centerY - iconSize);
             ctx.quadraticCurveTo(
               centerX + iconSize * 1.2, centerY - iconSize * 0.6,
+              centerX + iconSize * 0.5, centerY + iconSize * 0.5
+            );
+            ctx.quadraticCurveTo(
+              centerX, centerY + iconSize * 0.8,
+              centerX - iconSize * 0.5, centerY + iconSize * 0.5
+            );
+            ctx.quadraticCurveTo(
+              centerX - iconSize * 1.2, centerY - iconSize * 0.6,
+              centerX, centerY - iconSize
+            );
+            ctx.stroke();
+            break;
+            
+          case PowerUpType.EXTRA_LIFE:
+            // Draw heart icon
+            ctx.beginPath();
+            // Left half of heart
+            ctx.moveTo(centerX, centerY + iconSize * 0.4);
+            ctx.bezierCurveTo(
+              centerX - iconSize * 0.5, centerY,
+              centerX - iconSize, centerY - iconSize * 0.5,
+              centerX, centerY - iconSize * 0.5
+            );
+            // Right half of heart
+            ctx.bezierCurveTo(
+              centerX + iconSize, centerY - iconSize * 0.5,
+              centerX + iconSize * 0.5, centerY,
+              centerX, centerY + iconSize * 0.4
+            );
+            ctx.fill();
+            break;
+        }
+        
+        ctx.restore();
+      }
+    };
+    
+    this.powerUps.push(powerUp);
+  }
+
+  private updatePowerUps(deltaTime: number): void {
+    // Update slow mode timer
+    if (this.slowModeActive) {
+      this.slowModeTimer += deltaTime;
+      if (this.slowModeTimer >= this.slowModeDuration) {
+        this.slowModeActive = false;
+        this.slowModeTimer = 0;
+      }
+    }
+  }
+
+  private updateDifficulty
