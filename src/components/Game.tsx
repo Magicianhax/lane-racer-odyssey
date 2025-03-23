@@ -1,8 +1,9 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine, GameState, PowerUpType } from '../game/GameEngine';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2, Pause, Play } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
@@ -29,6 +30,7 @@ const Game: React.FC = () => {
   const [enemyCarURLs, setEnemyCarURLs] = useState<string[]>(DEFAULT_ENEMY_CARS);
   const [seedImageURL, setSeedImageURL] = useState<string>(SEED_IMAGE);
   const [loadingError, setLoadingError] = useState<string | null>(null);
+  const [isPaused, setIsPaused] = useState<boolean>(false);
   
   const isMobile = useIsMobile();
   
@@ -196,7 +198,13 @@ const Game: React.FC = () => {
         canvas: canvasRef.current,
         onScoreChange: (newScore) => setScore(newScore),
         onLivesChange: (newLives) => setLives(newLives),
-        onGameStateChange: (newState) => setGameState(newState),
+        onGameStateChange: (newState) => {
+          setGameState(newState);
+          // Reset pause state when game state changes
+          if (newState !== GameState.GAMEPLAY) {
+            setIsPaused(false);
+          }
+        },
         onPowerUpStart: (type, duration) => {
           switch (type) {
             case PowerUpType.SLOW_SPEED:
@@ -303,14 +311,30 @@ const Game: React.FC = () => {
   };
   
   const handleTouchLeft = () => {
-    if (gameEngineRef.current && gameState === GameState.GAMEPLAY) {
+    if (gameEngineRef.current && gameState === GameState.GAMEPLAY && !isPaused) {
       gameEngineRef.current.handleTouchLeft();
     }
   };
   
   const handleTouchRight = () => {
-    if (gameEngineRef.current && gameState === GameState.GAMEPLAY) {
+    if (gameEngineRef.current && gameState === GameState.GAMEPLAY && !isPaused) {
       gameEngineRef.current.handleTouchRight();
+    }
+  };
+
+  const handlePauseResume = () => {
+    if (!gameEngineRef.current || gameState !== GameState.GAMEPLAY) return;
+    
+    if (isPaused) {
+      // Resume game
+      gameEngineRef.current.resumeGame();
+      setIsPaused(false);
+      toast.info('GAME RESUMED');
+    } else {
+      // Pause game
+      gameEngineRef.current.pauseGame();
+      setIsPaused(true);
+      toast.info('GAME PAUSED');
     }
   };
   
@@ -346,6 +370,30 @@ const Game: React.FC = () => {
             )}
           </div>
         </div>
+        
+        {/* Add pause button that shows only during gameplay */}
+        {gameState === GameState.GAMEPLAY && (
+          <div className="absolute top-4 right-4 z-20">
+            <Button
+              variant="teal"
+              size="sm"
+              className="glassmorphism shadow-lg shadow-[#91d3d1]/20"
+              onClick={handlePauseResume}
+            >
+              {isPaused ? (
+                <>
+                  <Play className="w-4 h-4" />
+                  Resume
+                </>
+              ) : (
+                <>
+                  <Pause className="w-4 h-4" />
+                  Pause
+                </>
+              )}
+            </Button>
+          </div>
+        )}
         
         {gameState === GameState.START_SCREEN && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-black/20 to-black/80 backdrop-blur-sm transition-all duration-500 animate-fade-in">
@@ -391,9 +439,31 @@ const Game: React.FC = () => {
                       <span className="mr-2">•</span>
                       Look for special power-ups to help you survive
                     </li>
+                    <li className="flex items-start">
+                      <span className="mr-2">•</span>
+                      Press <span className="px-2 py-0.5 mx-1 rounded bg-black/30">P</span> or the pause button to pause the game
+                    </li>
                   </ul>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+        
+        {/* Pause screen overlay */}
+        {gameState === GameState.GAMEPLAY && isPaused && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-black/30 to-black/70 backdrop-blur-md transition-all duration-300 animate-fade-in z-10">
+            <div className="glassmorphism rounded-3xl p-8 max-w-md mx-auto text-center border border-[#91d3d1]/20 shadow-xl animate-scale-in">
+              <h2 className="text-3xl font-bold mb-4 tracking-tight text-white">Game Paused</h2>
+              <p className="text-gray-300 mb-6">Take a breather! Your progress is saved.</p>
+              
+              <Button 
+                onClick={handlePauseResume}
+                className="game-button w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 rounded-xl py-6 text-lg font-medium shadow-lg shadow-[#91d3d1]/20"
+              >
+                <Play className="w-5 h-5 mr-2" />
+                Resume Game
+              </Button>
             </div>
           </div>
         )}
