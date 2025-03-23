@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine, GameState, PowerUpType } from '../game/GameEngine';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2, Pause, Play } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2, Pause, Play, RotateCcw, Volume2, VolumeX } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
@@ -30,6 +30,7 @@ const Game: React.FC = () => {
   const [seedImageURL, setSeedImageURL] = useState<string>(SEED_IMAGE);
   const [loadingError, setLoadingError] = useState<string | null>(null);
   const [isPaused, setIsPaused] = useState<boolean>(false);
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   
   const isMobile = useIsMobile();
   
@@ -162,6 +163,11 @@ const Game: React.FC = () => {
       setIsFirstTime(false);
     }
     
+    const soundSetting = localStorage.getItem('soundEnabled');
+    if (soundSetting !== null) {
+      setSoundEnabled(soundSetting === 'true');
+    }
+    
     const resizeCanvas = () => {
       if (!canvasRef.current) return;
       
@@ -248,7 +254,8 @@ const Game: React.FC = () => {
           enemyCarURLs,
           seedImageURL,
           useDefaultsIfBroken: true
-        }
+        },
+        soundEnabled: soundEnabled
       });
       
       gameEngineRef.current = gameEngine;
@@ -269,7 +276,7 @@ const Game: React.FC = () => {
         gameEngineRef.current.cleanup();
       }
     };
-  }, [carAssetsLoaded, playerCarURL, enemyCarURLs, seedImageURL, loadingError]);
+  }, [carAssetsLoaded, playerCarURL, enemyCarURLs, seedImageURL, loadingError, soundEnabled]);
   
   useEffect(() => {
     if (slowModeTimer > 0) {
@@ -335,6 +342,27 @@ const Game: React.FC = () => {
       setIsPaused(true);
       toast.info('GAME PAUSED');
     }
+  };
+  
+  const handleRestartGame = () => {
+    if (gameEngineRef.current) {
+      setIsPaused(false);
+      gameEngineRef.current.resumeGame(); // Need to resume first before restarting
+      gameEngineRef.current.startGame(); // This resets and starts the game
+      toast.info('GAME RESTARTED');
+    }
+  };
+  
+  const toggleSound = () => {
+    const newSoundState = !soundEnabled;
+    setSoundEnabled(newSoundState);
+    localStorage.setItem('soundEnabled', newSoundState.toString());
+    
+    if (gameEngineRef.current) {
+      gameEngineRef.current.setSoundEnabled(newSoundState);
+    }
+    
+    toast.info(newSoundState ? 'SOUND ENABLED' : 'SOUND DISABLED');
   };
   
   return (
@@ -409,6 +437,25 @@ const Game: React.FC = () => {
                   {gameInitialized ? 'Start Game' : <Loader2 className="h-5 w-5 animate-spin" />}
                 </Button>
                 
+                <Button 
+                  variant={soundEnabled ? "teal-outline" : "outline"}
+                  size="sm" 
+                  onClick={toggleSound}
+                  className="w-full"
+                >
+                  {soundEnabled ? (
+                    <>
+                      <Volume2 className="w-4 h-4" />
+                      Sound On
+                    </>
+                  ) : (
+                    <>
+                      <VolumeX className="w-4 h-4" />
+                      Sound Off
+                    </>
+                  )}
+                </Button>
+                
                 {highScore > 0 && (
                   <div className="flex items-center space-x-2 text-[#91d3d1]">
                     <Trophy className="w-5 h-5" />
@@ -439,7 +486,7 @@ const Game: React.FC = () => {
                     </li>
                     <li className="flex items-start">
                       <span className="mr-2">•</span>
-                      Press <span className="px-2 py-0.5 mx-1 rounded bg-black/30">P</span> or the pause button to pause the game
+                      Use the pause button to pause the game
                     </li>
                   </ul>
                 </div>
@@ -478,6 +525,71 @@ const Game: React.FC = () => {
                   className="game-button w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 rounded-xl py-6 text-lg font-medium shadow-lg shadow-[#91d3d1]/20"
                 >
                   Try Again
+                </Button>
+                
+                <Button 
+                  variant={soundEnabled ? "teal-outline" : "outline"}
+                  size="sm"
+                  onClick={toggleSound}
+                  className="w-full"
+                >
+                  {soundEnabled ? (
+                    <>
+                      <Volume2 className="w-4 h-4" />
+                      Sound On
+                    </>
+                  ) : (
+                    <>
+                      <VolumeX className="w-4 h-4" />
+                      Sound Off
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {isPaused && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-black/20 to-black/80 backdrop-blur-sm transition-all duration-500 animate-fade-in">
+            <div className="pause-modal glassmorphism rounded-3xl p-8 max-w-md mx-auto text-center border border-[#91d3d1]/20 animate-scale-in">
+              <h2 className="text-3xl font-bold mb-6">Game Paused</h2>
+              
+              <div className="space-y-3">
+                <Button 
+                  onClick={handlePauseResume}
+                  className="game-button w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 rounded-xl py-6 text-lg font-medium shadow-lg shadow-[#91d3d1]/20"
+                >
+                  <Play className="w-5 h-5 mr-2" />
+                  Resume Game
+                </Button>
+                
+                <Button 
+                  onClick={handleRestartGame}
+                  variant="teal-outline"
+                  className="w-full py-3"
+                >
+                  <RotateCcw className="w-5 h-5 mr-2" />
+                  Restart Game
+                </Button>
+                
+                <Button 
+                  variant={soundEnabled ? "teal-outline" : "outline"}
+                  size="sm"
+                  onClick={toggleSound}
+                  className="w-full"
+                >
+                  {soundEnabled ? (
+                    <>
+                      <Volume2 className="w-4 h-4" />
+                      Sound On
+                    </>
+                  ) : (
+                    <>
+                      <VolumeX className="w-4 h-4" />
+                      Sound Off
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
