@@ -945,4 +945,362 @@ const Game: React.FC = () => {
       title: "Tips & Tricks",
       content: (
         <div className="space-y-4">
-          <h3 className="text-lg font-medium mb-
+          <h3 className="text-lg font-medium mb-2">Pro Tips:</h3>
+          <ul className="space-y-2">
+            <li className="flex items-start">
+              <span className="mr-2">•</span>
+              <div>Double-tap arrow keys to move multiple lanes at once!</div>
+            </li>
+            <li className="flex items-start">
+              <span className="mr-2">•</span>
+              <div>Prioritize collecting power-ups when traffic gets heavy</div>
+            </li>
+            <li className="flex items-start">
+              <span className="mr-2">•</span>
+              <div>Look ahead and plan your movements to avoid crashes</div>
+            </li>
+            <li className="flex items-start">
+              <span className="mr-2">•</span>
+              <div>Shield power-ups are best saved for intense traffic moments</div>
+            </li>
+          </ul>
+        </div>
+      )
+    }
+  ];
+
+  return (
+    <div className="relative w-full h-full flex flex-col items-center">
+      {/* Game Canvas */}
+      <div className="relative w-full flex-1 flex flex-col items-center">
+        {/* Top UI Bar */}
+        {gameState === GameState.GAMEPLAY && (
+          <div className="absolute top-0 left-0 right-0 z-10 p-2 flex justify-between items-center bg-black/30 backdrop-blur-sm">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center">
+                <Heart className="h-5 w-5 text-red-500 mr-1" />
+                <span className="font-bold">{lives}</span>
+              </div>
+              
+              <div className="flex items-center">
+                <Trophy className="h-5 w-5 text-yellow-500 mr-1" />
+                <span className="font-bold">{score}</span>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8 rounded-full bg-black/20 hover:bg-black/40"
+                onClick={toggleSound}
+              >
+                {isSoundEnabled ? (
+                  <Volume2 className="h-4 w-4" />
+                ) : (
+                  <VolumeX className="h-4 w-4" />
+                )}
+              </Button>
+              
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8 rounded-full bg-black/20 hover:bg-black/40"
+                onClick={handlePauseGame}
+              >
+                <Pause className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+        
+        {/* Power-up indicators */}
+        {(activeSlowMode || activeShield) && (
+          <div className="absolute top-12 right-2 z-10 flex flex-col space-y-2">
+            {activeSlowMode && (
+              <div className="bg-[#9b87f5] p-2 rounded-full flex items-center justify-center">
+                <Clock className="h-5 w-5 text-white" />
+                <div className="absolute w-full h-full rounded-full">
+                  <svg className="w-full h-full" viewBox="0 0 100 100">
+                    <circle
+                      className="text-white/30"
+                      strokeWidth="6"
+                      stroke="currentColor"
+                      fill="transparent"
+                      r="47"
+                      cx="50"
+                      cy="50"
+                      style={{
+                        strokeDasharray: 295.3,
+                        strokeDashoffset: 295.3 * (1 - slowModeTimer / 5000),
+                        transformOrigin: 'center',
+                        transform: 'rotate(-90deg)',
+                      }}
+                    />
+                  </svg>
+                </div>
+              </div>
+            )}
+            
+            {activeShield && (
+              <div className="bg-[#4cc9f0] p-2 rounded-full flex items-center justify-center">
+                <Shield className="h-5 w-5 text-white" />
+                <div className="absolute w-full h-full rounded-full">
+                  <svg className="w-full h-full" viewBox="0 0 100 100">
+                    <circle
+                      className="text-white/30"
+                      strokeWidth="6"
+                      stroke="currentColor"
+                      fill="transparent"
+                      r="47"
+                      cx="50"
+                      cy="50"
+                      style={{
+                        strokeDasharray: 295.3,
+                        strokeDashoffset: 295.3 * (1 - shieldTimer / 3000),
+                        transformOrigin: 'center',
+                        transform: 'rotate(-90deg)',
+                      }}
+                    />
+                  </svg>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        
+        {/* Canvas */}
+        <canvas
+          ref={canvasRef}
+          className="bg-gray-900 w-full h-full"
+        />
+        
+        {/* Mobile Controls */}
+        {isMobile && gameState === GameState.GAMEPLAY && (
+          <div className="absolute inset-0 z-10 pointer-events-none">
+            <div 
+              className="absolute left-0 top-0 w-1/2 h-full pointer-events-auto opacity-0"
+              onTouchStart={handleTouchLeft}
+            />
+            <div 
+              className="absolute right-0 top-0 w-1/2 h-full pointer-events-auto opacity-0"
+              onTouchStart={handleTouchRight}
+            />
+          </div>
+        )}
+        
+        {/* Start Screen */}
+        {gameState === GameState.START_SCREEN && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 z-20">
+            <div className="text-center p-6 rounded-lg max-w-md">
+              <h1 className="text-4xl font-bold mb-2">Road Runner</h1>
+              <p className="text-gray-300 mb-6">Dodge traffic and collect seeds!</p>
+              
+              {isFirstTime ? (
+                <div className="space-y-4">
+                  <p className="text-sm text-gray-400 mb-4">
+                    Use arrow keys (or tap screen) to move your car left and right.
+                    Avoid crashing into other cars and collect seeds for points!
+                  </p>
+                  <Button 
+                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                    onClick={handleStartGame}
+                  >
+                    Start Game
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="mb-4 p-3 bg-black/30 rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center">
+                        <Trophy className="h-5 w-5 text-yellow-500 mr-2" />
+                        <span className="text-gray-300">High Score:</span>
+                      </div>
+                      <span className="font-bold text-xl">{highScore}</span>
+                    </div>
+                  </div>
+                  
+                  <Button 
+                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                    onClick={handleStartGame}
+                  >
+                    Start Game
+                  </Button>
+                  
+                  <div className="flex space-x-2 mt-2">
+                    <Button 
+                      variant="outline" 
+                      className="flex-1"
+                      onClick={handleShowHowToPlay}
+                    >
+                      <HelpCircle className="h-4 w-4 mr-2" />
+                      How to Play
+                    </Button>
+                    
+                    <Button 
+                      variant="outline" 
+                      className="w-10"
+                      onClick={toggleSound}
+                    >
+                      {isSoundEnabled ? (
+                        <Volume2 className="h-4 w-4" />
+                      ) : (
+                        <VolumeX className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        
+        {/* How to Play Screen */}
+        {showHowToPlay && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 z-30">
+            <div className="bg-gray-900 p-6 rounded-lg max-w-md w-full mx-4">
+              <div className="flex justify-between items-center mb-4">
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={handleBackToMenu}
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <h2 className="text-xl font-bold">{howToPlayContent[currentHowToPlayPage].title}</h2>
+                <div className="w-8"></div> {/* Spacer for alignment */}
+              </div>
+              
+              <div className="min-h-[300px]">
+                {howToPlayContent[currentHowToPlayPage].content}
+              </div>
+              
+              <div className="flex justify-between mt-6">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  disabled={currentHowToPlayPage === 0}
+                  onClick={handlePrevPage}
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </Button>
+                
+                <div className="flex space-x-1">
+                  {howToPlayContent.map((_, index) => (
+                    <div 
+                      key={index}
+                      className={cn(
+                        "w-2 h-2 rounded-full",
+                        index === currentHowToPlayPage 
+                          ? "bg-white" 
+                          : "bg-gray-600"
+                      )}
+                    />
+                  ))}
+                </div>
+                
+                <Button
+                  variant="outline"
+                  size="icon"
+                  disabled={currentHowToPlayPage === howToPlayContent.length - 1}
+                  onClick={handleNextPage}
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Pause Screen */}
+        {gameState === GameState.PAUSED && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 z-20">
+            <div className="text-center p-6 rounded-lg">
+              <h2 className="text-3xl font-bold mb-6">Game Paused</h2>
+              
+              <div className="space-y-3">
+                <Button 
+                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                  onClick={handleResumeGame}
+                >
+                  <Play className="h-4 w-4 mr-2" />
+                  Resume Game
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={handleRestartGame}
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Restart Game
+                </Button>
+                
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="mt-4 h-10 w-10 rounded-full mx-auto"
+                  onClick={toggleSound}
+                >
+                  {isSoundEnabled ? (
+                    <Volume2 className="h-5 w-5" />
+                  ) : (
+                    <VolumeX className="h-5 w-5" />
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Game Over Screen */}
+        {gameState === GameState.GAME_OVER && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 z-20">
+            <div className="text-center p-6 rounded-lg max-w-md">
+              <h2 className="text-3xl font-bold mb-2">Game Over</h2>
+              
+              <div className="mb-6 space-y-3">
+                <div className="p-3 bg-black/30 rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-300">Your Score:</span>
+                    <span className="font-bold text-xl">{score}</span>
+                  </div>
+                </div>
+                
+                <div className="p-3 bg-black/30 rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center">
+                      <Trophy className="h-5 w-5 text-yellow-500 mr-2" />
+                      <span className="text-gray-300">High Score:</span>
+                    </div>
+                    <span className="font-bold text-xl">{highScore}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <Button 
+                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                  onClick={handleTryAgain}
+                >
+                  Try Again
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Loading Screen */}
+        {!gameInitialized && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 z-30">
+            <Loader2 className="h-10 w-10 animate-spin mb-4" />
+            <p className="text-lg">Loading game...</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default Game;
