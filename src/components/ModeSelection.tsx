@@ -22,7 +22,7 @@ const ModeSelection: React.FC<ModeSelectionProps> = ({
   onChangeUsername,
 }) => {
   return (
-    <div className="flex flex-col items-center justify-center w-full h-full bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] p-6">
+    <div className="absolute inset-0 flex flex-col items-center justify-center w-full h-full bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] p-6">
       <div className="glassmorphism rounded-3xl p-8 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20 w-full">
         {showBackButton && onBack && (
           <Button 
