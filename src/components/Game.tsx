@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine, GameState, PowerUpType } from '../game/GameEngine';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,10 @@ const DEFAULT_ENEMY_CARS = ['/enemycar1.png', '/enemycar2.png', '/enemycar3.png'
 const SEED_IMAGE = '/seed.png';
 const CAR_SOUND = '/car.m4a';
 const CRASH_SOUND = '/crash.m4a';
+// Add new sound constants
+const SEED_SOUND = '/seed.m4a';
+const SLOW_TIMER_SOUND = '/5sec.m4a';
+const BUTTON_SOUND = '/tap.mp3';
 
 const Game: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -37,6 +42,10 @@ const Game: React.FC = () => {
   
   const carSoundRef = useRef<HTMLAudioElement | null>(null);
   const crashSoundRef = useRef<HTMLAudioElement | null>(null);
+  // Add refs for new sounds
+  const seedSoundRef = useRef<HTMLAudioElement | null>(null);
+  const slowTimerSoundRef = useRef<HTMLAudioElement | null>(null);
+  const buttonSoundRef = useRef<HTMLAudioElement | null>(null);
   const soundsLoadedRef = useRef<boolean>(false);
   
   const isMobile = useIsMobile();
@@ -54,6 +63,19 @@ const Game: React.FC = () => {
         const crashSound = new Audio(CRASH_SOUND);
         crashSound.volume = 0.7;
         crashSoundRef.current = crashSound;
+        
+        // Add new sound initializations
+        const seedSound = new Audio(SEED_SOUND);
+        seedSound.volume = 0.5;
+        seedSoundRef.current = seedSound;
+        
+        const slowTimerSound = new Audio(SLOW_TIMER_SOUND);
+        slowTimerSound.volume = 0.4;
+        slowTimerSoundRef.current = slowTimerSound;
+        
+        const buttonSound = new Audio(BUTTON_SOUND);
+        buttonSound.volume = 0.3;
+        buttonSoundRef.current = buttonSound;
         
         await Promise.all([
           new Promise<void>((resolve) => {
@@ -82,6 +104,49 @@ const Game: React.FC = () => {
             });
             
             crashSound.load();
+          }),
+          
+          // Add promises for new sounds
+          new Promise<void>((resolve) => {
+            seedSound.addEventListener('canplaythrough', () => {
+              console.log("Seed sound loaded successfully");
+              resolve();
+            }, { once: true });
+            
+            seedSound.addEventListener('error', (e) => {
+              console.error("Error loading seed sound:", e);
+              resolve();
+            });
+            
+            seedSound.load();
+          }),
+          
+          new Promise<void>((resolve) => {
+            slowTimerSound.addEventListener('canplaythrough', () => {
+              console.log("Slow timer sound loaded successfully");
+              resolve();
+            }, { once: true });
+            
+            slowTimerSound.addEventListener('error', (e) => {
+              console.error("Error loading slow timer sound:", e);
+              resolve();
+            });
+            
+            slowTimerSound.load();
+          }),
+          
+          new Promise<void>((resolve) => {
+            buttonSound.addEventListener('canplaythrough', () => {
+              console.log("Button sound loaded successfully");
+              resolve();
+            }, { once: true });
+            
+            buttonSound.addEventListener('error', (e) => {
+              console.error("Error loading button sound:", e);
+              resolve();
+            });
+            
+            buttonSound.load();
           })
         ]);
         
@@ -190,6 +255,61 @@ const Game: React.FC = () => {
     };
   }, []);
   
+  // Add new sound functions
+  const playPickupSound = () => {
+    if (!isSoundEnabled || !seedSoundRef.current) return;
+    
+    try {
+      seedSoundRef.current.currentTime = 0;
+      
+      const playPromise = seedSoundRef.current.play();
+      
+      if (playPromise !== undefined) {
+        playPromise.catch(err => {
+          console.error("Error playing pickup sound:", err);
+        });
+      }
+    } catch (err) {
+      console.error("Could not play pickup sound:", err);
+    }
+  };
+  
+  const playSlowTimerSound = () => {
+    if (!isSoundEnabled || !slowTimerSoundRef.current) return;
+    
+    try {
+      slowTimerSoundRef.current.currentTime = 0;
+      
+      const playPromise = slowTimerSoundRef.current.play();
+      
+      if (playPromise !== undefined) {
+        playPromise.catch(err => {
+          console.error("Error playing slow timer sound:", err);
+        });
+      }
+    } catch (err) {
+      console.error("Could not play slow timer sound:", err);
+    }
+  };
+  
+  const playButtonSound = () => {
+    if (!isSoundEnabled || !buttonSoundRef.current) return;
+    
+    try {
+      buttonSoundRef.current.currentTime = 0;
+      
+      const playPromise = buttonSoundRef.current.play();
+      
+      if (playPromise !== undefined) {
+        playPromise.catch(err => {
+          console.error("Error playing button sound:", err);
+        });
+      }
+    } catch (err) {
+      console.error("Could not play button sound:", err);
+    }
+  };
+  
   const startEngineSound = () => {
     if (!isSoundEnabled || !carSoundRef.current) return;
     
@@ -277,6 +397,22 @@ const Game: React.FC = () => {
       crashSoundRef.current.pause();
       crashSoundRef.current.currentTime = 0;
     }
+    
+    // Add new sounds to stop all sounds function
+    if (seedSoundRef.current) {
+      seedSoundRef.current.pause();
+      seedSoundRef.current.currentTime = 0;
+    }
+    
+    if (slowTimerSoundRef.current) {
+      slowTimerSoundRef.current.pause();
+      slowTimerSoundRef.current.currentTime = 0;
+    }
+    
+    if (buttonSoundRef.current) {
+      buttonSoundRef.current.pause();
+      buttonSoundRef.current.currentTime = 0;
+    }
   };
   
   const toggleSound = () => {
@@ -290,6 +426,8 @@ const Game: React.FC = () => {
       } else {
         stopAllSounds();
       }
+      
+      playButtonSound(); // Always play button sound on toggle (if now enabled)
       
       return newState;
     });
@@ -371,6 +509,7 @@ const Game: React.FC = () => {
             case PowerUpType.SLOW_SPEED:
               setActiveSlowMode(true);
               setSlowModeTimer(duration);
+              playSlowTimerSound(); // Play slow timer sound
               toast.success('SLOW MODE ACTIVATED', {
                 description: 'Traffic speed reduced',
                 icon: <Clock className="h-5 w-5 text-blue-500" />,
@@ -379,12 +518,14 @@ const Game: React.FC = () => {
             case PowerUpType.SHIELD:
               setActiveShield(true);
               setShieldTimer(duration);
+              playPickupSound(); // Play pickup sound for shield
               toast.success('SHIELD ACTIVATED', {
                 description: 'Invulnerable for 3s',
                 icon: <Shield className="h-5 w-5 text-cyan-500" />,
               });
               break;
             case PowerUpType.EXTRA_LIFE:
+              playPickupSound(); // Play pickup sound for extra life
               toast.success('EXTRA LIFE', {
                 icon: <Heart className="h-5 w-5 text-red-500" />,
               });
@@ -407,6 +548,9 @@ const Game: React.FC = () => {
         },
         onCollision: () => {
           playCollisionSound();
+        },
+        onSeedCollected: () => {
+          playPickupSound(); // Play pickup sound for seeds
         },
         customAssets: {
           playerCarURL,
@@ -456,6 +600,7 @@ const Game: React.FC = () => {
   
   const handleStartGame = () => {
     console.log("Start game clicked, gameEngine exists:", !!gameEngineRef.current);
+    playButtonSound(); // Play button sound
     if (gameEngineRef.current) {
       gameEngineRef.current.startGame();
       toast.success('GAME STARTED', {
@@ -468,23 +613,28 @@ const Game: React.FC = () => {
   };
   
   const handleShowHowToPlay = () => {
+    playButtonSound(); // Play button sound
     setShowHowToPlay(true);
     setCurrentHowToPlayPage(0);
   };
   
   const handleBackToMenu = () => {
+    playButtonSound(); // Play button sound
     setShowHowToPlay(false);
   };
   
   const handleNextPage = () => {
+    playButtonSound(); // Play button sound
     setCurrentHowToPlayPage(prev => Math.min(prev + 1, howToPlayContent.length - 1));
   };
   
   const handlePrevPage = () => {
+    playButtonSound(); // Play button sound
     setCurrentHowToPlayPage(prev => Math.max(prev - 1, 0));
   };
   
   const handleTryAgain = () => {
+    playButtonSound(); // Play button sound
     if (gameEngineRef.current) {
       setHighScore(gameEngineRef.current.getHighScore());
       gameEngineRef.current.startGame();
@@ -504,18 +654,21 @@ const Game: React.FC = () => {
   };
   
   const handlePauseGame = () => {
+    playButtonSound(); // Play button sound
     if (gameEngineRef.current && gameState === GameState.GAMEPLAY) {
       gameEngineRef.current.pauseGame();
     }
   };
   
   const handleResumeGame = () => {
+    playButtonSound(); // Play button sound
     if (gameEngineRef.current && gameState === GameState.PAUSED) {
       gameEngineRef.current.resumeGame();
     }
   };
   
   const handleRestartGame = () => {
+    playButtonSound(); // Play button sound
     if (gameEngineRef.current) {
       setHighScore(gameEngineRef.current.getHighScore());
       gameEngineRef.current.restartGame();
