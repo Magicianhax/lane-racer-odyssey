@@ -15,13 +15,13 @@ const Index = () => {
             <Game />
           </div>
         ) : (
-          <div className="mobile-frame-container relative">
+          <div className="mobile-frame-container">
             <div className="mobile-frame">
               <div className="notch"></div>
               <div className="side-button left-button"></div>
               <div className="side-button right-button-top"></div>
               <div className="side-button right-button-bottom"></div>
-              <div className="mobile-screen relative overflow-hidden">
+              <div className="mobile-screen">
                 <Game />
               </div>
               <div className="home-indicator"></div>
