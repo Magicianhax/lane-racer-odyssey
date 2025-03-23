@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine, GameState, PowerUpType } from '../game/GameEngine';
 import { Button } from '@/components/ui/button';
@@ -94,6 +95,100 @@ const Game: React.FC = () => {
     };
     
     preloadSounds();
+    
+    // Preload car image assets
+    const preloadCarAssets = async () => {
+      try {
+        console.log("Loading car assets...");
+        
+        const playerCarImage = new Image();
+        const enemyCar1 = new Image();
+        const enemyCar2 = new Image();
+        const enemyCar3 = new Image();
+        const seedImage = new Image();
+        
+        // Create an array of promises to wait for all images to load
+        const promises = [
+          new Promise<void>((resolve, reject) => {
+            playerCarImage.onload = () => {
+              console.log("Player car image loaded successfully");
+              resolve();
+            };
+            playerCarImage.onerror = (e) => {
+              console.error("Error loading player car image:", e);
+              reject(new Error("Failed to load player car image"));
+            };
+            playerCarImage.src = playerCarURL;
+          }),
+          
+          new Promise<void>((resolve, reject) => {
+            enemyCar1.onload = () => {
+              console.log("Enemy car 1 image loaded successfully");
+              resolve();
+            };
+            enemyCar1.onerror = (e) => {
+              console.error("Error loading enemy car 1 image:", e);
+              reject(new Error("Failed to load enemy car 1 image"));
+            };
+            enemyCar1.src = enemyCarURLs[0];
+          }),
+          
+          new Promise<void>((resolve, reject) => {
+            enemyCar2.onload = () => {
+              console.log("Enemy car 2 image loaded successfully");
+              resolve();
+            };
+            enemyCar2.onerror = (e) => {
+              console.error("Error loading enemy car 2 image:", e);
+              reject(new Error("Failed to load enemy car 2 image"));
+            };
+            enemyCar2.src = enemyCarURLs[1];
+          }),
+          
+          new Promise<void>((resolve, reject) => {
+            enemyCar3.onload = () => {
+              console.log("Enemy car 3 image loaded successfully");
+              resolve();
+            };
+            enemyCar3.onerror = (e) => {
+              console.error("Error loading enemy car 3 image:", e);
+              reject(new Error("Failed to load enemy car 3 image"));
+            };
+            enemyCar3.src = enemyCarURLs[2];
+          }),
+          
+          new Promise<void>((resolve, reject) => {
+            seedImage.onload = () => {
+              console.log("Seed image loaded successfully");
+              resolve();
+            };
+            seedImage.onerror = (e) => {
+              console.error("Error loading seed image:", e);
+              reject(new Error("Failed to load seed image"));
+            };
+            seedImage.src = seedImageURL;
+          })
+        ];
+        
+        // Wait for all images to load or at least attempt to load
+        try {
+          await Promise.all(promises);
+          console.log("All car assets loaded successfully");
+        } catch (error) {
+          console.error("Some car assets failed to load:", error);
+          setLoadingError("Some game assets couldn't be loaded. Using fallbacks.");
+        } finally {
+          // Mark assets as loaded even if some failed (the game engine has fallbacks)
+          setCarAssetsLoaded(true);
+        }
+      } catch (err) {
+        console.error("Error in car asset preloading:", err);
+        setLoadingError("Failed to load game assets. Using fallbacks.");
+        setCarAssetsLoaded(true); // Allow game to proceed with fallbacks
+      }
+    };
+    
+    preloadCarAssets();
     
     return () => {
       stopAllSounds();
