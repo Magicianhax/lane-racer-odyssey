@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine, GameState, PowerUpType, GameMode } from '../game/GameEngine';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2, Pause, Play, RefreshCw, HelpCircle, ArrowLeft, Volume2, VolumeX, Globe, Blocks, User } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2, Pause, Play, RefreshCw, HelpCircle, ArrowLeft, Volume2, VolumeX, Globe, Blocks, User, Settings, Home } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { ModeSelectionScreen, UsernameCreationScreen } from './ModeSelectionComponents';
@@ -656,12 +656,12 @@ const Game: React.FC = () => {
     // Save game mode to localStorage
     localStorage.setItem('gameMode', mode);
     
-    // If user already has a username, skip to start screen
+    // If user already has a username, ask if they want to update it
     const savedUsername = localStorage.getItem('username');
     if (savedUsername) {
       setUsername(savedUsername);
       if (gameEngineRef.current) {
-        gameEngineRef.current.setGameState(GameState.START_SCREEN);
+        gameEngineRef.current.setGameState(GameState.USERNAME_CREATION);
       }
     } else {
       // Otherwise go to username creation
@@ -693,11 +693,35 @@ const Game: React.FC = () => {
       gameEngineRef.current.setGameState(GameState.MODE_SELECTION);
     }
   };
-  
+
   const handleShowHowToPlay = () => {
     playButtonSound();
     setShowHowToPlay(true);
     setCurrentHowToPlayPage(0);
+  };
+  
+  // Handler for going back to mode selection from any screen
+  const handleGoToModeSelection = () => {
+    playButtonSound();
+    if (gameEngineRef.current) {
+      gameEngineRef.current.setGameState(GameState.MODE_SELECTION);
+    }
+  };
+  
+  // Handler for going back to start screen from game over screen
+  const handleBackToStartScreen = () => {
+    playButtonSound();
+    if (gameEngineRef.current) {
+      gameEngineRef.current.setGameState(GameState.START_SCREEN);
+    }
+  };
+  
+  // Handler for continuing with current username and mode from the mode selection screen
+  const handleContinueWithCurrentSettings = () => {
+    playButtonSound();
+    if (gameEngineRef.current) {
+      gameEngineRef.current.setGameState(GameState.START_SCREEN);
+    }
   };
   
   const handleBackToMenu = () => {
@@ -949,7 +973,12 @@ const Game: React.FC = () => {
         
         {/* Mode Selection Screen */}
         {gameState === GameState.MODE_SELECTION && (
-          <ModeSelectionScreen onSelectMode={handleModeSelection} />
+          <ModeSelectionScreen 
+            onSelectMode={handleModeSelection}
+            currentMode={selectedGameMode}
+            currentUsername={username}
+            onContinue={handleContinueWithCurrentSettings}
+          />
         )}
         
         {/* Username Creation Screen */}
@@ -958,6 +987,7 @@ const Game: React.FC = () => {
             onSubmit={handleUsernameSubmit}
             onBack={handleUsernameBack}
             mode={selectedGameMode}
+            currentUsername={username}
           />
         )}
         
@@ -1172,14 +1202,25 @@ const Game: React.FC = () => {
                 </Button>
                 
                 <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="mt-4 rounded-full bg-black/20 backdrop-blur-sm hover:bg-black/30"
-                  onClick={toggleSound}
-                  aria-label={isSoundEnabled ? "Mute sound" : "Enable sound"}
+                  onClick={handleBackToStartScreen}
+                  variant="teal-outline"
+                  className="w-full rounded-xl py-6 text-lg font-medium"
                 >
-                  {isSoundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                  <Home className="mr-2 h-5 w-5" />
+                  Back to Menu
                 </Button>
+                
+                <div className="flex justify-center mt-4">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="rounded-full bg-black/20 backdrop-blur-sm hover:bg-black/30"
+                    onClick={toggleSound}
+                    aria-label={isSoundEnabled ? "Mute sound" : "Enable sound"}
+                  >
+                    {isSoundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
