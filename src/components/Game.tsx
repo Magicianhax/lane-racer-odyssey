@@ -617,9 +617,15 @@ const Game: React.FC = () => {
     // Save username to localStorage for persistence
     localStorage.setItem('gameUsername', name);
     localStorage.setItem('gameMode', selectedMode || 'online');
+    
+    // Change to start screen directly
     setGameState(GameState.START_SCREEN);
+    // Reset preGameState to properly show the start screen
     setPreGameState(PreGameState.MODE_SELECTION);
+    
     playButtonSound();
+    
+    // Show welcome toast
     toast.success(`Welcome, ${name}!`, {
       description: `Playing in ${selectedMode} mode`
     });
@@ -929,7 +935,10 @@ const Game: React.FC = () => {
                 </Button>
                 
                 <Button 
-                  onClick={() => setPreGameState(PreGameState.MODE_SELECTION)}
+                  onClick={() => {
+                    setPreGameState(PreGameState.MODE_SELECTION);
+                    setGameState(GameState.START_SCREEN);
+                  }}
                   variant="ghost"
                   className="text-[#91d3d1]/70 hover:text-[#91d3d1] hover:bg-black/20"
                 >
@@ -966,7 +975,7 @@ const Game: React.FC = () => {
           </div>
         )}
         
-        {gameState === GameState.START_SCREEN && preGameState === PreGameState.MODE_SELECTION && (
+        {gameState === GameState.START_SCREEN && preGameState === PreGameState.MODE_SELECTION && !username && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
             <div className="glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
               <ModeSelection onSelectMode={handleModeSelection} />
