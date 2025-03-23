@@ -382,7 +382,7 @@ const Game: React.FC = () => {
         crashSoundRef.current.pause();
       }
     };
-  }, [carAssetsLoaded, playerCarURL, enemyCarURLs, seedImageURL, loadingError, gameState]);
+  }, [carAssetsLoaded, playerCarURL, enemyCarURLs, seedImageURL, loadingError]);
   
   useEffect(() => {
     if (slowModeTimer > 0) {
