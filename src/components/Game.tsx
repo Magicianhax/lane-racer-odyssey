@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine, GameState, PowerUpType } from '../game/GameEngine';
 import { Button } from '@/components/ui/button';
@@ -96,7 +95,6 @@ const Game: React.FC = () => {
     
     preloadSounds();
     
-    // Preload car image assets
     const preloadCarAssets = async () => {
       try {
         console.log("Loading car assets...");
@@ -107,7 +105,6 @@ const Game: React.FC = () => {
         const enemyCar3 = new Image();
         const seedImage = new Image();
         
-        // Create an array of promises to wait for all images to load
         const promises = [
           new Promise<void>((resolve, reject) => {
             playerCarImage.onload = () => {
@@ -170,7 +167,6 @@ const Game: React.FC = () => {
           })
         ];
         
-        // Wait for all images to load or at least attempt to load
         try {
           await Promise.all(promises);
           console.log("All car assets loaded successfully");
@@ -178,13 +174,12 @@ const Game: React.FC = () => {
           console.error("Some car assets failed to load:", error);
           setLoadingError("Some game assets couldn't be loaded. Using fallbacks.");
         } finally {
-          // Mark assets as loaded even if some failed (the game engine has fallbacks)
           setCarAssetsLoaded(true);
         }
       } catch (err) {
         console.error("Error in car asset preloading:", err);
         setLoadingError("Failed to load game assets. Using fallbacks.");
-        setCarAssetsLoaded(true); // Allow game to proceed with fallbacks
+        setCarAssetsLoaded(true);
       }
     };
     
@@ -256,22 +251,18 @@ const Game: React.FC = () => {
       pauseEngineSound();
       
       crashSoundRef.current.currentTime = 0;
-      const playPromise = crashSoundRef.current.play();
+      await crashSoundRef.current.play();
       
-      if (playPromise !== undefined) {
-        await playPromise;
-        
-        const crashSoundDuration = crashSoundRef.current.duration * 1000 || 1000;
-        
-        setTimeout(() => {
-          if (gameState === GameState.GAMEPLAY) {
-            resumeEngineSound();
-          }
-        }, Math.min(crashSoundDuration, 1000));
-      }
+      setTimeout(() => {
+        if (gameState === GameState.GAMEPLAY) {
+          resumeEngineSound();
+        }
+      }, 1000);
     } catch (err) {
       console.error("Could not play collision sound:", err);
-      resumeEngineSound();
+      if (gameState === GameState.GAMEPLAY) {
+        resumeEngineSound();
+      }
     }
   };
   
@@ -303,17 +294,22 @@ const Game: React.FC = () => {
   useEffect(() => {
     if (!soundsLoadedRef.current) return;
     
+    console.log("Game state changed to:", gameState);
+    
     switch (gameState) {
       case GameState.GAMEPLAY:
         if (isSoundEnabled) {
+          console.log("Starting engine sound due to GAMEPLAY state");
           startEngineSound();
         }
         break;
       case GameState.PAUSED:
+        console.log("Pausing engine sound due to PAUSED state");
         pauseEngineSound();
         break;
       case GameState.GAME_OVER:
       case GameState.START_SCREEN:
+        console.log("Stopping all sounds due to GAME_OVER or START_SCREEN state");
         stopAllSounds();
         break;
     }
