@@ -1,8 +1,9 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine, GameState, PowerUpType } from '../game/GameEngine';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2, Pause, Play, RefreshCw } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
@@ -314,6 +315,25 @@ const Game: React.FC = () => {
     }
   };
   
+  const handlePauseGame = () => {
+    if (gameEngineRef.current && gameState === GameState.GAMEPLAY) {
+      gameEngineRef.current.pauseGame();
+    }
+  };
+  
+  const handleResumeGame = () => {
+    if (gameEngineRef.current && gameState === GameState.PAUSED) {
+      gameEngineRef.current.resumeGame();
+    }
+  };
+  
+  const handleRestartGame = () => {
+    if (gameEngineRef.current) {
+      setHighScore(gameEngineRef.current.getHighScore());
+      gameEngineRef.current.restartGame();
+    }
+  };
+  
   return (
     <div className="flex flex-col items-center justify-center w-full h-full">
       <div className="game-canvas-container relative w-full max-w-[600px]">
@@ -343,6 +363,18 @@ const Game: React.FC = () => {
                 <Shield className="w-4 h-4 text-[#64d2ff]" />
                 <span className="text-sm font-medium">{Math.ceil(shieldTimer / 1000)}s</span>
               </div>
+            )}
+            
+            {gameState === GameState.GAMEPLAY && (
+              <Button 
+                variant="teal" 
+                size="icon" 
+                className="rounded-full hover:bg-[#7ec7c5] transition-colors"
+                onClick={handlePauseGame}
+                aria-label="Pause game"
+              >
+                <Pause className="h-5 w-5" />
+              </Button>
             )}
           </div>
         </div>
@@ -394,6 +426,37 @@ const Game: React.FC = () => {
                   </ul>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+        
+        {gameState === GameState.PAUSED && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-black/20 to-black/80 backdrop-blur-sm transition-all duration-500 animate-fade-in">
+            <div className="pause-menu glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
+              <h1 className="text-3xl font-bold mb-6 tracking-tight text-white">Game Paused</h1>
+              
+              <div className="flex flex-col space-y-4 items-center">
+                <Button 
+                  onClick={handleResumeGame}
+                  className="game-button w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 rounded-xl py-6 text-lg font-medium shadow-lg shadow-[#91d3d1]/20"
+                >
+                  <Play className="mr-2 h-5 w-5" />
+                  Resume Game
+                </Button>
+                
+                <Button 
+                  onClick={handleRestartGame}
+                  variant="teal-outline"
+                  className="w-full rounded-xl py-6 text-lg font-medium"
+                >
+                  <RefreshCw className="mr-2 h-5 w-5" />
+                  Restart Game
+                </Button>
+                
+                <div className="text-sm text-gray-300 mt-4">
+                  Current Score: <span className="font-bold text-white">{score}</span>
+                </div>
+              </div>
             </div>
           </div>
         )}

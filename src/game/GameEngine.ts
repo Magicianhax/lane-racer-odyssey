@@ -335,6 +335,32 @@ export class GameEngine {
     this.movePlayerRight();
   }
   
+  public pauseGame(): void {
+    if (this.gameState === GameState.GAMEPLAY) {
+      this.gameState = GameState.PAUSED;
+      this.onGameStateChange(GameState.PAUSED);
+    }
+  }
+  
+  public resumeGame(): void {
+    if (this.gameState === GameState.PAUSED) {
+      this.gameState = GameState.GAMEPLAY;
+      this.onGameStateChange(GameState.GAMEPLAY);
+      this.lastFrameTime = performance.now();
+    }
+  }
+  
+  public restartGame(): void {
+    this.resetGame();
+    this.gameState = GameState.GAMEPLAY;
+    this.onGameStateChange(GameState.GAMEPLAY);
+    this.lastFrameTime = performance.now();
+    
+    if (this.animationFrameId === null) {
+      this.gameLoop();
+    }
+  }
+  
   private setupEventListeners(): void {
     window.addEventListener('keydown', this.handleKeyDown.bind(this));
   }
@@ -1013,8 +1039,8 @@ export class GameEngine {
     const sizeVariation = type === 'tree' ? 30 : 15;
     const size = baseSize + Math.random() * sizeVariation;
     
-    // Randomize tree type - 70% pine, 30% oak
-    const treeType = type === 'tree' ? (Math.random() > 0.3 ? 'pine' : 'oak') : null;
+    // Always set tree type to oak (removed pine trees)
+    const treeType = type === 'tree' ? 'oak' : null;
     
     const decoration: Decoration = {
       x: isLeftSide ? x - size : x,
@@ -1077,156 +1103,75 @@ export class GameEngine {
             trunkHeight
           );
           
-          if (treeType === 'pine') {
-            // Pine tree (triangular shape)
+          // Oak tree (round shape)
+          
+          // Draw tree crown (circular shape with variations)
+          const centerX = decoration.x + decoration.size / 2;
+          const centerY = decoration.y + decoration.size * 0.4;
+          const radius = decoration.size * 0.4;
+          
+          // Draw shadow
+          ctx.fillStyle = '#1C3F1C';
+          ctx.beginPath();
+          ctx.arc(
+            centerX + radius * 0.1,
+            centerY + radius * 0.1,
+            radius * 1.05,
+            0,
+            Math.PI * 2
+          );
+          ctx.fill();
+          
+          // Main foliage gradient
+          const gradient = ctx.createRadialGradient(
+            centerX - radius * 0.2, centerY - radius * 0.2, radius * 0.1,
+            centerX, centerY, radius
+          );
+          gradient.addColorStop(0, '#3A7D44');
+          gradient.addColorStop(0.7, '#2A5A30');
+          gradient.addColorStop(1, '#1C3F1C');
+          
+          // Draw main crown
+          ctx.fillStyle = gradient;
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+          ctx.fill();
+          
+          // Add smaller circles for texture/foliage detail
+          ctx.fillStyle = '#3A7D44';
+          
+          // Create variations in the foliage
+          for (let i = 0; i < 6; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const distance = radius * 0.5 * Math.random();
+            const blobRadius = radius * (0.4 + Math.random() * 0.3);
             
-            // Create darker shadow beneath for depth
-            ctx.fillStyle = '#1C3F1C';
-            
-            const crownWidth = decoration.size * 0.8;
-            const crownHeight = decoration.size * 0.8;
-            const crownX = decoration.x + (decoration.size - crownWidth) / 2;
-            const crownY = decoration.y + decoration.size * 0.2;
-            
-            // Bottom layer shadow
-            ctx.beginPath();
-            ctx.moveTo(crownX + crownWidth / 2, crownY + crownHeight * 0.1);
-            ctx.lineTo(crownX - crownWidth * 0.1, crownY + crownHeight);
-            ctx.lineTo(crownX + crownWidth * 1.1, crownY + crownHeight);
-            ctx.closePath();
-            ctx.fill();
-            
-            // Main tree layers with gradient
-            const gradient = ctx.createLinearGradient(
-              crownX, crownY, 
-              crownX + crownWidth, crownY + crownHeight
-            );
-            gradient.addColorStop(0, '#1a3b15');
-            gradient.addColorStop(0.5, '#29632b');
-            gradient.addColorStop(1, '#2D5E40');
-            ctx.fillStyle = gradient;
-            
-            // Bottom layer
-            ctx.beginPath();
-            ctx.moveTo(crownX + crownWidth / 2, crownY + crownHeight * 0.1);
-            ctx.lineTo(crownX, crownY + crownHeight);
-            ctx.lineTo(crownX + crownWidth, crownY + crownHeight);
-            ctx.closePath();
-            ctx.fill();
-            
-            // Add a second layer to the pine tree
-            const layer2Width = crownWidth * 0.8;
-            const layer2Height = crownHeight * 0.7;
-            const layer2X = decoration.x + (decoration.size - layer2Width) / 2;
-            const layer2Y = crownY + crownHeight * 0.3;
-            
-            ctx.beginPath();
-            ctx.moveTo(layer2X + layer2Width / 2, layer2Y);
-            ctx.lineTo(layer2X, layer2Y + layer2Height);
-            ctx.lineTo(layer2X + layer2Width, layer2Y + layer2Height);
-            ctx.closePath();
-            ctx.fill();
-            
-            // Add a third, smaller layer for more detail
-            const layer3Width = layer2Width * 0.7;
-            const layer3Height = layer2Height * 0.6;
-            const layer3X = decoration.x + (decoration.size - layer3Width) / 2;
-            const layer3Y = layer2Y + layer2Height * 0.2;
-            
-            ctx.beginPath();
-            ctx.moveTo(layer3X + layer3Width / 2, layer3Y);
-            ctx.lineTo(layer3X, layer3Y + layer3Height);
-            ctx.lineTo(layer3X + layer3Width, layer3Y + layer3Height);
-            ctx.closePath();
-            ctx.fill();
-            
-            // Add some texture/detail
-            ctx.fillStyle = '#1a3b15';
-            ctx.globalAlpha = 0.3;
-            
-            // Random spots
-            for (let i = 0; i < 8; i++) {
-              const spotX = crownX + Math.random() * crownWidth;
-              const spotY = crownY + Math.random() * crownHeight;
-              const spotSize = 2 + Math.random() * 4;
-              
-              ctx.beginPath();
-              ctx.arc(spotX, spotY, spotSize, 0, Math.PI * 2);
-              ctx.fill();
-            }
-            
-            ctx.globalAlpha = 1;
-          } else {
-            // Oak tree (round shape)
-            
-            // Draw tree crown (circular shape with variations)
-            const centerX = decoration.x + decoration.size / 2;
-            const centerY = decoration.y + decoration.size * 0.4;
-            const radius = decoration.size * 0.4;
-            
-            // Draw shadow
-            ctx.fillStyle = '#1C3F1C';
             ctx.beginPath();
             ctx.arc(
-              centerX + radius * 0.1,
-              centerY + radius * 0.1,
-              radius * 1.05,
+              centerX + Math.cos(angle) * distance,
+              centerY + Math.sin(angle) * distance,
+              blobRadius,
               0,
               Math.PI * 2
             );
             ctx.fill();
-            
-            // Main foliage gradient
-            const gradient = ctx.createRadialGradient(
-              centerX - radius * 0.2, centerY - radius * 0.2, radius * 0.1,
-              centerX, centerY, radius
-            );
-            gradient.addColorStop(0, '#3A7D44');
-            gradient.addColorStop(0.7, '#2A5A30');
-            gradient.addColorStop(1, '#1C3F1C');
-            
-            // Draw main crown
-            ctx.fillStyle = gradient;
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Add smaller circles for texture/foliage detail
-            ctx.fillStyle = '#3A7D44';
-            
-            // Create variations in the foliage
-            for (let i = 0; i < 6; i++) {
-              const angle = Math.random() * Math.PI * 2;
-              const distance = radius * 0.5 * Math.random();
-              const blobRadius = radius * (0.4 + Math.random() * 0.3);
-              
-              ctx.beginPath();
-              ctx.arc(
-                centerX + Math.cos(angle) * distance,
-                centerY + Math.sin(angle) * distance,
-                blobRadius,
-                0,
-                Math.PI * 2
-              );
-              ctx.fill();
-            }
-            
-            // Add highlights
-            ctx.fillStyle = '#4A8D54';
-            ctx.globalAlpha = 0.3;
-            
-            ctx.beginPath();
-            ctx.arc(
-              centerX - radius * 0.3,
-              centerY - radius * 0.3,
-              radius * 0.5,
-              0,
-              Math.PI * 2
-            );
-            ctx.fill();
-            
-            ctx.globalAlpha = 1;
           }
+          
+          // Add highlights
+          ctx.fillStyle = '#4A8D54';
+          ctx.globalAlpha = 0.3;
+          
+          ctx.beginPath();
+          ctx.arc(
+            centerX - radius * 0.3,
+            centerY - radius * 0.3,
+            radius * 0.5,
+            0,
+            Math.PI * 2
+          );
+          ctx.fill();
+          
+          ctx.globalAlpha = 1;
         } else {
           // Draw bush (circular shape with improved texture)
           
