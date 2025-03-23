@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine, GameState, PowerUpType } from '../game/GameEngine';
 import { Button } from '@/components/ui/button';
@@ -371,7 +370,6 @@ const Game: React.FC = () => {
           </div>
         </div>
         
-        {/* Add pause button that shows only during gameplay */}
         {gameState === GameState.GAMEPLAY && (
           <div className="absolute top-4 right-4 z-20">
             <Button
@@ -446,24 +444,6 @@ const Game: React.FC = () => {
                   </ul>
                 </div>
               )}
-            </div>
-          </div>
-        )}
-        
-        {/* Pause screen overlay */}
-        {gameState === GameState.GAMEPLAY && isPaused && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-black/30 to-black/70 backdrop-blur-md transition-all duration-300 animate-fade-in z-10">
-            <div className="glassmorphism rounded-3xl p-8 max-w-md mx-auto text-center border border-[#91d3d1]/20 shadow-xl animate-scale-in">
-              <h2 className="text-3xl font-bold mb-4 tracking-tight text-white">Game Paused</h2>
-              <p className="text-gray-300 mb-6">Take a breather! Your progress is saved.</p>
-              
-              <Button 
-                onClick={handlePauseResume}
-                className="game-button w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 rounded-xl py-6 text-lg font-medium shadow-lg shadow-[#91d3d1]/20"
-              >
-                <Play className="w-5 h-5 mr-2" />
-                Resume Game
-              </Button>
             </div>
           </div>
         )}

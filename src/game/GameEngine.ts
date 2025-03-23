@@ -380,9 +380,21 @@ export class GameEngine {
 
   private togglePause(): void {
     if (this.gameState === GameState.GAMEPLAY) {
+      this.pauseGame();
+    } else if (this.gameState === GameState.PAUSED) {
+      this.resumeGame();
+    }
+  }
+
+  private pauseGame(): void {
+    if (this.gameState === GameState.GAMEPLAY) {
       this.gameState = GameState.PAUSED;
       this.onGameStateChange(GameState.PAUSED);
-    } else if (this.gameState === GameState.PAUSED) {
+    }
+  }
+
+  private resumeGame(): void {
+    if (this.gameState === GameState.PAUSED) {
       this.gameState = GameState.GAMEPLAY;
       this.onGameStateChange(GameState.GAMEPLAY);
       this.lastFrameTime = performance.now();
