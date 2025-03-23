@@ -112,7 +112,7 @@ const Game: React.FC = () => {
         crashSoundRef.current = null;
       }
     };
-  }, [gameState]);
+  }, []);
   
   useEffect(() => {
     const preloadCarAssets = async () => {
@@ -285,7 +285,14 @@ const Game: React.FC = () => {
             console.log("Starting car sound from beginning");
             if (carSoundRef.current) {
               carSoundRef.current.currentTime = 0;
-              carSoundRef.current.play().catch(e => console.error("Error playing car sound:", e));
+              // Use a small timeout to ensure audio context is ready
+              setTimeout(() => {
+                if (carSoundRef.current) {
+                  carSoundRef.current.play()
+                    .then(() => console.log("Car sound started successfully"))
+                    .catch(e => console.error("Error playing car sound:", e));
+                }
+              }, 100);
             }
           } else if (newState === GameState.PAUSED) {
             console.log("Pausing car sound");
@@ -409,11 +416,6 @@ const Game: React.FC = () => {
     console.log("Start game clicked, gameEngine exists:", !!gameEngineRef.current);
     if (gameEngineRef.current) {
       gameEngineRef.current.startGame();
-      
-      if (carSoundRef.current) {
-        carSoundRef.current.currentTime = 0;
-        carSoundRef.current.play().catch(e => console.error("Error playing car sound:", e));
-      }
       
       toast.success('GAME STARTED', {
         description: 'Use arrows to move'
