@@ -1,88 +1,11 @@
-// Main game engine class
 
-export enum GameState {
-  START_SCREEN,
-  GAMEPLAY,
-  PAUSED,
-  GAME_OVER
-}
+import { GameState, PowerUpType, GameObject, PlayerCar, RoadMarking, Decoration, ExplosionParticle, GameConfig } from './types';
+import { GameFactory } from './factory';
+import { CollisionManager } from './collision';
+import { GameRenderer } from './renderer';
+import { GameUtils } from './utils';
 
-export enum PowerUpType {
-  SLOW_SPEED,
-  SHIELD,
-  EXTRA_LIFE
-}
-
-// Extended GameObject interface to include powerUpType for power-ups
-export interface GameObject {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  lane: number;
-  active: boolean;
-  type?: string;
-  powerUpType?: PowerUpType; // Ensure this is defined in the interface
-  update: (delta: number) => void;
-  render: (ctx: CanvasRenderingContext2D) => void;
-}
-
-export interface PlayerCar extends GameObject {
-  lives: number;
-  shield: boolean;
-  shieldTimer: number;
-  lanePosition: number;
-  targetLane: number;
-  transitioning: boolean;
-}
-
-// New interface for explosion particles
-export interface ExplosionParticle {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  size: number;
-  color: string;
-  alpha: number;
-  lifetime: number;
-  currentLife: number;
-}
-
-// New interface for road marking
-export interface RoadMarking {
-  y: number;
-  active: boolean;
-  update: (delta: number) => void;
-  render: (ctx: CanvasRenderingContext2D) => void;
-}
-
-// New interface for decorative elements
-export interface Decoration {
-  x: number;
-  y: number;
-  type: 'tree' | 'bush';
-  size: number;
-  active: boolean;
-  update: (delta: number) => void;
-  render: (ctx: CanvasRenderingContext2D) => void;
-}
-
-export interface GameConfig {
-  canvas: HTMLCanvasElement;
-  onScoreChange: (score: number) => void;
-  onLivesChange: (lives: number) => void;
-  onGameStateChange: (state: GameState) => void;
-  onPowerUpStart: (type: PowerUpType, duration: number) => void;
-  onPowerUpEnd: (type: PowerUpType) => void;
-  onCollision?: () => void; // New collision callback
-  customAssets?: {
-    playerCarURL: string;
-    enemyCarURLs: string[];
-    seedImageURL?: string;
-    useDefaultsIfBroken?: boolean;
-  };
-}
+export { GameState, PowerUpType } from './types';
 
 export class GameEngine {
   private canvas: HTMLCanvasElement;
@@ -104,10 +27,10 @@ export class GameEngine {
   // Game images
   private playerCarImage: HTMLImageElement;
   private enemyCarImages: HTMLImageElement[] = [];
-  private seedImage: HTMLImageElement | null = null; // Added seed image
+  private seedImage: HTMLImageElement | null = null;
   private playerCarLoaded: boolean = false;
   private enemyCarLoaded: boolean = false;
-  private seedImageLoaded: boolean = false; // Added seed image loaded flag
+  private seedImageLoaded: boolean = false;
   private imagesLoaded: boolean = false;
   private imageLoadErrors: boolean = false;
   
@@ -146,8 +69,6 @@ export class GameEngine {
   private onGameStateChange: (state: GameState) => void;
   private onPowerUpStart: (type: PowerUpType, duration: number) => void;
   private onPowerUpEnd: (type: PowerUpType) => void;
-  
-  // Add new collision callback
   private onCollision?: () => void;
   
   // Animation frame id for cleanup
@@ -169,7 +90,7 @@ export class GameEngine {
     this.onGameStateChange = config.onGameStateChange;
     this.onPowerUpStart = config.onPowerUpStart;
     this.onPowerUpEnd = config.onPowerUpEnd;
-    this.onCollision = config.onCollision; // Set collision callback
+    this.onCollision = config.onCollision;
     
     // Initialize game dimensions
     this.calculateDimensions();
@@ -181,7 +102,7 @@ export class GameEngine {
     
     // Load car images with proper error handling
     this.playerCarImage = new Image();
-    this.playerCarImage.crossOrigin = "anonymous"; // Try to fix CORS issues
+    this.playerCarImage.crossOrigin = "anonymous";
     
     // Create seed image
     if (config.customAssets?.seedImageURL) {
@@ -191,89 +112,7 @@ export class GameEngine {
     
     // Use custom assets if provided
     if (config.customAssets) {
-      console.log("Using custom car assets:", config.customAssets);
-      
-      // Load player car image
-      this.playerCarImage.onload = () => {
-        console.log("Player car image loaded successfully");
-        this.playerCarLoaded = true;
-        this.checkAllImagesLoaded();
-      };
-      
-      this.playerCarImage.onerror = (e) => {
-        console.error("Error loading player car image:", e);
-        this.imageLoadErrors = true;
-        this.playerCarLoaded = true; // Consider it "loaded" so we can continue with fallbacks
-        this.checkAllImagesLoaded();
-      };
-      
-      this.playerCarImage.src = config.customAssets.playerCarURL;
-      
-      // Load enemy car images
-      let enemyImagesLoaded = 0;
-      const totalEnemyImages = config.customAssets.enemyCarURLs.length;
-      
-      config.customAssets.enemyCarURLs.forEach((url, index) => {
-        const enemyImg = new Image();
-        enemyImg.crossOrigin = "anonymous";
-        
-        enemyImg.onload = () => {
-          console.log(`Enemy car image ${index} loaded successfully`);
-          this.enemyCarImages[index] = enemyImg;
-          enemyImagesLoaded++;
-          
-          if (enemyImagesLoaded === totalEnemyImages) {
-            this.enemyCarLoaded = true;
-            this.checkAllImagesLoaded();
-          }
-        };
-        
-        enemyImg.onerror = (e) => {
-          console.error(`Error loading enemy car image ${index}:`, e);
-          this.imageLoadErrors = true;
-          
-          // Create a backup image
-          const backupImg = new Image();
-          backupImg.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgNjQgMTI4IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPxyZWN0IHg9IjEwIiB5PSIxMCIgd2lkdGg9IjQ0IiBoZWlnaHQ9IjEwOCIgcng9IjYiIGZpbGw9IiNERDM3M0MiLz48cmVjdCB4PSIxNiIgeT0iMzIiIHdpZHRoPSIzMiIgaGVpZ2h0PSIyNCIgZmlsbD0iIzIyMjgzOCIvPjxjaXJjbGUgY3g9IjIwIiBjeT0iMTAwIiByPSI4IiBmaWxsPSIjMjIyIi8+PGNpcmNsZSBjeD0iNDQiIGN5PSIxMDAiIHI9IjgiIGZpbGw9IiMyMjIiLz48Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSI0IiBmaWxsPSIjRkZGRjAwIi8+PGNpcmNsZSBjeD0iNDgiIGN5PSIxNiIgcj0iNCIgZmlsbD0iI0ZGRkYwMCIvPjwvc3ZnPg==';
-          this.enemyCarImages[index] = backupImg;
-          
-          enemyImagesLoaded++;
-          if (enemyImagesLoaded === totalEnemyImages) {
-            this.enemyCarLoaded = true;
-            this.checkAllImagesLoaded();
-          }
-        };
-        
-        enemyImg.src = url;
-      });
-      
-      // If there are no enemy car URLs, mark as loaded
-      if (totalEnemyImages === 0) {
-        this.enemyCarLoaded = true;
-        this.checkAllImagesLoaded();
-      }
-      
-      // Load seed image if provided
-      if (config.customAssets.seedImageURL && this.seedImage) {
-        this.seedImage.onload = () => {
-          console.log("Seed image loaded successfully");
-          this.seedImageLoaded = true;
-          this.checkAllImagesLoaded();
-        };
-        
-        this.seedImage.onerror = (e) => {
-          console.error("Error loading seed image:", e);
-          this.imageLoadErrors = true;
-          this.seedImageLoaded = true; // Consider it "loaded" so we can continue with fallbacks
-          this.checkAllImagesLoaded();
-        };
-        
-        this.seedImage.src = config.customAssets.seedImageURL;
-      } else {
-        // If no seed image URL provided, consider it loaded
-        this.seedImageLoaded = true;
-        this.checkAllImagesLoaded();
-      }
+      this.loadAssets(config);
     } else {
       console.error("No custom assets provided, game cannot initialize properly");
       // Mark as loaded but with errors, so we can use fallbacks
@@ -293,6 +132,7 @@ export class GameEngine {
     this.loadHighScore();
   }
 
+  // Public methods
   public resizeCanvas(): void {
     this.calculateDimensions();
     // If player exists, update its position based on new dimensions
@@ -363,6 +203,104 @@ export class GameEngine {
     
     if (this.animationFrameId === null) {
       this.gameLoop();
+    }
+  }
+
+  // Private methods
+  private loadAssets(config: GameConfig): void {
+    console.log("Using custom car assets:", config.customAssets);
+    
+    // Load player car image
+    this.playerCarImage.onload = () => {
+      console.log("Player car image loaded successfully");
+      this.playerCarLoaded = true;
+      this.checkAllImagesLoaded();
+    };
+    
+    this.playerCarImage.onerror = (e) => {
+      console.error("Error loading player car image:", e);
+      this.imageLoadErrors = true;
+      this.playerCarLoaded = true; // Consider it "loaded" so we can continue with fallbacks
+      this.checkAllImagesLoaded();
+    };
+    
+    this.playerCarImage.src = config.customAssets!.playerCarURL;
+    
+    // Load enemy car images
+    let enemyImagesLoaded = 0;
+    const totalEnemyImages = config.customAssets!.enemyCarURLs.length;
+    
+    config.customAssets!.enemyCarURLs.forEach((url, index) => {
+      const enemyImg = new Image();
+      enemyImg.crossOrigin = "anonymous";
+      
+      enemyImg.onload = () => {
+        console.log(`Enemy car image ${index} loaded successfully`);
+        this.enemyCarImages[index] = enemyImg;
+        enemyImagesLoaded++;
+        
+        if (enemyImagesLoaded === totalEnemyImages) {
+          this.enemyCarLoaded = true;
+          this.checkAllImagesLoaded();
+        }
+      };
+      
+      enemyImg.onerror = (e) => {
+        console.error(`Error loading enemy car image ${index}:`, e);
+        this.imageLoadErrors = true;
+        
+        // Create a backup image
+        const backupImg = new Image();
+        backupImg.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgNjQgMTI4IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPxyZWN0IHg9IjEwIiB5PSIxMCIgd2lkdGg9IjQ0IiBoZWlnaHQ9IjEwOCIgcng9IjYiIGZpbGw9IiNERDM3M0MiLz48cmVjdCB4PSIxNiIgeT0iMzIiIHdpZHRoPSIzMiIgaGVpZ2h0PSIyNCIgZmlsbD0iIzIyMjgzOCIvPjxjaXJjbGUgY3g9IjIwIiBjeT0iMTAwIiByPSI4IiBmaWxsPSIjMjIyIi8+PGNpcmNsZSBjeD0iNDQiIGN5PSIxMDAiIHI9IjgiIGZpbGw9IiMyMjIiLz48Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSI0IiBmaWxsPSIjRkZGRjAwIi8+PGNpcmNsZSBjeD0iNDgiIGN5PSIxNiIgcj0iNCIgZmlsbD0iI0ZGRkYwMCIvPjwvc3ZnPg==';
+        this.enemyCarImages[index] = backupImg;
+        
+        enemyImagesLoaded++;
+        if (enemyImagesLoaded === totalEnemyImages) {
+          this.enemyCarLoaded = true;
+          this.checkAllImagesLoaded();
+        }
+      };
+      
+      enemyImg.src = url;
+    });
+    
+    // If there are no enemy car URLs, mark as loaded
+    if (totalEnemyImages === 0) {
+      this.enemyCarLoaded = true;
+      this.checkAllImagesLoaded();
+    }
+    
+    // Load seed image if provided
+    if (config.customAssets!.seedImageURL && this.seedImage) {
+      this.seedImage.onload = () => {
+        console.log("Seed image loaded successfully");
+        this.seedImageLoaded = true;
+        this.checkAllImagesLoaded();
+      };
+      
+      this.seedImage.onerror = (e) => {
+        console.error("Error loading seed image:", e);
+        this.imageLoadErrors = true;
+        this.seedImageLoaded = true; // Consider it "loaded" so we can continue with fallbacks
+        this.checkAllImagesLoaded();
+      };
+      
+      this.seedImage.src = config.customAssets!.seedImageURL;
+    } else {
+      // If no seed image URL provided, consider it loaded
+      this.seedImageLoaded = true;
+      this.checkAllImagesLoaded();
+    }
+  }
+  
+  private checkAllImagesLoaded(): void {
+    // Check if all images are loaded
+    if (this.playerCarLoaded && this.enemyCarLoaded && this.seedImageLoaded) {
+      this.imagesLoaded = true;
+      console.log("All images loaded, initializing game");
+      
+      // Initialize player after images are loaded
+      this.player = this.createPlayer();
     }
   }
   
@@ -467,6 +405,20 @@ export class GameEngine {
     this.initRoadMarkings();
     
     this.onLivesChange(this.player.lives);
+  }
+
+  private calculateDimensions(): void {
+    // Calculate road and lane dimensions based on canvas size
+    this.roadWidth = this.canvas.width * 0.8;
+    this.roadCenterX = this.canvas.width / 2;
+    this.laneWidth = this.roadWidth / 3;
+    
+    // Calculate lane center positions
+    this.lanePositions = [
+      this.roadCenterX - this.laneWidth,
+      this.roadCenterX,
+      this.roadCenterX + this.laneWidth
+    ];
   }
 
   private initRoadMarkings(): void {
@@ -580,32 +532,9 @@ export class GameEngine {
   private checkCollisions(): void {
     if (!this.player || this.gameState !== GameState.GAMEPLAY) return;
     
-    // Check enemy collisions - use a smaller collision box for more precise collisions
+    // Check enemy collisions
     this.enemies.forEach(enemy => {
-      const collisionMargin = 10; // Reduce collision box size by this amount on each side
-      
-      // Create tighter collision box for more precise collision detection
-      const playerBox = {
-        x: this.player!.x + collisionMargin,
-        y: this.player!.y + collisionMargin,
-        width: this.player!.width - (collisionMargin * 2),
-        height: this.player!.height - (collisionMargin * 2)
-      };
-      
-      const enemyBox = {
-        x: enemy.x + collisionMargin,
-        y: enemy.y + collisionMargin,
-        width: enemy.width - (collisionMargin * 2),
-        height: enemy.height - (collisionMargin * 2)
-      };
-      
-      // Check if the tighter boxes are colliding
-      if (
-        playerBox.x < enemyBox.x + enemyBox.width &&
-        playerBox.x + playerBox.width > enemyBox.x &&
-        playerBox.y < enemyBox.y + enemyBox.height &&
-        playerBox.y + playerBox.height > enemyBox.y
-      ) {
+      if (CollisionManager.checkPreciseCollision(this.player!, enemy)) {
         if (this.player!.shield) {
           // Player has shield, destroy enemy
           enemy.active = false;
@@ -632,7 +561,7 @@ export class GameEngine {
     
     // Check seed collisions
     this.seeds.forEach(seed => {
-      if (this.isColliding(this.player!, seed)) {
+      if (CollisionManager.isColliding(this.player!, seed)) {
         seed.active = false;
         this.score += 10;
         this.onScoreChange(this.score);
@@ -641,7 +570,7 @@ export class GameEngine {
     
     // Check power-up collisions
     this.powerUps.forEach(powerUp => {
-      if (this.isColliding(this.player!, powerUp) && powerUp.powerUpType !== undefined) {
+      if (CollisionManager.isColliding(this.player!, powerUp) && powerUp.powerUpType !== undefined) {
         powerUp.active = false;
         
         switch (powerUp.powerUpType) {
@@ -659,38 +588,9 @@ export class GameEngine {
     });
   }
 
-  private isColliding(obj1: GameObject, obj2: GameObject): boolean {
-    return (
-      obj1.x < obj2.x + obj2.width &&
-      obj1.x + obj1.width > obj2.x &&
-      obj1.y < obj2.y + obj2.height &&
-      obj1.y + obj1.height > obj2.y
-    );
-  }
-
   private createExplosion(x: number, y: number): void {
-    const particleCount = 20;
-    const colors = ['#ff6600', '#ffcc00', '#ff3300', '#ff9900'];
-    
-    for (let i = 0; i < particleCount; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 1 + Math.random() * 3;
-      const size = 2 + Math.random() * 6;
-      const lifetime = 500 + Math.random() * 1000;
-      const color = colors[Math.floor(Math.random() * colors.length)];
-      
-      this.explosions.push({
-        x,
-        y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        size,
-        color,
-        alpha: 1,
-        lifetime,
-        currentLife: lifetime
-      });
-    }
+    const newExplosions = GameUtils.createExplosion(x, y);
+    this.explosions.push(...newExplosions);
   }
 
   private updateSpawns(deltaTime: number): void {
@@ -730,6 +630,127 @@ export class GameEngine {
     }
   }
 
+  private gameOver(): void {
+    this.gameState = GameState.GAME_OVER;
+    this.onGameStateChange(GameState.GAME_OVER);
+    
+    // Save high score
+    this.saveHighScore();
+  }
+
+  private activateSlowMode(): void {
+    this.slowModeActive = true;
+    this.slowModeTimer = 0;
+    this.onPowerUpStart(PowerUpType.SLOW_SPEED, this.slowModeDuration);
+  }
+
+  private activateShield(): void {
+    if (this.player) {
+      this.player.shield = true;
+      this.player.shieldTimer = 0;
+      this.onPowerUpStart(PowerUpType.SHIELD, 3000); // 3 seconds
+    }
+  }
+
+  private addExtraLife(): void {
+    if (this.player) {
+      this.player.lives++;
+      this.onLivesChange(this.player.lives);
+      this.onPowerUpStart(PowerUpType.EXTRA_LIFE, 0);
+    }
+  }
+
+  private updatePowerUps(deltaTime: number): void {
+    // Update slow mode timer
+    if (this.slowModeActive) {
+      this.slowModeTimer += deltaTime;
+      if (this.slowModeTimer >= this.slowModeDuration) {
+        this.slowModeActive = false;
+        this.slowModeTimer = 0;
+        this.onPowerUpEnd(PowerUpType.SLOW_SPEED);
+      }
+    }
+    
+    // Shield is handled by the player object
+    if (this.player && this.player.shield && this.player.shieldTimer >= 3000) {
+      this.onPowerUpEnd(PowerUpType.SHIELD);
+    }
+  }
+
+  private updateDifficulty(deltaTime: number): void {
+    // Increase difficulty over time
+    this.difficultyTimer += deltaTime;
+    if (this.difficultyTimer >= this.difficultyInterval) {
+      // Increase game speed
+      this.gameSpeed *= 1.1;
+      
+      // Decrease spawn intervals
+      this.enemySpawnInterval = Math.max(500, this.enemySpawnInterval * 0.9);
+      this.seedSpawnInterval = Math.max(300, this.seedSpawnInterval * 0.95);
+      
+      this.difficultyTimer = 0;
+    }
+  }
+
+  private render(): void {
+    // Clear canvas
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    
+    // Draw background
+    GameRenderer.drawBackground(this.ctx, this.canvas, this.roadWidth, this.roadCenterX);
+    
+    // Draw decorations
+    this.decorations.forEach(decoration => decoration.render(this.ctx));
+    
+    // Draw road markings
+    this.roadMarkings.forEach(marking => marking.render(this.ctx));
+    
+    // Draw game objects
+    this.seeds.forEach(seed => seed.render(this.ctx));
+    this.powerUps.forEach(powerUp => powerUp.render(this.ctx));
+    this.enemies.forEach(enemy => enemy.render(this.ctx));
+    
+    // Draw player
+    if (this.player && this.gameState === GameState.GAMEPLAY) {
+      this.player.render(this.ctx);
+    }
+    
+    // Draw explosions
+    GameRenderer.drawExplosions(this.ctx, this.explosions);
+    
+    // Draw UI
+    GameRenderer.drawUI(
+      this.ctx, 
+      this.canvas, 
+      GameState[this.gameState], 
+      this.score, 
+      this.player ? this.player.lives : 0, 
+      this.highScore
+    );
+  }
+
+  // Factory methods
+  private createPlayer(): PlayerCar {
+    return GameFactory.createPlayer(
+      this.lanePositions,
+      this.laneWidth,
+      this.canvas.height,
+      this.playerCarImage
+    );
+  }
+
+  private createEnemy(lane: number): GameObject {
+    return GameFactory.createEnemy(
+      lane,
+      this.lanePositions,
+      this.laneWidth,
+      this.canvas.height,
+      this.gameSpeed,
+      this.enemyCarImages,
+      this.slowModeActive
+    );
+  }
+
   private spawnEnemy(): void {
     const lane = Math.floor(Math.random() * 3);
     this.enemies.push(this.createEnemy(lane));
@@ -738,189 +759,53 @@ export class GameEngine {
   private spawnSeed(): void {
     // Create a seed at a random lane
     const lane = Math.floor(Math.random() * 3);
-    
-    // Seed size is DOUBLED from the original size (2x bigger)
-    const width = this.laneWidth * 0.4; // 0.2 * 2 = 0.4
-    const height = width;
-    
-    const seed: GameObject = {
-      x: this.lanePositions[lane] - (width / 2),
-      y: -height,
-      width,
-      height,
+    const seed = GameFactory.createSeed(
       lane,
-      active: true,
-      type: 'seed',
-      update: (delta: number) => {
-        const speed = 0.25 * this.gameSpeed * (this.slowModeActive ? 0.5 : 1);
-        seed.y += speed * delta;
-        
-        // Check if out of bounds
-        if (seed.y > this.canvas.height) {
-          seed.active = false;
-        }
-      },
-      render: (ctx: CanvasRenderingContext2D) => {
-        ctx.save();
-        
-        // Try to use the seed image if available
-        if (this.seedImage) {
-          try {
-            ctx.drawImage(
-              this.seedImage,
-              seed.x,
-              seed.y,
-              seed.width,
-              seed.height
-            );
-            
-            // Add a subtle glow effect behind the image
-            ctx.shadowColor = '#ffdb4d';
-            ctx.shadowBlur = 10;
-            ctx.drawImage(
-              this.seedImage,
-              seed.x,
-              seed.y,
-              seed.width,
-              seed.height
-            );
-            ctx.shadowBlur = 0;
-          } catch (e) {
-            // Fall back to drawing a circle if the image fails
-            this.drawSeedFallback(ctx, seed);
-          }
-        } else {
-          // No image available, use fallback
-          this.drawSeedFallback(ctx, seed);
-        }
-        
-        ctx.restore();
-      }
-    };
-    
+      this.lanePositions,
+      this.laneWidth,
+      this.canvas.height,
+      this.gameSpeed,
+      this.seedImage,
+      this.slowModeActive,
+      GameRenderer.drawSeedFallback
+    );
     this.seeds.push(seed);
   }
 
-  private drawSeedFallback(ctx: CanvasRenderingContext2D, seed: GameObject): void {
-    // Draw seed (a small circle)
-    ctx.fillStyle = '#ffdb4d';
-    ctx.beginPath();
-    ctx.arc(
-      seed.x + seed.width / 2,
-      seed.y + seed.height / 2,
-      seed.width / 2,
-      0,
-      Math.PI * 2
+  private spawnPowerUp(): void {
+    const lane = Math.floor(Math.random() * 3);
+    const powerUp = GameFactory.createPowerUp(
+      lane,
+      this.lanePositions,
+      this.laneWidth,
+      this.canvas.height,
+      this.gameSpeed,
+      this.slowModeActive
     );
-    ctx.fill();
-    
-    // Add a small glow effect
-    ctx.shadowColor = '#ffdb4d';
-    ctx.shadowBlur = 10;
-    ctx.beginPath();
-    ctx.arc(
-      seed.x + seed.width / 2,
-      seed.y + seed.height / 2,
-      seed.width / 3,
-      0,
-      Math.PI * 2
-    );
-    ctx.fill();
+    this.powerUps.push(powerUp);
   }
 
-  private spawnPowerUp(): void {
-    // Create a power-up at a random lane
-    const lane = Math.floor(Math.random() * 3);
-    
-    // Randomly choose power-up type
-    const powerUpType = Math.floor(Math.random() * 3);
-    
-    // Power-up size is medium (between seed and car)
-    const width = this.laneWidth * 0.3;
-    const height = width;
-    
-    const powerUp: GameObject = {
-      x: this.lanePositions[lane] - (width / 2),
-      y: -height,
-      width,
-      height,
-      lane,
-      active: true,
-      type: 'powerUp',
-      powerUpType: powerUpType as PowerUpType,
-      update: (delta: number) => {
-        const speed = 0.25 * this.gameSpeed * (this.slowModeActive ? 0.5 : 1);
-        powerUp.y += speed * delta;
-        
-        // Check if out of bounds
-        if (powerUp.y > this.canvas.height) {
-          powerUp.active = false;
-        }
-      },
-      render: (ctx: CanvasRenderingContext2D) => {
-        ctx.save();
-        
-        let color = '#ffffff';
-        
-        // Set color based on power-up type
-        switch (powerUp.powerUpType) {
-          case PowerUpType.SLOW_SPEED:
-            color = '#9b87f5'; // Purple
-            break;
-          case PowerUpType.SHIELD:
-            color = '#4cc9f0'; // Cyan
-            break;
-          case PowerUpType.EXTRA_LIFE:
-            color = '#ff5e5e'; // Red
-            break;
-        }
-        
-        // Draw power-up shape (circled hexagon)
-        ctx.fillStyle = color;
-        
-        // Draw circle
-        ctx.beginPath();
-        ctx.arc(
-          powerUp.x + powerUp.width / 2,
-          powerUp.y + powerUp.height / 2,
-          powerUp.width / 2,
-          0,
-          Math.PI * 2
-        );
-        ctx.fill();
-        
-        // Draw icon based on power-up type
-        ctx.fillStyle = '#ffffff';
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
-        
-        const centerX = powerUp.x + powerUp.width / 2;
-        const centerY = powerUp.y + powerUp.height / 2;
-        const iconSize = powerUp.width * 0.35;
-        
-        switch (powerUp.powerUpType) {
-          case PowerUpType.SLOW_SPEED:
-            // Draw clock icon
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, iconSize, 0, Math.PI * 2);
-            ctx.stroke();
-            
-            // Draw clock hands
-            ctx.beginPath();
-            ctx.moveTo(centerX, centerY);
-            ctx.lineTo(centerX, centerY - iconSize * 0.7);
-            ctx.stroke();
-            
-            ctx.beginPath();
-            ctx.moveTo(centerX, centerY);
-            ctx.lineTo(centerX + iconSize * 0.5, centerY + iconSize * 0.3);
-            ctx.stroke();
-            break;
-            
-          case PowerUpType.SHIELD:
-            // Draw shield icon
-            ctx.beginPath();
-            ctx.moveTo(centerX, centerY - iconSize);
-            ctx.quadraticCurveTo(
-              centerX + iconSize * 1.2, centerY - iconSize * 0.6,
-              centerX +
+  private createRoadMarking(y: number): void {
+    const roadMarking = GameFactory.createRoadMarking(
+      y,
+      this.canvas.width,
+      this.roadWidth,
+      this.roadCenterX,
+      this.gameSpeed,
+      this.canvas.height,
+      this.slowModeActive
+    );
+    this.roadMarkings.push(roadMarking);
+  }
+
+  private spawnDecoration(): void {
+    const decoration = GameFactory.createDecoration(
+      this.canvas.width,
+      this.roadWidth,
+      this.canvas.height,
+      this.gameSpeed,
+      this.slowModeActive
+    );
+    this.decorations.push(decoration);
+  }
+}
