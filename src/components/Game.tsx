@@ -35,6 +35,7 @@ const Game: React.FC = () => {
   const carSoundRef = useRef<HTMLAudioElement | null>(null);
   const crashSoundRef = useRef<HTMLAudioElement | null>(null);
   const [audioLoaded, setAudioLoaded] = useState(false);
+  const [isPlayingCrashSound, setIsPlayingCrashSound] = useState(false);
   
   const isMobile = useIsMobile();
   
@@ -55,15 +56,18 @@ const Game: React.FC = () => {
         
         crashSound.addEventListener('ended', () => {
           console.log("Crash sound ended, restarting engine sound from beginning");
+          setIsPlayingCrashSound(false);
+          
           if (gameState === GameState.GAMEPLAY && carSoundRef.current) {
             carSoundRef.current.currentTime = 0;
+            
             setTimeout(() => {
-              if (carSoundRef.current && gameState === GameState.GAMEPLAY) {
+              if (carSoundRef.current && gameState === GameState.GAMEPLAY && !isPlayingCrashSound) {
                 carSoundRef.current.play()
-                  .then(() => console.log("Car sound restarted after crash"))
+                  .then(() => console.log("Car sound successfully restarted after crash"))
                   .catch(e => console.error("Error restarting car sound after crash:", e));
               }
-            }, 50);
+            }, 100);
           }
         });
         
@@ -289,16 +293,26 @@ const Game: React.FC = () => {
         },
         onPlayerCrash: () => {
           console.log("Playing crash sound");
+          
+          setIsPlayingCrashSound(true);
+          
           if (crashSoundRef.current) {
-            crashSoundRef.current.currentTime = 0;
-            
             if (carSoundRef.current) {
               carSoundRef.current.pause();
             }
             
-            crashSoundRef.current.play()
-              .then(() => console.log("Crash sound started successfully"))
-              .catch(e => console.error("Error playing crash sound:", e));
+            crashSoundRef.current.currentTime = 0;
+            
+            setTimeout(() => {
+              if (crashSoundRef.current && gameState === GameState.GAMEPLAY) {
+                crashSoundRef.current.play()
+                  .then(() => console.log("Crash sound started successfully"))
+                  .catch(e => {
+                    console.error("Error playing crash sound:", e);
+                    setIsPlayingCrashSound(false);
+                  });
+              }
+            }, 50);
           }
         },
         onPowerUpStart: (type, duration) => {
@@ -395,12 +409,12 @@ const Game: React.FC = () => {
   }, [shieldTimer]);
   
   useEffect(() => {
-    if (gameState === GameState.GAMEPLAY) {
-      console.log("Game state changed to GAMEPLAY, starting engine sound");
+    if (gameState === GameState.GAMEPLAY && !isPlayingCrashSound) {
+      console.log("Game state changed to GAMEPLAY and no crash sound playing, starting engine sound");
       if (carSoundRef.current) {
         carSoundRef.current.currentTime = 0;
         setTimeout(() => {
-          if (carSoundRef.current && gameState === GameState.GAMEPLAY) {
+          if (carSoundRef.current && gameState === GameState.GAMEPLAY && !isPlayingCrashSound) {
             carSoundRef.current.play()
               .then(() => console.log("Car sound started successfully on state change"))
               .catch(e => console.error("Error playing car sound on state change:", e));
@@ -423,7 +437,7 @@ const Game: React.FC = () => {
         crashSoundRef.current.currentTime = 0;
       }
     }
-  }, [gameState]);
+  }, [gameState, isPlayingCrashSound]);
   
   const handleStartGame = () => {
     console.log("Start game clicked, gameEngine exists:", !!gameEngineRef.current);
