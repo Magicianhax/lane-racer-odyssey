@@ -32,97 +32,7 @@ const Game: React.FC = () => {
   const [showHowToPlay, setShowHowToPlay] = useState<boolean>(false);
   const [currentHowToPlayPage, setCurrentHowToPlayPage] = useState<number>(0);
   
-  const carSoundRef = useRef<HTMLAudioElement | null>(null);
-  const crashSoundRef = useRef<HTMLAudioElement | null>(null);
-  const [audioLoaded, setAudioLoaded] = useState(false);
-  const [isPlayingCrashSound, setIsPlayingCrashSound] = useState(false);
-  
   const isMobile = useIsMobile();
-  
-  useEffect(() => {
-    const loadAudio = async () => {
-      try {
-        console.log("Loading audio assets...");
-        
-        const carSound = new Audio('/car.m4a');
-        carSound.loop = true;
-        carSound.volume = 0.5;
-        carSoundRef.current = carSound;
-        
-        const crashSound = new Audio('/crash.m4a');
-        crashSound.loop = false;
-        crashSound.volume = 0.7;
-        crashSoundRef.current = crashSound;
-        
-        crashSound.addEventListener('ended', () => {
-          console.log("Crash sound ended, restarting engine sound from beginning");
-          setIsPlayingCrashSound(false);
-          
-          if (gameState === GameState.GAMEPLAY && carSoundRef.current) {
-            carSoundRef.current.currentTime = 0;
-            
-            setTimeout(() => {
-              if (carSoundRef.current && gameState === GameState.GAMEPLAY && !isPlayingCrashSound) {
-                carSoundRef.current.play()
-                  .then(() => console.log("Car sound successfully restarted after crash"))
-                  .catch(e => console.error("Error restarting car sound after crash:", e));
-              }
-            }, 100);
-          }
-        });
-        
-        await Promise.all([
-          new Promise<void>((resolve) => {
-            carSound.addEventListener('canplaythrough', () => {
-              console.log("Car sound loaded");
-              resolve();
-            }, { once: true });
-            
-            carSound.addEventListener('error', (e) => {
-              console.error("Error loading car sound:", e);
-              resolve(); // Still resolve to continue
-            });
-            
-            carSound.load();
-          }),
-          
-          new Promise<void>((resolve) => {
-            crashSound.addEventListener('canplaythrough', () => {
-              console.log("Crash sound loaded");
-              resolve();
-            }, { once: true });
-            
-            crashSound.addEventListener('error', (e) => {
-              console.error("Error loading crash sound:", e);
-              resolve(); // Still resolve to continue
-            });
-            
-            crashSound.load();
-          })
-        ]);
-        
-        setAudioLoaded(true);
-        console.log("Audio assets loaded successfully");
-      } catch (err) {
-        console.error("Error loading audio:", err);
-        setAudioLoaded(true);
-      }
-    };
-    
-    loadAudio();
-    
-    return () => {
-      if (carSoundRef.current) {
-        carSoundRef.current.pause();
-        carSoundRef.current = null;
-      }
-      
-      if (crashSoundRef.current) {
-        crashSoundRef.current.pause();
-        crashSoundRef.current = null;
-      }
-    };
-  }, []);
   
   useEffect(() => {
     const preloadCarAssets = async () => {
@@ -168,7 +78,7 @@ const Game: React.FC = () => {
               
               enemyImg.onerror = (e) => {
                 console.error(`Error loading enemy image ${url}:`, e);
-                resolve(DEFAULT_ENEMY_CARS[0]);
+                resolve(DEFAULT_ENEMY_CARS[0]); // Use first car as fallback
               };
               
               enemyImg.src = url;
@@ -288,33 +198,7 @@ const Game: React.FC = () => {
         canvas: canvasRef.current,
         onScoreChange: (newScore) => setScore(newScore),
         onLivesChange: (newLives) => setLives(newLives),
-        onGameStateChange: (newState) => {
-          setGameState(newState);
-        },
-        onPlayerCrash: () => {
-          console.log("Playing crash sound");
-          
-          setIsPlayingCrashSound(true);
-          
-          if (crashSoundRef.current) {
-            if (carSoundRef.current) {
-              carSoundRef.current.pause();
-            }
-            
-            crashSoundRef.current.currentTime = 0;
-            
-            setTimeout(() => {
-              if (crashSoundRef.current && gameState === GameState.GAMEPLAY) {
-                crashSoundRef.current.play()
-                  .then(() => console.log("Crash sound started successfully"))
-                  .catch(e => {
-                    console.error("Error playing crash sound:", e);
-                    setIsPlayingCrashSound(false);
-                  });
-              }
-            }, 50);
-          }
-        },
+        onGameStateChange: (newState) => setGameState(newState),
         onPowerUpStart: (type, duration) => {
           switch (type) {
             case PowerUpType.SLOW_SPEED:
@@ -379,14 +263,6 @@ const Game: React.FC = () => {
       if (gameEngineRef.current) {
         gameEngineRef.current.cleanup();
       }
-      
-      if (carSoundRef.current) {
-        carSoundRef.current.pause();
-      }
-      
-      if (crashSoundRef.current) {
-        crashSoundRef.current.pause();
-      }
     };
   }, [carAssetsLoaded, playerCarURL, enemyCarURLs, seedImageURL, loadingError]);
   
@@ -408,42 +284,10 @@ const Game: React.FC = () => {
     }
   }, [shieldTimer]);
   
-  useEffect(() => {
-    if (gameState === GameState.GAMEPLAY && !isPlayingCrashSound) {
-      console.log("Game state changed to GAMEPLAY and no crash sound playing, starting engine sound");
-      if (carSoundRef.current) {
-        carSoundRef.current.currentTime = 0;
-        setTimeout(() => {
-          if (carSoundRef.current && gameState === GameState.GAMEPLAY && !isPlayingCrashSound) {
-            carSoundRef.current.play()
-              .then(() => console.log("Car sound started successfully on state change"))
-              .catch(e => console.error("Error playing car sound on state change:", e));
-          }
-        }, 100);
-      }
-    } else if (gameState === GameState.PAUSED) {
-      console.log("Game state changed to PAUSED, pausing engine sound");
-      if (carSoundRef.current) {
-        carSoundRef.current.pause();
-      }
-    } else if (gameState === GameState.GAME_OVER || gameState === GameState.START_SCREEN) {
-      console.log("Game state changed to END state, stopping all sounds");
-      if (carSoundRef.current) {
-        carSoundRef.current.pause();
-        carSoundRef.current.currentTime = 0;
-      }
-      if (crashSoundRef.current) {
-        crashSoundRef.current.pause();
-        crashSoundRef.current.currentTime = 0;
-      }
-    }
-  }, [gameState, isPlayingCrashSound]);
-  
   const handleStartGame = () => {
     console.log("Start game clicked, gameEngine exists:", !!gameEngineRef.current);
     if (gameEngineRef.current) {
       gameEngineRef.current.startGame();
-      
       toast.success('GAME STARTED', {
         description: 'Use arrows to move'
       });

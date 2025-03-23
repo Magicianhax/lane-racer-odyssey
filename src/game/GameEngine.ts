@@ -75,7 +75,6 @@ export interface GameConfig {
   onGameStateChange: (state: GameState) => void;
   onPowerUpStart: (type: PowerUpType, duration: number) => void;
   onPowerUpEnd: (type: PowerUpType) => void;
-  onPlayerCrash?: () => void; // New callback for crash sound
   customAssets?: {
     playerCarURL: string;
     enemyCarURLs: string[];
@@ -146,7 +145,6 @@ export class GameEngine {
   private onGameStateChange: (state: GameState) => void;
   private onPowerUpStart: (type: PowerUpType, duration: number) => void;
   private onPowerUpEnd: (type: PowerUpType) => void;
-  private onPlayerCrash?: () => void; // New callback for crash sound
   
   // Animation frame id for cleanup
   private animationFrameId: number | null = null;
@@ -167,7 +165,6 @@ export class GameEngine {
     this.onGameStateChange = config.onGameStateChange;
     this.onPowerUpStart = config.onPowerUpStart;
     this.onPowerUpEnd = config.onPowerUpEnd;
-    this.onPlayerCrash = config.onPlayerCrash; // Initialize crash callback
     
     // Initialize game dimensions
     this.calculateDimensions();
@@ -614,11 +611,6 @@ export class GameEngine {
           this.onLivesChange(this.player!.lives);
           enemy.active = false;
           this.createExplosion(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2);
-          
-          // Trigger crash sound effect via callback
-          if (this.onPlayerCrash) {
-            this.onPlayerCrash();
-          }
           
           // Check game over
           if (this.player!.lives <= 0) {
