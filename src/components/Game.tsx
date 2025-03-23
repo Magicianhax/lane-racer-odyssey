@@ -5,6 +5,8 @@ import { toast } from 'sonner';
 import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2, Pause, Play, RefreshCw, HelpCircle, ArrowLeft, Volume2, VolumeX } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
+import ModeSelection, { GameMode } from './ModeSelection';
+import UsernameCreation from './UsernameCreation';
 
 const DEFAULT_PLAYER_CAR = '/playercar.png';
 const DEFAULT_ENEMY_CARS = ['/enemycar1.png', '/enemycar2.png', '/enemycar3.png'];
@@ -14,7 +16,6 @@ const CRASH_SOUND = '/crash.m4a';
 const SEED_SOUND = '/seed.m4a';
 const SLOW_TIMER_SOUND = '/5 sec.m4a';
 const BUTTON_SOUND = '/tap.mp3';
-
 
 const Game: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -38,6 +39,12 @@ const Game: React.FC = () => {
   const [showHowToPlay, setShowHowToPlay] = useState<boolean>(false);
   const [currentHowToPlayPage, setCurrentHowToPlayPage] = useState<number>(0);
   const [isSoundEnabled, setIsSoundEnabled] = useState<boolean>(true);
+  
+  // New state variables for mode selection and username
+  const [showModeSelection, setShowModeSelection] = useState<boolean>(true);
+  const [showUsernameCreation, setShowUsernameCreation] = useState<boolean>(false);
+  const [selectedMode, setSelectedMode] = useState<GameMode>(null);
+  const [username, setUsername] = useState<string>('');
   
   const carSoundRef = useRef<HTMLAudioElement | null>(null);
   const crashSoundRef = useRef<HTMLAudioElement | null>(null);
@@ -603,6 +610,50 @@ const Game: React.FC = () => {
     }
   }, [shieldTimer]);
   
+  // Handle mode selection
+  const handleSelectMode = (mode: GameMode) => {
+    playButtonSound();
+    setSelectedMode(mode);
+    setShowModeSelection(false);
+    setShowUsernameCreation(true);
+  };
+  
+  // Handle username confirmation
+  const handleUsernameConfirm = (name: string) => {
+    playButtonSound();
+    setUsername(name);
+    setShowUsernameCreation(false);
+    
+    // Store the username in localStorage for returning players
+    localStorage.setItem('gameUsername', name);
+    
+    // Check if mode should be stored too
+    if (selectedMode) {
+      localStorage.setItem('gameMode', selectedMode);
+    }
+  };
+  
+  // Handle back to mode selection
+  const handleBackToModeSelection = () => {
+    playButtonSound();
+    setShowUsernameCreation(false);
+    setShowModeSelection(true);
+  };
+  
+  // Check for returning player
+  useEffect(() => {
+    const savedUsername = localStorage.getItem('gameUsername');
+    const savedMode = localStorage.getItem('gameMode') as GameMode;
+    
+    if (savedUsername && savedMode) {
+      setUsername(savedUsername);
+      setSelectedMode(savedMode);
+      // Skip the mode selection and username creation
+      setShowModeSelection(false);
+      setShowUsernameCreation(false);
+    }
+  }, []);
+  
   const handleStartGame = () => {
     console.log("Start game clicked, gameEngine exists:", !!gameEngineRef.current);
     if (gameEngineRef.current) {
@@ -809,7 +860,22 @@ const Game: React.FC = () => {
       <div className="game-canvas-container relative w-full max-w-[600px]">
         <canvas ref={canvasRef} className="w-full h-full"></canvas>
         
-        {gameState === GameState.GAMEPLAY && (
+        {/* Mode Selection Screen */}
+        {showModeSelection && (
+          <ModeSelection onSelectMode={handleSelectMode} />
+        )}
+        
+        {/* Username Creation Screen */}
+        {showUsernameCreation && (
+          <UsernameCreation 
+            selectedMode={selectedMode} 
+            onConfirm={handleUsernameConfirm} 
+            onBack={handleBackToModeSelection} 
+          />
+        )}
+        
+        {/* Game UI - Only show if not in mode selection or username creation */}
+        {gameState === GameState.GAMEPLAY && !showModeSelection && !showUsernameCreation && (
           <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10">
             <div className="flex items-center space-x-2 glassmorphism px-3 py-1 rounded-full">
               {Array.from({ length: lives }).map((_, i) => (
@@ -822,6 +888,20 @@ const Game: React.FC = () => {
             </div>
             
             <div className="flex items-center space-x-2">
+              {/* Display username if available */}
+              {username && (
+                <div className="flex items-center space-x-1 glassmorphism px-3 py-1 rounded-full mr-2">
+                  <span className="text-sm font-medium">{username}</span>
+                </div>
+              )}
+              
+              {/* Display game mode indicator */}
+              {selectedMode && (
+                <div className="flex items-center space-x-1 glassmorphism px-3 py-1 rounded-full mr-2">
+                  <span className="text-xs uppercase">{selectedMode}</span>
+                </div>
+              )}
+              
               {activeSlowMode && (
                 <div className="flex items-center space-x-1 glassmorphism px-3 py-1 rounded-full">
                   <Clock className="w-4 h-4 text-[#a170fc]" />
@@ -849,254 +929,4 @@ const Game: React.FC = () => {
               <Button 
                 variant="teal" 
                 size="icon" 
-                className="rounded-full hover:bg-[#7ec7c5] transition-colors"
-                onClick={handlePauseGame}
-                aria-label="Pause game"
-              >
-                <Pause className="h-5 w-5" />
-              </Button>
-            </div>
-          </div>
-        )}
-        
-        {gameState === GameState.START_SCREEN && !showHowToPlay && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
-            <div className="glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
-              <h1 className="text-5xl font-bold mb-2 tracking-tight text-white text-gradient">Superseed Lane Runner</h1>
-              <div className="chip text-xs bg-[#91d3d1]/10 text-[#91d3d1] px-3 py-1 rounded-full mb-4 inline-block">FAST-PACED ACTION</div>
-              <p className="text-gray-300 mb-6">Navigate through traffic, collect seeds, and survive as long as possible!</p>
-              
-              <div className="flex flex-col space-y-4 items-center">
-                <Button 
-                  onClick={handleStartGame}
-                  className="game-button w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 rounded-xl py-6 text-lg font-medium shadow-lg shadow-[#91d3d1]/20"
-                  disabled={!gameInitialized}
-                >
-                  {gameInitialized ? 'Start Game' : <Loader2 className="h-5 w-5 animate-spin" />}
-                </Button>
-                
-                <Button 
-                  onClick={handleShowHowToPlay}
-                  variant="teal-outline"
-                  className="w-full rounded-xl py-6 text-lg font-medium"
-                >
-                  <HelpCircle className="mr-2 h-5 w-5" />
-                  How to Play
-                </Button>
-                
-                <div className="flex items-center space-x-4 mt-2">
-                  {highScore > 0 && (
-                    <div className="flex items-center space-x-2 text-[#91d3d1]">
-                      <Trophy className="w-5 h-5" />
-                      <span>High Score: {highScore}</span>
-                    </div>
-                  )}
-                  
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="rounded-full bg-black/20 backdrop-blur-sm hover:bg-black/30"
-                    onClick={toggleSound}
-                    aria-label={isSoundEnabled ? "Mute sound" : "Enable sound"}
-                  >
-                    {isSoundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-                  </Button>
-                </div>
-              </div>
-            </div>
-            
-            <div className="absolute -bottom-20 -left-10 opacity-10 rotate-12 transform scale-75">
-              <div className="w-32 h-20 bg-white rounded-md"></div>
-            </div>
-            <div className="absolute top-20 -right-10 opacity-10 -rotate-12 transform scale-75">
-              <div className="w-32 h-20 bg-white rounded-md"></div>
-            </div>
-          </div>
-        )}
-        
-        {gameState === GameState.START_SCREEN && showHowToPlay && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
-            <div className="glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
-              <div className="flex items-center justify-between mb-4">
-                <Button 
-                  variant="teal-outline" 
-                  size="icon" 
-                  className="rounded-full"
-                  onClick={handleBackToMenu}
-                >
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
-                <h2 className="text-2xl font-bold tracking-tight text-white">How to Play</h2>
-                <div className="w-9"></div>
-              </div>
-              
-              <div className="chip text-xs bg-[#91d3d1]/10 text-[#91d3d1] px-3 py-1 rounded-full mb-6 inline-block">
-                {currentHowToPlayPage + 1} of {howToPlayContent.length}
-              </div>
-              
-              <h3 className="text-xl font-medium mb-4 text-[#91d3d1]">{howToPlayContent[currentHowToPlayPage].title}</h3>
-              
-              <div className="text-left mb-6 min-h-[200px]">
-                {howToPlayContent[currentHowToPlayPage].content}
-              </div>
-              
-              <div className="flex justify-between">
-                <Button
-                  variant="teal-outline"
-                  size="sm"
-                  onClick={handlePrevPage}
-                  disabled={currentHowToPlayPage === 0}
-                  className={cn(
-                    "rounded-full px-4",
-                    currentHowToPlayPage === 0 && "opacity-50 cursor-not-allowed"
-                  )}
-                >
-                  <ChevronLeft className="h-5 w-5 mr-1" />
-                  Previous
-                </Button>
-                
-                <Button
-                  variant="teal-outline"
-                  size="sm"
-                  onClick={handleNextPage}
-                  disabled={currentHowToPlayPage === howToPlayContent.length - 1}
-                  className={cn(
-                    "rounded-full px-4",
-                    currentHowToPlayPage === howToPlayContent.length - 1 && "opacity-50 cursor-not-allowed"
-                  )}
-                >
-                  Next
-                  <ChevronRight className="h-5 w-5 ml-1" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        {gameState === GameState.PAUSED && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
-            <div className="pause-menu glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
-              <h1 className="text-3xl font-bold mb-6 tracking-tight text-white">Game Paused</h1>
-              
-              <div className="flex flex-col space-y-4 items-center">
-                <Button 
-                  onClick={handleResumeGame}
-                  className="game-button w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 rounded-xl py-6 text-lg font-medium shadow-lg shadow-[#91d3d1]/20"
-                >
-                  <Play className="mr-2 h-5 w-5" />
-                  Resume Game
-                </Button>
-                
-                <Button 
-                  onClick={handleRestartGame}
-                  variant="teal-outline"
-                  className="w-full rounded-xl py-6 text-lg font-medium"
-                >
-                  <RefreshCw className="mr-2 h-5 w-5" />
-                  Restart Game
-                </Button>
-                
-                <div className="flex items-center mt-4 space-x-3">
-                  <div className="text-sm text-gray-300">
-                    Current Score: <span className="font-bold text-white">{score}</span>
-                  </div>
-                  
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="rounded-full bg-black/20 backdrop-blur-sm hover:bg-black/30"
-                    onClick={toggleSound}
-                    aria-label={isSoundEnabled ? "Mute sound" : "Enable sound"}
-                  >
-                    {isSoundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        {gameState === GameState.GAME_OVER && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
-            <div className="game-over-modal glassmorphism rounded-3xl p-8 max-w-md mx-auto text-center border border-[#91d3d1]/20">
-              <h2 className="text-3xl font-bold mb-2">Game Over</h2>
-              
-              <div className="my-6 space-y-4">
-                <div className="space-y-2">
-                  <p className="text-gray-400 text-sm">YOUR SCORE</p>
-                  <p className="text-4xl font-bold">{score}</p>
-                </div>
-                
-                {score > highScore ? (
-                  <div className="py-2 px-4 bg-[#91d3d1]/20 text-[#91d3d1] rounded-full inline-flex items-center space-x-2 animate-pulse">
-                    <Trophy className="w-5 h-5" />
-                    <span>New High Score!</span>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <p className="text-gray-400 text-sm">HIGH SCORE</p>
-                    <p className="text-2xl font-medium">{highScore}</p>
-                  </div>
-                )}
-              </div>
-              
-              <div className="space-y-3">
-                <Button 
-                  onClick={handleTryAgain}
-                  className="game-button w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 rounded-xl py-6 text-lg font-medium shadow-lg shadow-[#91d3d1]/20"
-                >
-                  Try Again
-                </Button>
-                
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="mt-4 rounded-full bg-black/20 backdrop-blur-sm hover:bg-black/30"
-                  onClick={toggleSound}
-                  aria-label={isSoundEnabled ? "Mute sound" : "Enable sound"}
-                >
-                  {isSoundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        {isMobile && gameState === GameState.GAMEPLAY && (
-          <div className="absolute bottom-10 left-0 right-0 flex justify-between px-8">
-            <button
-              className={cn(
-                "w-16 h-16 rounded-full glassmorphism border border-[#91d3d1]/30 touch-control flex items-center justify-center",
-                "active:bg-[#91d3d1]/30 transition-all"
-              )}
-              onTouchStart={handleTouchLeft}
-            >
-              <ChevronLeft className="h-10 w-10 text-[#91d3d1]" />
-            </button>
-            
-            <button
-              className={cn(
-                "w-16 h-16 rounded-full glassmorphism border border-[#91d3d1]/30 touch-control flex items-center justify-center",
-                "active:bg-[#91d3d1]/30 transition-all"
-              )}
-              onTouchStart={handleTouchRight}
-            >
-              <ChevronRight className="h-10 w-10 text-[#91d3d1]" />
-            </button>
-          </div>
-        )}
-        
-        {(!carAssetsLoaded || !gameInitialized) && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-background">
-            <Loader2 className="h-8 w-8 animate-spin text-[#91d3d1] mb-4" />
-            <p className="text-sm text-muted-foreground">Loading game assets...</p>
-          </div>
-        )}
-        
-        <div className="bg-noise absolute inset-0 pointer-events-none opacity-5"></div>
-      </div>
-    </div>
-  );
-};
-
-export default Game;
+                className="rounded-full hover

@@ -15,7 +15,7 @@ const Index = () => {
             <Game />
           </div>
         ) : (
-          <div className="mobile-frame-container">
+          <div className="mobile-frame-container relative z-10">
             <div className="mobile-frame">
               <div className="notch"></div>
               <div className="side-button left-button"></div>
