@@ -53,6 +53,13 @@ const Game: React.FC = () => {
         crashSound.volume = 0.7;
         crashSoundRef.current = crashSound;
         
+        crashSound.addEventListener('ended', () => {
+          console.log("Crash sound ended, restarting engine sound");
+          if (gameState === GameState.GAMEPLAY && carSoundRef.current) {
+            carSoundRef.current.play().catch(e => console.error("Error resuming car sound after crash:", e));
+          }
+        });
+        
         await Promise.all([
           new Promise<void>((resolve) => {
             carSound.addEventListener('canplaythrough', () => {
@@ -104,7 +111,7 @@ const Game: React.FC = () => {
         crashSoundRef.current = null;
       }
     };
-  }, []);
+  }, [gameState]);
   
   useEffect(() => {
     const preloadCarAssets = async () => {
@@ -296,17 +303,12 @@ const Game: React.FC = () => {
           console.log("Playing crash sound");
           if (crashSoundRef.current) {
             crashSoundRef.current.currentTime = 0;
-            crashSoundRef.current.play().catch(e => console.error("Error playing crash sound:", e));
-          }
-          
-          if (carSoundRef.current) {
-            carSoundRef.current.pause();
             
-            setTimeout(() => {
-              if (gameState === GameState.GAMEPLAY && carSoundRef.current) {
-                carSoundRef.current.play().catch(e => console.error("Error resuming car sound:", e));
-              }
-            }, 1500);
+            if (carSoundRef.current) {
+              carSoundRef.current.pause();
+            }
+            
+            crashSoundRef.current.play().catch(e => console.error("Error playing crash sound:", e));
           }
         },
         onPowerUpStart: (type, duration) => {
