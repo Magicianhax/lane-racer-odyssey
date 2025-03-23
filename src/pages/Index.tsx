@@ -28,7 +28,7 @@ const Index = () => {
             </div>
             <div className="mt-6 flex items-center justify-center text-[#91d3d1]/70 text-sm">
               <Smartphone className="w-4 h-4 mr-2" />
-              <span>Lane Runner Mobile</span>
+              <span>Superseed Lane Runner</span>
             </div>
           </div>
         )}
