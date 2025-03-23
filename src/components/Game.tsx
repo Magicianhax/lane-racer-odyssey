@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2, Pause, Play, RefreshCw, HelpCircle, ArrowLeft } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
+import audioManager from '@/game/AudioManager';
 
 const DEFAULT_PLAYER_CAR = '/playercar.png';
 const DEFAULT_ENEMY_CARS = ['/enemycar1.png', '/enemycar2.png', '/enemycar3.png'];
@@ -198,7 +199,10 @@ const Game: React.FC = () => {
         canvas: canvasRef.current,
         onScoreChange: (newScore) => setScore(newScore),
         onLivesChange: (newLives) => setLives(newLives),
-        onGameStateChange: (newState) => setGameState(newState),
+        onGameStateChange: (newState) => {
+          setGameState(newState);
+          audioManager.handleGameStateChange(GameState[newState]);
+        },
         onPowerUpStart: (type, duration) => {
           switch (type) {
             case PowerUpType.SLOW_SPEED:
@@ -243,6 +247,9 @@ const Game: React.FC = () => {
           enemyCarURLs,
           seedImageURL,
           useDefaultsIfBroken: true
+        },
+        onCollision: () => {
+          audioManager.playCrashSound();
         }
       });
       
@@ -263,6 +270,7 @@ const Game: React.FC = () => {
       if (gameEngineRef.current) {
         gameEngineRef.current.cleanup();
       }
+      audioManager.stopAllSounds();
     };
   }, [carAssetsLoaded, playerCarURL, enemyCarURLs, seedImageURL, loadingError]);
   
