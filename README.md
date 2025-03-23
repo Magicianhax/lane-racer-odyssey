@@ -1,8 +1,66 @@
-# Welcome to your Lovable project
+
+# Superseed Lane Runner
+
+A fast-paced lane-switching car game where you collect seeds while avoiding obstacles.
 
 ## Project info
 
 **URL**: https://lovable.dev/projects/6ac891d1-4316-46e0-87b2-c2e47b4eca71
+
+## Game Rules
+
+### Objective
+- Drive your car down the highway, collecting seeds while avoiding enemy cars
+- Survive as long as possible and achieve the highest score
+- Unlock achievements by reaching specific milestones
+
+### Core Mechanics
+- **Movement**: Switch between three lanes using left/right arrow keys or by tapping/clicking the lane you want to move to
+- **Scoring**: Earn points by collecting seeds and surviving longer
+- **Lives**: You start with 3 lives; lose a life when you crash into an enemy car
+- **Difficulty**: Game speed gradually increases over time, making it progressively challenging
+
+### Power-ups
+- **Shield**: Temporary protection from crashes
+- **Slow Timer**: Temporarily reduces game speed
+- **Extra Life**: Adds one additional life (up to the maximum)
+
+### Controls
+- **Arrow Keys**: Switch lanes (left/right)
+- **Mouse/Touch**: Click/tap on a lane to move there
+- **P Key**: Pause/resume game
+- **M Key**: Mute/unmute sounds
+
+## Game Features
+
+### Sound Effects
+- Engine sound during gameplay
+- Crash sound when colliding with enemy cars
+- Seed collection sound
+- Power-up activation sounds
+- UI interaction sounds
+
+### Visual Elements
+- Player car with animation
+- Enemy cars with different appearances
+- Seed collectibles
+- Power-up indicators
+- Lives and score display
+- Dynamic background
+
+### Game States
+- Start Screen
+- Active Gameplay
+- Paused Game
+- Game Over Screen
+
+## How to Play
+
+1. Start the game by clicking the "Start Game" button
+2. Use arrow keys or click/tap to switch lanes
+3. Collect seeds while avoiding enemy cars
+4. Use power-ups strategically to survive longer
+5. Try to beat your high score with each play
 
 ## How can I edit this code?
 
@@ -52,13 +110,23 @@ npm run dev
 
 ## What technologies are used for this project?
 
-This project is built with .
+This project is built with:
 
 - Vite
 - TypeScript
 - React
 - shadcn-ui
 - Tailwind CSS
+- HTML5 Canvas for the game rendering
+
+## Game Implementation Details
+
+The game is built using a canvas-based rendering engine with React for the UI components:
+
+- `GameEngine.ts`: Core game logic, collision detection, and state management
+- `Game.tsx`: React component that integrates the game engine with the UI
+- Custom sound management for game effects
+- Responsive design that works on both desktop and mobile devices
 
 ## How can I deploy this project?
 
