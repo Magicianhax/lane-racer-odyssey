@@ -5,6 +5,8 @@ import { toast } from 'sonner';
 import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2, Pause, Play, RefreshCw, HelpCircle, ArrowLeft, Volume2, VolumeX } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
+import ModeSelection, { GameMode } from './ModeSelection';
+import UsernameInput from './UsernameInput';
 
 const DEFAULT_PLAYER_CAR = '/playercar.png';
 const DEFAULT_ENEMY_CARS = ['/enemycar1.png', '/enemycar2.png', '/enemycar3.png'];
@@ -15,11 +17,18 @@ const SEED_SOUND = '/seed.m4a';
 const SLOW_TIMER_SOUND = '/5 sec.m4a';
 const BUTTON_SOUND = '/tap.mp3';
 
+enum PreGameState {
+  MODE_SELECTION = 'mode_selection',
+  USERNAME_INPUT = 'username_input'
+}
 
 const Game: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameEngineRef = useRef<GameEngine | null>(null);
   const [gameState, setGameState] = useState<GameState>(GameState.START_SCREEN);
+  const [preGameState, setPreGameState] = useState<PreGameState>(PreGameState.MODE_SELECTION);
+  const [selectedMode, setSelectedMode] = useState<GameMode>(null);
+  const [username, setUsername] = useState<string>('');
   const [score, setScore] = useState<number>(0);
   const [lives, setLives] = useState<number>(3);
   const [highScore, setHighScore] = useState<number>(0);
@@ -75,7 +84,6 @@ const Game: React.FC = () => {
         buttonSoundRef.current = buttonSound;
         
         await Promise.all([
-          // Load car sound
           new Promise<void>((resolve) => {
             carSound.addEventListener('canplaythrough', () => {
               console.log("Car sound loaded successfully");
@@ -90,7 +98,6 @@ const Game: React.FC = () => {
             carSound.load();
           }),
           
-          // Load crash sound
           new Promise<void>((resolve) => {
             crashSound.addEventListener('canplaythrough', () => {
               console.log("Crash sound loaded successfully");
@@ -105,7 +112,6 @@ const Game: React.FC = () => {
             crashSound.load();
           }),
           
-          // Load seed sound
           new Promise<void>((resolve) => {
             seedSound.addEventListener('canplaythrough', () => {
               console.log("Seed collection sound loaded successfully");
@@ -120,7 +126,6 @@ const Game: React.FC = () => {
             seedSound.load();
           }),
           
-          // Load slow timer sound
           new Promise<void>((resolve) => {
             slowTimerSound.addEventListener('canplaythrough', () => {
               console.log("Slow timer sound loaded successfully");
@@ -135,7 +140,6 @@ const Game: React.FC = () => {
             slowTimerSound.load();
           }),
           
-          // Load button sound
           new Promise<void>((resolve) => {
             buttonSound.addEventListener('canplaythrough', () => {
               console.log("Button sound loaded successfully");
@@ -335,7 +339,6 @@ const Game: React.FC = () => {
       console.error("Could not play collision sound:", err);
     }
   };
-
 
   const playPickupSound = () => {
     if (!isSoundEnabled || !seedSoundRef.current) return;
@@ -603,6 +606,44 @@ const Game: React.FC = () => {
     }
   }, [shieldTimer]);
   
+  const handleModeSelection = (mode: GameMode) => {
+    setSelectedMode(mode);
+    setPreGameState(PreGameState.USERNAME_INPUT);
+    playButtonSound();
+  };
+  
+  const handleUsernameSubmit = (name: string) => {
+    setUsername(name);
+    // Save username to localStorage for persistence
+    localStorage.setItem('gameUsername', name);
+    localStorage.setItem('gameMode', selectedMode || 'online');
+    setGameState(GameState.START_SCREEN);
+    setPreGameState(PreGameState.MODE_SELECTION);
+    playButtonSound();
+    toast.success(`Welcome, ${name}!`, {
+      description: `Playing in ${selectedMode} mode`
+    });
+  };
+  
+  const handleBackToModeSelection = () => {
+    setPreGameState(PreGameState.MODE_SELECTION);
+    playButtonSound();
+  };
+  
+  useEffect(() => {
+    // Load saved username and mode if available
+    const savedUsername = localStorage.getItem('gameUsername');
+    const savedMode = localStorage.getItem('gameMode') as GameMode;
+    
+    if (savedUsername) {
+      setUsername(savedUsername);
+    }
+    
+    if (savedMode) {
+      setSelectedMode(savedMode);
+    }
+  }, []);
+  
   const handleStartGame = () => {
     console.log("Start game clicked, gameEngine exists:", !!gameEngineRef.current);
     if (gameEngineRef.current) {
@@ -859,11 +900,14 @@ const Game: React.FC = () => {
           </div>
         )}
         
-        {gameState === GameState.START_SCREEN && !showHowToPlay && (
+        {gameState === GameState.START_SCREEN && !showHowToPlay && username && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
             <div className="glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
               <h1 className="text-5xl font-bold mb-2 tracking-tight text-white text-gradient">Superseed Lane Runner</h1>
-              <div className="chip text-xs bg-[#91d3d1]/10 text-[#91d3d1] px-3 py-1 rounded-full mb-4 inline-block">FAST-PACED ACTION</div>
+              <div className="chip text-xs bg-[#91d3d1]/10 text-[#91d3d1] px-3 py-1 rounded-full mb-2 inline-block">
+                {selectedMode === 'online' ? 'ONLINE MODE' : 'ONCHAIN MODE'}
+              </div>
+              <p className="text-gray-300 mb-2">Welcome, <span className="font-medium text-[#91d3d1]">{username}</span>!</p>
               <p className="text-gray-300 mb-6">Navigate through traffic, collect seeds, and survive as long as possible!</p>
               
               <div className="flex flex-col space-y-4 items-center">
@@ -882,6 +926,14 @@ const Game: React.FC = () => {
                 >
                   <HelpCircle className="mr-2 h-5 w-5" />
                   How to Play
+                </Button>
+                
+                <Button 
+                  onClick={() => setPreGameState(PreGameState.MODE_SELECTION)}
+                  variant="ghost"
+                  className="text-[#91d3d1]/70 hover:text-[#91d3d1] hover:bg-black/20"
+                >
+                  Change Mode & Username
                 </Button>
                 
                 <div className="flex items-center space-x-4 mt-2">
@@ -910,6 +962,26 @@ const Game: React.FC = () => {
             </div>
             <div className="absolute top-20 -right-10 opacity-10 -rotate-12 transform scale-75">
               <div className="w-32 h-20 bg-white rounded-md"></div>
+            </div>
+          </div>
+        )}
+        
+        {gameState === GameState.START_SCREEN && preGameState === PreGameState.MODE_SELECTION && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
+            <div className="glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
+              <ModeSelection onSelectMode={handleModeSelection} />
+            </div>
+          </div>
+        )}
+        
+        {gameState === GameState.START_SCREEN && preGameState === PreGameState.USERNAME_INPUT && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
+            <div className="glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
+              <UsernameInput 
+                selectedMode={selectedMode} 
+                onUsernameSubmit={handleUsernameSubmit}
+                onBack={handleBackToModeSelection}
+              />
             </div>
           </div>
         )}
