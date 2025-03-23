@@ -251,13 +251,8 @@ const Game: React.FC = () => {
     if (!isSoundEnabled || !crashSoundRef.current) return;
     
     try {
-      // First completely stop the engine sound
-      if (carSoundRef.current) {
-        carSoundRef.current.pause();
-        carSoundRef.current.currentTime = 0;
-      }
-      
-      console.log("Playing crash sound...");
+      // Keep engine sound playing during crash
+      console.log("Playing crash sound while keeping engine sound...");
       
       // Play the crash sound
       if (crashSoundRef.current) {
@@ -270,36 +265,8 @@ const Game: React.FC = () => {
           });
         }
       }
-      
-      // Set a timeout to restart the engine sound after crash sound finishes
-      setTimeout(() => {
-        console.log("Crash sound should be finished, checking game state:", gameState);
-        if (gameState === GameState.GAMEPLAY && isSoundEnabled) {
-          console.log("Restarting engine sound after crash");
-          if (carSoundRef.current) {
-            carSoundRef.current.pause();
-            carSoundRef.current.currentTime = 0;
-            
-            const restartPromise = carSoundRef.current.play();
-            if (restartPromise !== undefined) {
-              restartPromise.catch(err => {
-                console.error("Error restarting engine sound after crash:", err);
-              });
-            }
-          }
-        }
-      }, 1500); // Give more time for crash sound to finish
-      
     } catch (err) {
       console.error("Could not play collision sound:", err);
-      
-      // Fallback to restart engine sound if there was an error with crash sound
-      if (gameState === GameState.GAMEPLAY && isSoundEnabled) {
-        setTimeout(() => {
-          console.log("Fallback: restarting engine sound after crash error");
-          startEngineSound();
-        }, 1000);
-      }
     }
   };
   
