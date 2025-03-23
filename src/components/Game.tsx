@@ -688,7 +688,7 @@ const Game: React.FC = () => {
   
   const handlePrevPage = () => {
     playButtonSound();
-    setCurrentHowToPage(prev => Math.max(prev - 1, 0));
+    setCurrentHowToPlayPage(prev => Math.max(prev - 1, 0));
   };
   
   const handleTryAgain = () => {
