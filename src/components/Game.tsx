@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine, GameState, PowerUpType } from '../game/GameEngine';
 import { Button } from '@/components/ui/button';
@@ -195,7 +194,9 @@ const Game: React.FC = () => {
     if (!isSoundEnabled || !carSoundRef.current) return;
     
     try {
-      carSoundRef.current.currentTime = 0; // Always start from the beginning
+      carSoundRef.current.pause();
+      carSoundRef.current.currentTime = 0;
+      
       const playPromise = carSoundRef.current.play();
       
       if (playPromise !== undefined) {
@@ -245,30 +246,33 @@ const Game: React.FC = () => {
     }
   };
   
-  const playCollisionSound = async () => {
+  const playCollisionSound = () => {
     if (!isSoundEnabled || !crashSoundRef.current) return;
     
     try {
-      // Stop engine sound completely (not just pause)
-      stopEngineSound();
+      if (carSoundRef.current) {
+        carSoundRef.current.pause();
+        carSoundRef.current.currentTime = 0;
+      }
       
-      // Play crash sound and wait for it to finish
-      crashSoundRef.current.currentTime = 0;
-      await crashSoundRef.current.play();
+      if (crashSoundRef.current) {
+        crashSoundRef.current.currentTime = 0;
+        
+        crashSoundRef.current.play().catch(err => {
+          console.error("Error playing crash sound:", err);
+        });
+      }
       
-      // Wait for the crash sound to finish, then restart engine sound
-      // Use a fixed timeout rather than depending on sound duration which can be unreliable
       setTimeout(() => {
-        if (gameState === GameState.GAMEPLAY) {
-          // Start the engine sound from the beginning
+        if (gameState === GameState.GAMEPLAY && isSoundEnabled && carSoundRef.current) {
           startEngineSound();
         }
-      }, 1000); // Fixed 1 second delay
-      
+      }, 1000);
     } catch (err) {
       console.error("Could not play collision sound:", err);
-      if (gameState === GameState.GAMEPLAY) {
-        startEngineSound();
+      
+      if (gameState === GameState.GAMEPLAY && isSoundEnabled) {
+        setTimeout(() => startEngineSound(), 500);
       }
     }
   };
@@ -307,7 +311,7 @@ const Game: React.FC = () => {
       case GameState.GAMEPLAY:
         if (isSoundEnabled) {
           console.log("Starting engine sound due to GAMEPLAY state");
-          startEngineSound(); // Always start from the beginning
+          startEngineSound();
         }
         break;
       case GameState.PAUSED:
