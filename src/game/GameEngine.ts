@@ -75,11 +75,12 @@ export interface GameConfig {
   onGameStateChange: (state: GameState) => void;
   onPowerUpStart: (type: PowerUpType, duration: number) => void;
   onPowerUpEnd: (type: PowerUpType) => void;
-  onCollision?: () => void; // New collision callback
+  onCollision?: () => void; // Collision sound callback
+  onSeedCollect?: () => void; // Seed collection sound callback
   customAssets?: {
     playerCarURL: string;
     enemyCarURLs: string[];
-    seedImageURL?: string; // Added support for seed image
+    seedImageURL?: string;
     useDefaultsIfBroken?: boolean;
   };
 }
@@ -149,6 +150,8 @@ export class GameEngine {
   
   // Add new collision callback
   private onCollision?: () => void;
+
+  private onSeedCollect?: () => void;
   
   // Animation frame id for cleanup
   private animationFrameId: number | null = null;
@@ -170,6 +173,8 @@ export class GameEngine {
     this.onPowerUpStart = config.onPowerUpStart;
     this.onPowerUpEnd = config.onPowerUpEnd;
     this.onCollision = config.onCollision; // Set collision callback
+    this.onSeedCollect = config.onSeedCollect; // Add this line
+
     
     // Initialize game dimensions
     this.calculateDimensions();
@@ -630,14 +635,19 @@ export class GameEngine {
       }
     });
     
-    // Check seed collisions
-    this.seeds.forEach(seed => {
-      if (this.isColliding(this.player!, seed)) {
-        seed.active = false;
-        this.score += 10;
-        this.onScoreChange(this.score);
-      }
-    });
+// Check seed collisions
+this.seeds.forEach(seed => {
+  if (this.isColliding(this.player!, seed)) {
+    seed.active = false;
+    this.score += 10;
+    this.onScoreChange(this.score);
+    
+    // Play seed collection sound if callback exists
+    if (this.onSeedCollect) {
+      this.onSeedCollect();
+    }
+  }
+});
     
     // Check power-up collisions
     this.powerUps.forEach(powerUp => {
