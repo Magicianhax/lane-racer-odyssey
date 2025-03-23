@@ -1,6 +1,8 @@
 // Main game engine class
 
 export enum GameState {
+  MODE_SELECTION, // New state for mode selection
+  USERNAME_CREATION, // New state for username creation
   START_SCREEN,
   GAMEPLAY,
   PAUSED,
@@ -11,6 +13,19 @@ export enum PowerUpType {
   SLOW_SPEED,
   SHIELD,
   EXTRA_LIFE
+}
+
+export enum GameMode {
+  ONLINE = 'online',
+  ONCHAIN = 'onchain',
+  NONE = 'none'
+}
+
+// Interface for user profile
+export interface UserProfile {
+  username: string;
+  gameMode: GameMode;
+  // Add more user stats here in the future
 }
 
 // Extended GameObject interface to include powerUpType for power-ups
@@ -88,7 +103,7 @@ export interface GameConfig {
 export class GameEngine {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
-  private gameState: GameState = GameState.START_SCREEN;
+  private gameState: GameState = GameState.MODE_SELECTION; // Changed initial state
   private lastFrameTime: number = 0;
   private accumulatedTime: number = 0;
   
@@ -296,6 +311,38 @@ export class GameEngine {
 
     // Load high score from local storage
     this.loadHighScore();
+    
+    // Check if we should start with MODE_SELECTION or START_SCREEN
+    // If username exists, go to START_SCREEN
+    if (this.hasStoredUsername()) {
+      this.gameState = GameState.START_SCREEN;
+      this.onGameStateChange(GameState.START_SCREEN);
+    } else {
+      // Otherwise, keep MODE_SELECTION
+      this.onGameStateChange(GameState.MODE_SELECTION);
+    }
+  }
+
+  // Method to allow setting the game state directly from outside
+  public setGameState(state: GameState): void {
+    this.gameState = state;
+    this.onGameStateChange(state);
+  }
+
+  // Method to check if username exists in localStorage
+  private hasStoredUsername(): boolean {
+    return !!localStorage.getItem('username');
+  }
+
+  // Method to get username
+  private getUsername(): string {
+    return localStorage.getItem('username') || '';
+  }
+
+  // Method to get selected game mode
+  private getGameMode(): GameMode {
+    const mode = localStorage.getItem('gameMode') as GameMode;
+    return mode || GameMode.ONLINE;
   }
 
   public resizeCanvas(): void {
@@ -361,6 +408,13 @@ export class GameEngine {
   }
   
   public restartGame(): void {
+    // If user doesn't have a username, start with mode selection
+    if (!this.hasStoredUsername()) {
+      this.gameState = GameState.MODE_SELECTION;
+      this.onGameStateChange(GameState.MODE_SELECTION);
+      return;
+    }
+    
     this.resetGame();
     this.gameState = GameState.GAMEPLAY;
     this.onGameStateChange(GameState.GAMEPLAY);
@@ -635,19 +689,19 @@ export class GameEngine {
       }
     });
     
-// Check seed collisions
-this.seeds.forEach(seed => {
-  if (this.isColliding(this.player!, seed)) {
-    seed.active = false;
-    this.score += 10;
-    this.onScoreChange(this.score);
-    
-    // Play seed collection sound if callback exists
-    if (this.onSeedCollect) {
-      this.onSeedCollect();
-    }
-  }
-});
+    // Check seed collisions
+    this.seeds.forEach(seed => {
+      if (this.isColliding(this.player!, seed)) {
+        seed.active = false;
+        this.score += 10;
+        this.onScoreChange(this.score);
+        
+        // Play seed collection sound if callback exists
+        if (this.onSeedCollect) {
+          this.onSeedCollect();
+        }
+      }
+    });
     
     // Check power-up collisions
     this.powerUps.forEach(powerUp => {

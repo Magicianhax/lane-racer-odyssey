@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { GameEngine, GameState, PowerUpType } from '../game/GameEngine';
+import { GameEngine, GameState, PowerUpType, GameMode } from '../game/GameEngine';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2, Pause, Play, RefreshCw, HelpCircle, ArrowLeft, Volume2, VolumeX } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2, Pause, Play, RefreshCw, HelpCircle, ArrowLeft, Volume2, VolumeX, Globe, Blocks, User } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
+import { ModeSelectionScreen, UsernameCreationScreen } from './ModeSelectionComponents';
 
 const DEFAULT_PLAYER_CAR = '/playercar.png';
 const DEFAULT_ENEMY_CARS = ['/enemycar1.png', '/enemycar2.png', '/enemycar3.png'];
@@ -15,11 +16,10 @@ const SEED_SOUND = '/seed.m4a';
 const SLOW_TIMER_SOUND = '/5 sec.m4a';
 const BUTTON_SOUND = '/tap.mp3';
 
-
 const Game: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameEngineRef = useRef<GameEngine | null>(null);
-  const [gameState, setGameState] = useState<GameState>(GameState.START_SCREEN);
+  const [gameState, setGameState] = useState<GameState>(GameState.MODE_SELECTION);
   const [score, setScore] = useState<number>(0);
   const [lives, setLives] = useState<number>(3);
   const [highScore, setHighScore] = useState<number>(0);
@@ -39,6 +39,10 @@ const Game: React.FC = () => {
   const [currentHowToPlayPage, setCurrentHowToPlayPage] = useState<number>(0);
   const [isSoundEnabled, setIsSoundEnabled] = useState<boolean>(true);
   
+  // Add new state for game mode and username
+  const [selectedGameMode, setSelectedGameMode] = useState<GameMode>(GameMode.NONE);
+  const [username, setUsername] = useState<string>('');
+  
   const carSoundRef = useRef<HTMLAudioElement | null>(null);
   const crashSoundRef = useRef<HTMLAudioElement | null>(null);
   const seedSoundRef = useRef<HTMLAudioElement | null>(null);
@@ -47,6 +51,19 @@ const Game: React.FC = () => {
   const soundsLoadedRef = useRef<boolean>(false);
   
   const isMobile = useIsMobile();
+  
+  // Load username and game mode from localStorage if available
+  useEffect(() => {
+    const savedUsername = localStorage.getItem('username');
+    if (savedUsername) {
+      setUsername(savedUsername);
+    }
+    
+    const savedGameMode = localStorage.getItem('gameMode') as GameMode;
+    if (savedGameMode && (savedGameMode === GameMode.ONLINE || savedGameMode === GameMode.ONCHAIN)) {
+      setSelectedGameMode(savedGameMode);
+    }
+  }, []);
   
   useEffect(() => {
     const preloadSounds = async () => {
@@ -256,6 +273,7 @@ const Game: React.FC = () => {
     };
   }, []);
   
+  // Existing sound handling functions...
   const startEngineSound = () => {
     if (!isSoundEnabled || !carSoundRef.current) return;
     
@@ -335,7 +353,6 @@ const Game: React.FC = () => {
       console.error("Could not play collision sound:", err);
     }
   };
-
 
   const playPickupSound = () => {
     if (!isSoundEnabled || !seedSoundRef.current) return;
@@ -456,7 +473,9 @@ const Game: React.FC = () => {
         break;
       case GameState.GAME_OVER:
       case GameState.START_SCREEN:
-        console.log("Stopping all sounds due to GAME_OVER or START_SCREEN state");
+      case GameState.MODE_SELECTION:
+      case GameState.USERNAME_CREATION:
+        console.log("Stopping all sounds due to state change");
         stopAllSounds();
         break;
     }
@@ -504,6 +523,7 @@ const Game: React.FC = () => {
         seedImageURL
       });
       
+      // Initialize GameEngine
       const gameEngine = new GameEngine({
         canvas: canvasRef.current,
         onScoreChange: (newScore) => setScore(newScore),
@@ -514,7 +534,7 @@ const Game: React.FC = () => {
             case PowerUpType.SLOW_SPEED:
               setActiveSlowMode(true);
               setSlowModeTimer(duration);
-              playSlowTimerSound(); // Added sound
+              playSlowTimerSound();
               toast.success('SLOW MODE ACTIVATED', {
                 description: 'Traffic speed reduced',
                 icon: <Clock className="h-5 w-5 text-blue-500" />,
@@ -523,14 +543,14 @@ const Game: React.FC = () => {
             case PowerUpType.SHIELD:
               setActiveShield(true);
               setShieldTimer(duration);
-              playPickupSound(); // Added sound
+              playPickupSound();
               toast.success('SHIELD ACTIVATED', {
                 description: 'Invulnerable for 3s',
                 icon: <Shield className="h-5 w-5 text-cyan-500" />,
               });
               break;
             case PowerUpType.EXTRA_LIFE:
-              playPickupSound(); // Added sound
+              playPickupSound();
               toast.success('EXTRA LIFE', {
                 icon: <Heart className="h-5 w-5 text-red-500" />,
               });
@@ -555,7 +575,7 @@ const Game: React.FC = () => {
           playCollisionSound();
         },
         onSeedCollect: () => {
-          playPickupSound(); // New callback for seed collection sound
+          playPickupSound();
         },
         customAssets: {
           playerCarURL,
@@ -568,6 +588,16 @@ const Game: React.FC = () => {
       gameEngineRef.current = gameEngine;
       setHighScore(gameEngine.getHighScore());
       setGameInitialized(true);
+      
+      // Check if user has played before and has a username
+      const savedUsername = localStorage.getItem('username');
+      if (savedUsername) {
+        // If the user has a username, start with START_SCREEN
+        gameEngine.setGameState(GameState.START_SCREEN);
+      } else {
+        // Otherwise start with MODE_SELECTION
+        gameEngine.setGameState(GameState.MODE_SELECTION);
+      }
       
       if (loadingError) {
         toast.warning(loadingError);
@@ -585,6 +615,7 @@ const Game: React.FC = () => {
     };
   }, [carAssetsLoaded, playerCarURL, enemyCarURLs, seedImageURL, loadingError]);
   
+  // Existing timer effects...
   useEffect(() => {
     if (slowModeTimer > 0) {
       const interval = setInterval(() => {
@@ -604,6 +635,7 @@ const Game: React.FC = () => {
   }, [shieldTimer]);
   
   const handleStartGame = () => {
+    playButtonSound();
     console.log("Start game clicked, gameEngine exists:", !!gameEngineRef.current);
     if (gameEngineRef.current) {
       gameEngineRef.current.startGame();
@@ -616,24 +648,75 @@ const Game: React.FC = () => {
     }
   };
   
+  // Handler for mode selection
+  const handleModeSelection = (mode: GameMode) => {
+    playButtonSound();
+    setSelectedGameMode(mode);
+    
+    // Save game mode to localStorage
+    localStorage.setItem('gameMode', mode);
+    
+    // If user already has a username, skip to start screen
+    const savedUsername = localStorage.getItem('username');
+    if (savedUsername) {
+      setUsername(savedUsername);
+      if (gameEngineRef.current) {
+        gameEngineRef.current.setGameState(GameState.START_SCREEN);
+      }
+    } else {
+      // Otherwise go to username creation
+      if (gameEngineRef.current) {
+        gameEngineRef.current.setGameState(GameState.USERNAME_CREATION);
+      }
+    }
+  };
+  
+  // Handler for username submission
+  const handleUsernameSubmit = (newUsername: string) => {
+    playButtonSound();
+    setUsername(newUsername);
+    
+    // Save username to localStorage
+    localStorage.setItem('username', newUsername);
+    
+    // Move to start screen
+    if (gameEngineRef.current) {
+      gameEngineRef.current.setGameState(GameState.START_SCREEN);
+    }
+  };
+  
+  // Handler for username back button
+  const handleUsernameBack = () => {
+    playButtonSound();
+    // Go back to mode selection
+    if (gameEngineRef.current) {
+      gameEngineRef.current.setGameState(GameState.MODE_SELECTION);
+    }
+  };
+  
   const handleShowHowToPlay = () => {
+    playButtonSound();
     setShowHowToPlay(true);
     setCurrentHowToPlayPage(0);
   };
   
   const handleBackToMenu = () => {
+    playButtonSound();
     setShowHowToPlay(false);
   };
   
   const handleNextPage = () => {
+    playButtonSound();
     setCurrentHowToPlayPage(prev => Math.min(prev + 1, howToPlayContent.length - 1));
   };
   
   const handlePrevPage = () => {
+    playButtonSound();
     setCurrentHowToPlayPage(prev => Math.max(prev - 1, 0));
   };
   
   const handleTryAgain = () => {
+    playButtonSound();
     if (gameEngineRef.current) {
       setHighScore(gameEngineRef.current.getHighScore());
       gameEngineRef.current.startGame();
@@ -653,25 +736,30 @@ const Game: React.FC = () => {
   };
   
   const handlePauseGame = () => {
+    playButtonSound();
     if (gameEngineRef.current && gameState === GameState.GAMEPLAY) {
       gameEngineRef.current.pauseGame();
     }
   };
   
   const handleResumeGame = () => {
+    playButtonSound();
     if (gameEngineRef.current && gameState === GameState.PAUSED) {
       gameEngineRef.current.resumeGame();
     }
   };
   
   const handleRestartGame = () => {
+    playButtonSound();
     if (gameEngineRef.current) {
       setHighScore(gameEngineRef.current.getHighScore());
       gameEngineRef.current.restartGame();
     }
   };
   
+  // Content for how to play screens
   const howToPlayContent = [
+    // Existing content...
     {
       title: "Basic Controls",
       content: (
@@ -859,10 +947,38 @@ const Game: React.FC = () => {
           </div>
         )}
         
+        {/* Mode Selection Screen */}
+        {gameState === GameState.MODE_SELECTION && (
+          <ModeSelectionScreen onSelectMode={handleModeSelection} />
+        )}
+        
+        {/* Username Creation Screen */}
+        {gameState === GameState.USERNAME_CREATION && (
+          <UsernameCreationScreen 
+            onSubmit={handleUsernameSubmit}
+            onBack={handleUsernameBack}
+            mode={selectedGameMode}
+          />
+        )}
+        
         {gameState === GameState.START_SCREEN && !showHowToPlay && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
             <div className="glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
               <h1 className="text-5xl font-bold mb-2 tracking-tight text-white text-gradient">Superseed Lane Runner</h1>
+              
+              {/* Display username and game mode if available */}
+              {username && (
+                <div className="chip text-xs bg-[#91d3d1]/20 text-[#91d3d1] px-3 py-1 rounded-full mb-2 inline-flex items-center">
+                  {selectedGameMode === GameMode.ONLINE ? (
+                    <Globe className="w-3 h-3 mr-1" />
+                  ) : (
+                    <Blocks className="w-3 h-3 mr-1" />
+                  )}
+                  {selectedGameMode === GameMode.ONLINE ? 'ONLINE' : 'ONCHAIN'} • 
+                  <User className="w-3 h-3 mx-1" /> {username}
+                </div>
+              )}
+              
               <div className="chip text-xs bg-[#91d3d1]/10 text-[#91d3d1] px-3 py-1 rounded-full mb-4 inline-block">FAST-PACED ACTION</div>
               <p className="text-gray-300 mb-6">Navigate through traffic, collect seeds, and survive as long as possible!</p>
               
@@ -919,7 +1035,7 @@ const Game: React.FC = () => {
             <div className="glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
               <div className="flex items-center justify-between mb-4">
                 <Button 
-                  variant="teal-outline" 
+                  variant="ghost" 
                   size="icon" 
                   className="rounded-full"
                   onClick={handleBackToMenu}
@@ -1022,6 +1138,13 @@ const Game: React.FC = () => {
               <h2 className="text-3xl font-bold mb-2">Game Over</h2>
               
               <div className="my-6 space-y-4">
+                {/* Display username in game over screen */}
+                {username && (
+                  <div className="chip text-xs bg-[#91d3d1]/20 text-[#91d3d1] px-3 py-1 rounded-full inline-flex items-center">
+                    <User className="w-3 h-3 mr-1" /> {username}
+                  </div>
+                )}
+                
                 <div className="space-y-2">
                   <p className="text-gray-400 text-sm">YOUR SCORE</p>
                   <p className="text-4xl font-bold">{score}</p>
