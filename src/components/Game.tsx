@@ -12,7 +12,7 @@ const SEED_IMAGE = '/seed.png';
 const CAR_SOUND = '/car.m4a';
 const CRASH_SOUND = '/crash.m4a';
 const SEED_SOUND = '/seed.m4a';
-const SLOW_TIMER_SOUND = '/5sec.m4a';
+const SLOW_TIMER_SOUND = '/5 sec.m4a';
 const BUTTON_SOUND = '/tap.mp3';
 
 
