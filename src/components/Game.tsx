@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine, GameState, PowerUpType } from '../game/GameEngine';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2, Pause, Play, RefreshCw, HelpCircle, ArrowLeft, Volume2, VolumeX } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2, Pause, Play, RefreshCw, HelpCircle, ArrowLeft } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
@@ -31,7 +31,6 @@ const Game: React.FC = () => {
   const [loadingError, setLoadingError] = useState<string | null>(null);
   const [showHowToPlay, setShowHowToPlay] = useState<boolean>(false);
   const [currentHowToPlayPage, setCurrentHowToPlayPage] = useState<number>(0);
-  const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   
   const isMobile = useIsMobile();
   
@@ -353,13 +352,6 @@ const Game: React.FC = () => {
     }
   };
   
-  const toggleSound = () => {
-    setSoundEnabled(!soundEnabled);
-    if (gameEngineRef.current) {
-      gameEngineRef.current.setSoundEnabled(!soundEnabled);
-    }
-  };
-  
   const howToPlayContent = [
     {
       title: "Basic Controls",
@@ -539,22 +531,7 @@ const Game: React.FC = () => {
         </div>
         
         {gameState === GameState.START_SCREEN && !showHowToPlay && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#1a2b45]/70 to-[#2d4b6e]/90 backdrop-blur-sm transition-all duration-500 animate-fade-in">
-            <div className="absolute inset-0 overflow-hidden">
-              <div className="absolute left-[10%] top-[15%] transform -rotate-12 opacity-20">
-                <img src={enemyCarURLs[0]} alt="" className="w-24 h-20" />
-              </div>
-              <div className="absolute right-[15%] top-[65%] transform rotate-12 opacity-20">
-                <img src={enemyCarURLs[1]} alt="" className="w-24 h-20" />
-              </div>
-              <div className="absolute left-[20%] bottom-[15%] transform -rotate-6 opacity-20">
-                <img src={enemyCarURLs[2]} alt="" className="w-24 h-20" />
-              </div>
-              <div className="absolute right-[25%] top-[25%] transform rotate-6 opacity-20">
-                <img src={playerCarURL} alt="" className="w-24 h-20" />
-              </div>
-            </div>
-            
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-black/20 to-black/80 backdrop-blur-sm transition-all duration-500 animate-fade-in">
             <div className="glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
               <h1 className="text-4xl font-bold mb-2 tracking-tight text-white">Superseed Lane Runner</h1>
               <div className="chip text-xs bg-[#91d3d1]/10 text-[#91d3d1] px-3 py-1 rounded-full mb-4 inline-block">FAST-PACED ACTION</div>
@@ -578,15 +555,6 @@ const Game: React.FC = () => {
                   How to Play
                 </Button>
                 
-                <Button 
-                  onClick={toggleSound}
-                  variant="teal-outline"
-                  size="icon"
-                  className="mt-2"
-                >
-                  {soundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
-                </Button>
-                
                 {highScore > 0 && (
                   <div className="flex items-center space-x-2 text-[#91d3d1] mt-2">
                     <Trophy className="w-5 h-5" />
@@ -599,16 +567,7 @@ const Game: React.FC = () => {
         )}
         
         {gameState === GameState.START_SCREEN && showHowToPlay && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#1a2b45]/70 to-[#2d4b6e]/90 backdrop-blur-sm transition-all duration-500 animate-fade-in">
-            <div className="absolute inset-0 overflow-hidden">
-              <div className="absolute left-[10%] top-[15%] transform -rotate-12 opacity-10">
-                <img src={enemyCarURLs[0]} alt="" className="w-24 h-20" />
-              </div>
-              <div className="absolute right-[15%] top-[65%] transform rotate-12 opacity-10">
-                <img src={enemyCarURLs[1]} alt="" className="w-24 h-20" />
-              </div>
-            </div>
-            
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-black/20 to-black/80 backdrop-blur-sm transition-all duration-500 animate-fade-in">
             <div className="glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
               <div className="flex items-center justify-between mb-4">
                 <Button 
@@ -667,16 +626,7 @@ const Game: React.FC = () => {
         )}
         
         {gameState === GameState.PAUSED && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#1a2b45]/70 to-[#2d4b6e]/90 backdrop-blur-sm transition-all duration-500 animate-fade-in">
-            <div className="absolute inset-0 overflow-hidden">
-              <div className="absolute left-[15%] top-[25%] transform -rotate-12 opacity-10">
-                <img src={enemyCarURLs[0]} alt="" className="w-24 h-20" />
-              </div>
-              <div className="absolute right-[20%] top-[55%] transform rotate-12 opacity-10">
-                <img src={enemyCarURLs[2]} alt="" className="w-24 h-20" />
-              </div>
-            </div>
-            
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-black/20 to-black/80 backdrop-blur-sm transition-all duration-500 animate-fade-in">
             <div className="pause-menu glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
               <h1 className="text-3xl font-bold mb-6 tracking-tight text-white">Game Paused</h1>
               
@@ -698,15 +648,6 @@ const Game: React.FC = () => {
                   Restart Game
                 </Button>
                 
-                <Button 
-                  onClick={toggleSound}
-                  variant="teal-outline"
-                  size="icon"
-                  className="mt-2"
-                >
-                  {soundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
-                </Button>
-                
                 <div className="text-sm text-gray-300 mt-4">
                   Current Score: <span className="font-bold text-white">{score}</span>
                 </div>
@@ -716,16 +657,7 @@ const Game: React.FC = () => {
         )}
         
         {gameState === GameState.GAME_OVER && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#1a2b45]/70 to-[#2d4b6e]/90 backdrop-blur-sm transition-all duration-500 animate-fade-in">
-            <div className="absolute inset-0 overflow-hidden">
-              <div className="absolute left-[10%] top-[15%] transform -rotate-12 opacity-10">
-                <img src={enemyCarURLs[1]} alt="" className="w-24 h-20" />
-              </div>
-              <div className="absolute right-[20%] bottom-[25%] transform rotate-12 opacity-10">
-                <img src={enemyCarURLs[0]} alt="" className="w-24 h-20" />
-              </div>
-            </div>
-            
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-black/20 to-black/80 backdrop-blur-sm transition-all duration-500 animate-fade-in">
             <div className="game-over-modal glassmorphism rounded-3xl p-8 max-w-md mx-auto text-center border border-[#91d3d1]/20">
               <h2 className="text-3xl font-bold mb-2">Game Over</h2>
               
@@ -754,15 +686,6 @@ const Game: React.FC = () => {
                   className="game-button w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 rounded-xl py-6 text-lg font-medium shadow-lg shadow-[#91d3d1]/20"
                 >
                   Try Again
-                </Button>
-                
-                <Button 
-                  onClick={toggleSound}
-                  variant="teal-outline"
-                  size="icon"
-                  className="mt-3"
-                >
-                  {soundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
                 </Button>
               </div>
             </div>
@@ -807,4 +730,3 @@ const Game: React.FC = () => {
 };
 
 export default Game;
-
