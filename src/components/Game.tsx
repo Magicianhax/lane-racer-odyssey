@@ -490,33 +490,33 @@ const Game: React.FC = () => {
       <div className="game-canvas-container relative w-full max-w-[600px]">
         <canvas ref={canvasRef} className="w-full h-full"></canvas>
         
-        <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10">
-          <div className="flex items-center space-x-2 glassmorphism px-3 py-1 rounded-full">
-            {Array.from({ length: lives }).map((_, i) => (
-              <Heart key={i} className="w-5 h-5 text-red-500 fill-red-500" />
-            ))}
-          </div>
-          
-          <div className="glassmorphism px-4 py-1 rounded-full">
-            <div className="hud-text text-xl font-medium">{score}</div>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            {activeSlowMode && (
-              <div className="flex items-center space-x-1 glassmorphism px-3 py-1 rounded-full">
-                <Clock className="w-4 h-4 text-[#a170fc]" />
-                <span className="text-sm font-medium">{Math.ceil(slowModeTimer / 1000)}s</span>
-              </div>
-            )}
+        {gameState === GameState.GAMEPLAY && (
+          <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10">
+            <div className="flex items-center space-x-2 glassmorphism px-3 py-1 rounded-full">
+              {Array.from({ length: lives }).map((_, i) => (
+                <Heart key={i} className="w-5 h-5 text-red-500 fill-red-500" />
+              ))}
+            </div>
             
-            {activeShield && (
-              <div className="flex items-center space-x-1 glassmorphism px-3 py-1 rounded-full">
-                <Shield className="w-4 h-4 text-[#64d2ff]" />
-                <span className="text-sm font-medium">{Math.ceil(shieldTimer / 1000)}s</span>
-              </div>
-            )}
+            <div className="glassmorphism px-4 py-1 rounded-full">
+              <div className="hud-text text-xl font-medium">{score}</div>
+            </div>
             
-            {gameState === GameState.GAMEPLAY && (
+            <div className="flex items-center space-x-2">
+              {activeSlowMode && (
+                <div className="flex items-center space-x-1 glassmorphism px-3 py-1 rounded-full">
+                  <Clock className="w-4 h-4 text-[#a170fc]" />
+                  <span className="text-sm font-medium">{Math.ceil(slowModeTimer / 1000)}s</span>
+                </div>
+              )}
+              
+              {activeShield && (
+                <div className="flex items-center space-x-1 glassmorphism px-3 py-1 rounded-full">
+                  <Shield className="w-4 h-4 text-[#64d2ff]" />
+                  <span className="text-sm font-medium">{Math.ceil(shieldTimer / 1000)}s</span>
+                </div>
+              )}
+              
               <Button 
                 variant="teal" 
                 size="icon" 
@@ -526,14 +526,14 @@ const Game: React.FC = () => {
               >
                 <Pause className="h-5 w-5" />
               </Button>
-            )}
+            </div>
           </div>
-        </div>
+        )}
         
         {gameState === GameState.START_SCREEN && !showHowToPlay && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-black/20 to-black/80 backdrop-blur-sm transition-all duration-500 animate-fade-in">
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
             <div className="glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
-              <h1 className="text-4xl font-bold mb-2 tracking-tight text-white">Superseed Lane Runner</h1>
+              <h1 className="text-5xl font-bold mb-2 tracking-tight text-white text-gradient">Superseed Lane Runner</h1>
               <div className="chip text-xs bg-[#91d3d1]/10 text-[#91d3d1] px-3 py-1 rounded-full mb-4 inline-block">FAST-PACED ACTION</div>
               <p className="text-gray-300 mb-6">Navigate through traffic, collect seeds, and survive as long as possible!</p>
               
@@ -563,11 +563,18 @@ const Game: React.FC = () => {
                 )}
               </div>
             </div>
+            
+            <div className="absolute -bottom-20 -left-10 opacity-10 rotate-12 transform scale-75">
+              <div className="w-32 h-20 bg-white rounded-md"></div>
+            </div>
+            <div className="absolute top-20 -right-10 opacity-10 -rotate-12 transform scale-75">
+              <div className="w-32 h-20 bg-white rounded-md"></div>
+            </div>
           </div>
         )}
         
         {gameState === GameState.START_SCREEN && showHowToPlay && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-black/20 to-black/80 backdrop-blur-sm transition-all duration-500 animate-fade-in">
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
             <div className="glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
               <div className="flex items-center justify-between mb-4">
                 <Button 
@@ -579,7 +586,7 @@ const Game: React.FC = () => {
                   <ArrowLeft className="h-5 w-5" />
                 </Button>
                 <h2 className="text-2xl font-bold tracking-tight text-white">How to Play</h2>
-                <div className="w-9"></div> {/* Spacer for centering */}
+                <div className="w-9"></div>
               </div>
               
               <div className="chip text-xs bg-[#91d3d1]/10 text-[#91d3d1] px-3 py-1 rounded-full mb-6 inline-block">
@@ -626,7 +633,7 @@ const Game: React.FC = () => {
         )}
         
         {gameState === GameState.PAUSED && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-black/20 to-black/80 backdrop-blur-sm transition-all duration-500 animate-fade-in">
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
             <div className="pause-menu glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
               <h1 className="text-3xl font-bold mb-6 tracking-tight text-white">Game Paused</h1>
               
@@ -657,7 +664,7 @@ const Game: React.FC = () => {
         )}
         
         {gameState === GameState.GAME_OVER && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-black/20 to-black/80 backdrop-blur-sm transition-all duration-500 animate-fade-in">
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
             <div className="game-over-modal glassmorphism rounded-3xl p-8 max-w-md mx-auto text-center border border-[#91d3d1]/20">
               <h2 className="text-3xl font-bold mb-2">Game Over</h2>
               

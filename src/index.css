@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -393,4 +394,13 @@
 
 [data-sonner-toast][data-state="closing"] {
   animation: toast-out 0.2s cubic-bezier(0.21, 1.02, 0.73, 1) forwards !important;
+}
+
+/* Title text gradient */
+.text-gradient {
+  background: linear-gradient(to bottom, #ffffff, #91d3d1);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 2px 10px rgba(145, 211, 209, 0.3);
 }
