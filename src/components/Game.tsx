@@ -608,8 +608,23 @@ const Game: React.FC = () => {
   
   const handleModeSelection = (mode: GameMode) => {
     setSelectedMode(mode);
-    setPreGameState(PreGameState.USERNAME_INPUT);
-    playButtonSound();
+    // If username exists and user is changing mode, don't go to username input
+    if (username) {
+      setGameState(GameState.START_SCREEN);
+      playButtonSound();
+      
+      // Show mode change toast
+      toast.success(`Mode changed to ${mode}!`, {
+        description: `Playing as ${username}`
+      });
+      
+      // Save to localStorage
+      localStorage.setItem('gameMode', mode || 'online');
+    } else {
+      // First time setup - go to username input
+      setPreGameState(PreGameState.USERNAME_INPUT);
+      playButtonSound();
+    }
   };
   
   const handleUsernameSubmit = (name: string) => {
@@ -629,6 +644,11 @@ const Game: React.FC = () => {
     toast.success(`Welcome, ${name}!`, {
       description: `Playing in ${selectedMode} mode`
     });
+  };
+  
+  const handleChangeUsername = () => {
+    setPreGameState(PreGameState.USERNAME_INPUT);
+    playButtonSound();
   };
   
   const handleBackToModeSelection = () => {
@@ -935,10 +955,7 @@ const Game: React.FC = () => {
                 </Button>
                 
                 <Button 
-                  onClick={() => {
-                    setPreGameState(PreGameState.MODE_SELECTION);
-                    setGameState(GameState.START_SCREEN);
-                  }}
+                  onClick={() => setPreGameState(PreGameState.MODE_SELECTION)}
                   variant="ghost"
                   className="text-[#91d3d1]/70 hover:text-[#91d3d1] hover:bg-black/20"
                 >
@@ -975,10 +992,14 @@ const Game: React.FC = () => {
           </div>
         )}
         
-        {gameState === GameState.START_SCREEN && preGameState === PreGameState.MODE_SELECTION && !username && (
+        {gameState === GameState.START_SCREEN && preGameState === PreGameState.MODE_SELECTION && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
             <div className="glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
-              <ModeSelection onSelectMode={handleModeSelection} />
+              <ModeSelection 
+                onSelectMode={handleModeSelection} 
+                username={username}
+                onChangeUsername={handleChangeUsername}
+              />
             </div>
           </div>
         )}
