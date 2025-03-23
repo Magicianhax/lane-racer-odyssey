@@ -57,7 +57,13 @@ const Game: React.FC = () => {
           console.log("Crash sound ended, restarting engine sound from beginning");
           if (gameState === GameState.GAMEPLAY && carSoundRef.current) {
             carSoundRef.current.currentTime = 0;
-            carSoundRef.current.play().catch(e => console.error("Error restarting car sound after crash:", e));
+            setTimeout(() => {
+              if (carSoundRef.current && gameState === GameState.GAMEPLAY) {
+                carSoundRef.current.play()
+                  .then(() => console.log("Car sound restarted after crash"))
+                  .catch(e => console.error("Error restarting car sound after crash:", e));
+              }
+            }, 50);
           }
         });
         
@@ -280,32 +286,6 @@ const Game: React.FC = () => {
         onLivesChange: (newLives) => setLives(newLives),
         onGameStateChange: (newState) => {
           setGameState(newState);
-          
-          if (newState === GameState.GAMEPLAY) {
-            console.log("Starting car sound from beginning");
-            if (carSoundRef.current) {
-              carSoundRef.current.currentTime = 0;
-              // Use a small timeout to ensure audio context is ready
-              setTimeout(() => {
-                if (carSoundRef.current) {
-                  carSoundRef.current.play()
-                    .then(() => console.log("Car sound started successfully"))
-                    .catch(e => console.error("Error playing car sound:", e));
-                }
-              }, 100);
-            }
-          } else if (newState === GameState.PAUSED) {
-            console.log("Pausing car sound");
-            if (carSoundRef.current) {
-              carSoundRef.current.pause();
-            }
-          } else if (newState === GameState.GAME_OVER || newState === GameState.START_SCREEN) {
-            console.log("Stopping all sounds");
-            if (carSoundRef.current) {
-              carSoundRef.current.pause();
-              carSoundRef.current.currentTime = 0;
-            }
-          }
         },
         onPlayerCrash: () => {
           console.log("Playing crash sound");
@@ -316,7 +296,9 @@ const Game: React.FC = () => {
               carSoundRef.current.pause();
             }
             
-            crashSoundRef.current.play().catch(e => console.error("Error playing crash sound:", e));
+            crashSoundRef.current.play()
+              .then(() => console.log("Crash sound started successfully"))
+              .catch(e => console.error("Error playing crash sound:", e));
           }
         },
         onPowerUpStart: (type, duration) => {
@@ -411,6 +393,37 @@ const Game: React.FC = () => {
       return () => clearInterval(interval);
     }
   }, [shieldTimer]);
+  
+  useEffect(() => {
+    if (gameState === GameState.GAMEPLAY) {
+      console.log("Game state changed to GAMEPLAY, starting engine sound");
+      if (carSoundRef.current) {
+        carSoundRef.current.currentTime = 0;
+        setTimeout(() => {
+          if (carSoundRef.current && gameState === GameState.GAMEPLAY) {
+            carSoundRef.current.play()
+              .then(() => console.log("Car sound started successfully on state change"))
+              .catch(e => console.error("Error playing car sound on state change:", e));
+          }
+        }, 100);
+      }
+    } else if (gameState === GameState.PAUSED) {
+      console.log("Game state changed to PAUSED, pausing engine sound");
+      if (carSoundRef.current) {
+        carSoundRef.current.pause();
+      }
+    } else if (gameState === GameState.GAME_OVER || gameState === GameState.START_SCREEN) {
+      console.log("Game state changed to END state, stopping all sounds");
+      if (carSoundRef.current) {
+        carSoundRef.current.pause();
+        carSoundRef.current.currentTime = 0;
+      }
+      if (crashSoundRef.current) {
+        crashSoundRef.current.pause();
+        crashSoundRef.current.currentTime = 0;
+      }
+    }
+  }, [gameState]);
   
   const handleStartGame = () => {
     console.log("Start game clicked, gameEngine exists:", !!gameEngineRef.current);
