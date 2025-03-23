@@ -21,8 +21,6 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
         teal: "bg-[#91d3d1] text-zinc-900 hover:bg-[#7ec7c5] dark:text-zinc-900",
         "teal-outline": "border border-[#91d3d1] text-[#91d3d1] hover:bg-[#91d3d1]/10",
-        purple: "bg-[#8b5cf6] text-white hover:bg-[#7c3aed] dark:text-white",
-        "purple-outline": "border border-[#8b5cf6] text-[#8b5cf6] hover:bg-[#8b5cf6]/10",
       },
       size: {
         default: "h-10 px-4 py-2",
