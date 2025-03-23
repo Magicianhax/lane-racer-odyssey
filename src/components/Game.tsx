@@ -11,6 +11,9 @@ const DEFAULT_ENEMY_CARS = ['/enemycar1.png', '/enemycar2.png', '/enemycar3.png'
 const SEED_IMAGE = '/seed.png';
 const CAR_SOUND = '/car.m4a';
 const CRASH_SOUND = '/crash.m4a';
+const SEED_SOUND = '/seed.m4a';
+const SLOW_TIMER_SOUND = '/5 sec.m4a';
+const BUTTON_SOUND = '/tap.mp3';
 
 const Game: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -35,8 +38,17 @@ const Game: React.FC = () => {
   const [currentHowToPlayPage, setCurrentHowToPlayPage] = useState<number>(0);
   const [isSoundEnabled, setIsSoundEnabled] = useState<boolean>(true);
   
+  // Track key presses for multi-lane movement
+  const keyPressTimeoutRef = useRef<number | null>(null);
+  const keyPressCountRef = useRef<number>(0);
+  const lastKeyPressTimeRef = useRef<number>(0);
+  
+  // Sound references
   const carSoundRef = useRef<HTMLAudioElement | null>(null);
   const crashSoundRef = useRef<HTMLAudioElement | null>(null);
+  const seedSoundRef = useRef<HTMLAudioElement | null>(null);
+  const slowTimerSoundRef = useRef<HTMLAudioElement | null>(null);
+  const buttonSoundRef = useRef<HTMLAudioElement | null>(null);
   const soundsLoadedRef = useRef<boolean>(false);
   
   const isMobile = useIsMobile();
@@ -54,6 +66,19 @@ const Game: React.FC = () => {
         const crashSound = new Audio(CRASH_SOUND);
         crashSound.volume = 0.7;
         crashSoundRef.current = crashSound;
+        
+        // New sound effects
+        const seedSound = new Audio(SEED_SOUND);
+        seedSound.volume = 0.5;
+        seedSoundRef.current = seedSound;
+        
+        const slowTimerSound = new Audio(SLOW_TIMER_SOUND);
+        slowTimerSound.volume = 0.4;
+        slowTimerSoundRef.current = slowTimerSound;
+        
+        const buttonSound = new Audio(BUTTON_SOUND);
+        buttonSound.volume = 0.3;
+        buttonSoundRef.current = buttonSound;
         
         await Promise.all([
           new Promise<void>((resolve) => {
@@ -82,6 +107,49 @@ const Game: React.FC = () => {
             });
             
             crashSound.load();
+          }),
+          
+          // Load new sound effects
+          new Promise<void>((resolve) => {
+            seedSound.addEventListener('canplaythrough', () => {
+              console.log("Seed sound loaded successfully");
+              resolve();
+            }, { once: true });
+            
+            seedSound.addEventListener('error', (e) => {
+              console.error("Error loading seed sound:", e);
+              resolve();
+            });
+            
+            seedSound.load();
+          }),
+          
+          new Promise<void>((resolve) => {
+            slowTimerSound.addEventListener('canplaythrough', () => {
+              console.log("Slow timer sound loaded successfully");
+              resolve();
+            }, { once: true });
+            
+            slowTimerSound.addEventListener('error', (e) => {
+              console.error("Error loading slow timer sound:", e);
+              resolve();
+            });
+            
+            slowTimerSound.load();
+          }),
+          
+          new Promise<void>((resolve) => {
+            buttonSound.addEventListener('canplaythrough', () => {
+              console.log("Button sound loaded successfully");
+              resolve();
+            }, { once: true });
+            
+            buttonSound.addEventListener('error', (e) => {
+              console.error("Error loading button sound:", e);
+              resolve();
+            });
+            
+            buttonSound.load();
           })
         ]);
         
@@ -190,6 +258,7 @@ const Game: React.FC = () => {
     };
   }, []);
   
+  // Sound control functions
   const startEngineSound = () => {
     if (!isSoundEnabled || !carSoundRef.current) return;
     
@@ -270,6 +339,64 @@ const Game: React.FC = () => {
     }
   };
   
+  // New sound functions
+  const playPickupSound = () => {
+    if (!isSoundEnabled || !seedSoundRef.current) return;
+    
+    try {
+      if (seedSoundRef.current) {
+        seedSoundRef.current.currentTime = 0;
+        
+        const seedPromise = seedSoundRef.current.play();
+        if (seedPromise !== undefined) {
+          seedPromise.catch(err => {
+            console.error("Error playing pickup sound:", err);
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Could not play pickup sound:", err);
+    }
+  };
+  
+  const playSlowTimerSound = () => {
+    if (!isSoundEnabled || !slowTimerSoundRef.current) return;
+    
+    try {
+      if (slowTimerSoundRef.current) {
+        slowTimerSoundRef.current.currentTime = 0;
+        
+        const slowTimerPromise = slowTimerSoundRef.current.play();
+        if (slowTimerPromise !== undefined) {
+          slowTimerPromise.catch(err => {
+            console.error("Error playing slow timer sound:", err);
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Could not play slow timer sound:", err);
+    }
+  };
+  
+  const playButtonSound = () => {
+    if (!isSoundEnabled || !buttonSoundRef.current) return;
+    
+    try {
+      if (buttonSoundRef.current) {
+        buttonSoundRef.current.currentTime = 0;
+        
+        const buttonPromise = buttonSoundRef.current.play();
+        if (buttonPromise !== undefined) {
+          buttonPromise.catch(err => {
+            console.error("Error playing button sound:", err);
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Could not play button sound:", err);
+    }
+  };
+  
   const stopAllSounds = () => {
     stopEngineSound();
     
@@ -277,9 +404,26 @@ const Game: React.FC = () => {
       crashSoundRef.current.pause();
       crashSoundRef.current.currentTime = 0;
     }
+    
+    if (seedSoundRef.current) {
+      seedSoundRef.current.pause();
+      seedSoundRef.current.currentTime = 0;
+    }
+    
+    if (slowTimerSoundRef.current) {
+      slowTimerSoundRef.current.pause();
+      slowTimerSoundRef.current.currentTime = 0;
+    }
+    
+    if (buttonSoundRef.current) {
+      buttonSoundRef.current.pause();
+      buttonSoundRef.current.currentTime = 0;
+    }
   };
   
   const toggleSound = () => {
+    playButtonSound(); // Play the button sound before toggling (will only play if sound is currently enabled)
+    
     setIsSoundEnabled(prev => {
       const newState = !prev;
       
@@ -371,6 +515,7 @@ const Game: React.FC = () => {
             case PowerUpType.SLOW_SPEED:
               setActiveSlowMode(true);
               setSlowModeTimer(duration);
+              playSlowTimerSound(); // Play slow timer sound when activating
               toast.success('SLOW MODE ACTIVATED', {
                 description: 'Traffic speed reduced',
                 icon: <Clock className="h-5 w-5 text-blue-500" />,
@@ -379,12 +524,14 @@ const Game: React.FC = () => {
             case PowerUpType.SHIELD:
               setActiveShield(true);
               setShieldTimer(duration);
+              playPickupSound(); // Play pickup sound for shield activation
               toast.success('SHIELD ACTIVATED', {
                 description: 'Invulnerable for 3s',
                 icon: <Shield className="h-5 w-5 text-cyan-500" />,
               });
               break;
             case PowerUpType.EXTRA_LIFE:
+              playPickupSound(); // Play pickup sound for extra life
               toast.success('EXTRA LIFE', {
                 icon: <Heart className="h-5 w-5 text-red-500" />,
               });
@@ -407,6 +554,9 @@ const Game: React.FC = () => {
         },
         onCollision: () => {
           playCollisionSound();
+        },
+        onSeedCollected: () => {
+          playPickupSound(); // Play pickup sound when collecting seeds
         },
         customAssets: {
           playerCarURL,
@@ -436,6 +586,97 @@ const Game: React.FC = () => {
     };
   }, [carAssetsLoaded, playerCarURL, enemyCarURLs, seedImageURL, loadingError]);
   
+  // Handle keyboard input for multi-lane movement
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (gameState !== GameState.GAMEPLAY || !gameEngineRef.current) return;
+      
+      const currentTime = Date.now();
+      const timeDiff = currentTime - lastKeyPressTimeRef.current;
+      
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        
+        if (timeDiff < 300) {
+          // Consecutive press within threshold
+          keyPressCountRef.current += 1;
+          
+          // Clear existing timeout
+          if (keyPressTimeoutRef.current) {
+            window.clearTimeout(keyPressTimeoutRef.current);
+          }
+          
+          // Set a new timeout to execute the move
+          keyPressTimeoutRef.current = window.setTimeout(() => {
+            const lanes = Math.min(keyPressCountRef.current, 3);
+            gameEngineRef.current?.movePlayerLanes(-lanes);
+            keyPressCountRef.current = 0;
+          }, 50);
+        } else {
+          // First press or press after threshold
+          keyPressCountRef.current = 1;
+          
+          // Clear existing timeout
+          if (keyPressTimeoutRef.current) {
+            window.clearTimeout(keyPressTimeoutRef.current);
+          }
+          
+          // Set a new timeout to execute the move
+          keyPressTimeoutRef.current = window.setTimeout(() => {
+            gameEngineRef.current?.movePlayerLanes(-1);
+            keyPressCountRef.current = 0;
+          }, 50);
+        }
+        
+        lastKeyPressTimeRef.current = currentTime;
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        
+        if (timeDiff < 300) {
+          // Consecutive press within threshold
+          keyPressCountRef.current += 1;
+          
+          // Clear existing timeout
+          if (keyPressTimeoutRef.current) {
+            window.clearTimeout(keyPressTimeoutRef.current);
+          }
+          
+          // Set a new timeout to execute the move
+          keyPressTimeoutRef.current = window.setTimeout(() => {
+            const lanes = Math.min(keyPressCountRef.current, 3);
+            gameEngineRef.current?.movePlayerLanes(lanes);
+            keyPressCountRef.current = 0;
+          }, 50);
+        } else {
+          // First press or press after threshold
+          keyPressCountRef.current = 1;
+          
+          // Clear existing timeout
+          if (keyPressTimeoutRef.current) {
+            window.clearTimeout(keyPressTimeoutRef.current);
+          }
+          
+          // Set a new timeout to execute the move
+          keyPressTimeoutRef.current = window.setTimeout(() => {
+            gameEngineRef.current?.movePlayerLanes(1);
+            keyPressCountRef.current = 0;
+          }, 50);
+        }
+        
+        lastKeyPressTimeRef.current = currentTime;
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      if (keyPressTimeoutRef.current) {
+        window.clearTimeout(keyPressTimeoutRef.current);
+      }
+    };
+  }, [gameState]);
+  
   useEffect(() => {
     if (slowModeTimer > 0) {
       const interval = setInterval(() => {
@@ -454,7 +695,9 @@ const Game: React.FC = () => {
     }
   }, [shieldTimer]);
   
+  // Event handler functions - updated to include button sounds
   const handleStartGame = () => {
+    playButtonSound();
     console.log("Start game clicked, gameEngine exists:", !!gameEngineRef.current);
     if (gameEngineRef.current) {
       gameEngineRef.current.startGame();
@@ -468,23 +711,28 @@ const Game: React.FC = () => {
   };
   
   const handleShowHowToPlay = () => {
+    playButtonSound();
     setShowHowToPlay(true);
     setCurrentHowToPlayPage(0);
   };
   
   const handleBackToMenu = () => {
+    playButtonSound();
     setShowHowToPlay(false);
   };
   
   const handleNextPage = () => {
+    playButtonSound();
     setCurrentHowToPlayPage(prev => Math.min(prev + 1, howToPlayContent.length - 1));
   };
   
   const handlePrevPage = () => {
+    playButtonSound();
     setCurrentHowToPlayPage(prev => Math.max(prev - 1, 0));
   };
   
   const handleTryAgain = () => {
+    playButtonSound();
     if (gameEngineRef.current) {
       setHighScore(gameEngineRef.current.getHighScore());
       gameEngineRef.current.startGame();
@@ -493,29 +741,100 @@ const Game: React.FC = () => {
   
   const handleTouchLeft = () => {
     if (gameEngineRef.current && gameState === GameState.GAMEPLAY) {
-      gameEngineRef.current.handleTouchLeft();
+      const currentTime = Date.now();
+      const timeDiff = currentTime - lastKeyPressTimeRef.current;
+      
+      if (timeDiff < 300) {
+        // Consecutive press within threshold
+        keyPressCountRef.current += 1;
+        
+        // Clear existing timeout
+        if (keyPressTimeoutRef.current) {
+          window.clearTimeout(keyPressTimeoutRef.current);
+        }
+        
+        // Set a new timeout to execute the move
+        keyPressTimeoutRef.current = window.setTimeout(() => {
+          const lanes = Math.min(keyPressCountRef.current, 3);
+          gameEngineRef.current?.movePlayerLanes(-lanes);
+          keyPressCountRef.current = 0;
+        }, 50);
+      } else {
+        // First press or press after threshold
+        keyPressCountRef.current = 1;
+        
+        // Clear existing timeout
+        if (keyPressTimeoutRef.current) {
+          window.clearTimeout(keyPressTimeoutRef.current);
+        }
+        
+        // Set a new timeout to execute the move
+        keyPressTimeoutRef.current = window.setTimeout(() => {
+          gameEngineRef.current?.movePlayerLanes(-1);
+          keyPressCountRef.current = 0;
+        }, 50);
+      }
+      
+      lastKeyPressTimeRef.current = currentTime;
     }
   };
   
   const handleTouchRight = () => {
     if (gameEngineRef.current && gameState === GameState.GAMEPLAY) {
-      gameEngineRef.current.handleTouchRight();
+      const currentTime = Date.now();
+      const timeDiff = currentTime - lastKeyPressTimeRef.current;
+      
+      if (timeDiff < 300) {
+        // Consecutive press within threshold
+        keyPressCountRef.current += 1;
+        
+        // Clear existing timeout
+        if (keyPressTimeoutRef.current) {
+          window.clearTimeout(keyPressTimeoutRef.current);
+        }
+        
+        // Set a new timeout to execute the move
+        keyPressTimeoutRef.current = window.setTimeout(() => {
+          const lanes = Math.min(keyPressCountRef.current, 3);
+          gameEngineRef.current?.movePlayerLanes(lanes);
+          keyPressCountRef.current = 0;
+        }, 50);
+      } else {
+        // First press or press after threshold
+        keyPressCountRef.current = 1;
+        
+        // Clear existing timeout
+        if (keyPressTimeoutRef.current) {
+          window.clearTimeout(keyPressTimeoutRef.current);
+        }
+        
+        // Set a new timeout to execute the move
+        keyPressTimeoutRef.current = window.setTimeout(() => {
+          gameEngineRef.current?.movePlayerLanes(1);
+          keyPressCountRef.current = 0;
+        }, 50);
+      }
+      
+      lastKeyPressTimeRef.current = currentTime;
     }
   };
   
   const handlePauseGame = () => {
+    playButtonSound();
     if (gameEngineRef.current && gameState === GameState.GAMEPLAY) {
       gameEngineRef.current.pauseGame();
     }
   };
   
   const handleResumeGame = () => {
+    playButtonSound();
     if (gameEngineRef.current && gameState === GameState.PAUSED) {
       gameEngineRef.current.resumeGame();
     }
   };
   
   const handleRestartGame = () => {
+    playButtonSound();
     if (gameEngineRef.current) {
       setHighScore(gameEngineRef.current.getHighScore());
       gameEngineRef.current.restartGame();
@@ -626,328 +945,4 @@ const Game: React.FC = () => {
       title: "Tips & Tricks",
       content: (
         <div className="space-y-4">
-          <h3 className="text-lg font-medium mb-2">Pro Tips:</h3>
-          
-          <ul className="space-y-3">
-            <li className="flex items-start">
-              <span className="mr-2">•</span>
-              <div>Plan your moves in advance to avoid getting boxed in by cars</div>
-            </li>
-            <li className="flex items-start">
-              <span className="mr-2">•</span>
-              <div>Prioritize collecting power-ups when traffic gets heavy</div>
-            </li>
-            <li className="flex items-start">
-              <span className="mr-2">•</span>
-              <div>Shield power-ups can be used offensively to intentionally crash through cars</div>
-            </li>
-            <li className="flex items-start">
-              <span className="mr-2">•</span>
-              <div>Look ahead for upcoming obstacles and plan your route</div>
-            </li>
-            <li className="flex items-start">
-              <span className="mr-2">•</span>
-              <div>The game gets faster over time - be prepared!</div>
-            </li>
-          </ul>
-        </div>
-      )
-    }
-  ];
-  
-  return (
-    <div className="flex flex-col items-center justify-center w-full h-full">
-      <div className="game-canvas-container relative w-full max-w-[600px]">
-        <canvas ref={canvasRef} className="w-full h-full"></canvas>
-        
-        {gameState === GameState.GAMEPLAY && (
-          <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10">
-            <div className="flex items-center space-x-2 glassmorphism px-3 py-1 rounded-full">
-              {Array.from({ length: lives }).map((_, i) => (
-                <Heart key={i} className="w-5 h-5 text-red-500 fill-red-500" />
-              ))}
-            </div>
-            
-            <div className="glassmorphism px-4 py-1 rounded-full">
-              <div className="hud-text text-xl font-medium">{score}</div>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              {activeSlowMode && (
-                <div className="flex items-center space-x-1 glassmorphism px-3 py-1 rounded-full">
-                  <Clock className="w-4 h-4 text-[#a170fc]" />
-                  <span className="text-sm font-medium">{Math.ceil(slowModeTimer / 1000)}s</span>
-                </div>
-              )}
-              
-              {activeShield && (
-                <div className="flex items-center space-x-1 glassmorphism px-3 py-1 rounded-full">
-                  <Shield className="w-4 h-4 text-[#64d2ff]" />
-                  <span className="text-sm font-medium">{Math.ceil(shieldTimer / 1000)}s</span>
-                </div>
-              )}
-              
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="rounded-full bg-black/20 backdrop-blur-sm hover:bg-black/30"
-                onClick={toggleSound}
-                aria-label={isSoundEnabled ? "Mute sound" : "Enable sound"}
-              >
-                {isSoundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-              </Button>
-              
-              <Button 
-                variant="teal" 
-                size="icon" 
-                className="rounded-full hover:bg-[#7ec7c5] transition-colors"
-                onClick={handlePauseGame}
-                aria-label="Pause game"
-              >
-                <Pause className="h-5 w-5" />
-              </Button>
-            </div>
-          </div>
-        )}
-        
-        {gameState === GameState.START_SCREEN && !showHowToPlay && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
-            <div className="glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
-              <h1 className="text-5xl font-bold mb-2 tracking-tight text-white text-gradient">Superseed Lane Runner</h1>
-              <div className="chip text-xs bg-[#91d3d1]/10 text-[#91d3d1] px-3 py-1 rounded-full mb-4 inline-block">FAST-PACED ACTION</div>
-              <p className="text-gray-300 mb-6">Navigate through traffic, collect seeds, and survive as long as possible!</p>
-              
-              <div className="flex flex-col space-y-4 items-center">
-                <Button 
-                  onClick={handleStartGame}
-                  className="game-button w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 rounded-xl py-6 text-lg font-medium shadow-lg shadow-[#91d3d1]/20"
-                  disabled={!gameInitialized}
-                >
-                  {gameInitialized ? 'Start Game' : <Loader2 className="h-5 w-5 animate-spin" />}
-                </Button>
-                
-                <Button 
-                  onClick={handleShowHowToPlay}
-                  variant="teal-outline"
-                  className="w-full rounded-xl py-6 text-lg font-medium"
-                >
-                  <HelpCircle className="mr-2 h-5 w-5" />
-                  How to Play
-                </Button>
-                
-                <div className="flex items-center space-x-4 mt-2">
-                  {highScore > 0 && (
-                    <div className="flex items-center space-x-2 text-[#91d3d1]">
-                      <Trophy className="w-5 h-5" />
-                      <span>High Score: {highScore}</span>
-                    </div>
-                  )}
-                  
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="rounded-full bg-black/20 backdrop-blur-sm hover:bg-black/30"
-                    onClick={toggleSound}
-                    aria-label={isSoundEnabled ? "Mute sound" : "Enable sound"}
-                  >
-                    {isSoundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-                  </Button>
-                </div>
-              </div>
-            </div>
-            
-            <div className="absolute -bottom-20 -left-10 opacity-10 rotate-12 transform scale-75">
-              <div className="w-32 h-20 bg-white rounded-md"></div>
-            </div>
-            <div className="absolute top-20 -right-10 opacity-10 -rotate-12 transform scale-75">
-              <div className="w-32 h-20 bg-white rounded-md"></div>
-            </div>
-          </div>
-        )}
-        
-        {gameState === GameState.START_SCREEN && showHowToPlay && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
-            <div className="glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
-              <div className="flex items-center justify-between mb-4">
-                <Button 
-                  variant="teal-outline" 
-                  size="icon" 
-                  className="rounded-full"
-                  onClick={handleBackToMenu}
-                >
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
-                <h2 className="text-2xl font-bold tracking-tight text-white">How to Play</h2>
-                <div className="w-9"></div>
-              </div>
-              
-              <div className="chip text-xs bg-[#91d3d1]/10 text-[#91d3d1] px-3 py-1 rounded-full mb-6 inline-block">
-                {currentHowToPlayPage + 1} of {howToPlayContent.length}
-              </div>
-              
-              <h3 className="text-xl font-medium mb-4 text-[#91d3d1]">{howToPlayContent[currentHowToPlayPage].title}</h3>
-              
-              <div className="text-left mb-6 min-h-[200px]">
-                {howToPlayContent[currentHowToPlayPage].content}
-              </div>
-              
-              <div className="flex justify-between">
-                <Button
-                  variant="teal-outline"
-                  size="sm"
-                  onClick={handlePrevPage}
-                  disabled={currentHowToPlayPage === 0}
-                  className={cn(
-                    "rounded-full px-4",
-                    currentHowToPlayPage === 0 && "opacity-50 cursor-not-allowed"
-                  )}
-                >
-                  <ChevronLeft className="h-5 w-5 mr-1" />
-                  Previous
-                </Button>
-                
-                <Button
-                  variant="teal-outline"
-                  size="sm"
-                  onClick={handleNextPage}
-                  disabled={currentHowToPlayPage === howToPlayContent.length - 1}
-                  className={cn(
-                    "rounded-full px-4",
-                    currentHowToPlayPage === howToPlayContent.length - 1 && "opacity-50 cursor-not-allowed"
-                  )}
-                >
-                  Next
-                  <ChevronRight className="h-5 w-5 ml-1" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        {gameState === GameState.PAUSED && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
-            <div className="pause-menu glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
-              <h1 className="text-3xl font-bold mb-6 tracking-tight text-white">Game Paused</h1>
-              
-              <div className="flex flex-col space-y-4 items-center">
-                <Button 
-                  onClick={handleResumeGame}
-                  className="game-button w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 rounded-xl py-6 text-lg font-medium shadow-lg shadow-[#91d3d1]/20"
-                >
-                  <Play className="mr-2 h-5 w-5" />
-                  Resume Game
-                </Button>
-                
-                <Button 
-                  onClick={handleRestartGame}
-                  variant="teal-outline"
-                  className="w-full rounded-xl py-6 text-lg font-medium"
-                >
-                  <RefreshCw className="mr-2 h-5 w-5" />
-                  Restart Game
-                </Button>
-                
-                <div className="flex items-center mt-4 space-x-3">
-                  <div className="text-sm text-gray-300">
-                    Current Score: <span className="font-bold text-white">{score}</span>
-                  </div>
-                  
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="rounded-full bg-black/20 backdrop-blur-sm hover:bg-black/30"
-                    onClick={toggleSound}
-                    aria-label={isSoundEnabled ? "Mute sound" : "Enable sound"}
-                  >
-                    {isSoundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        {gameState === GameState.GAME_OVER && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
-            <div className="game-over-modal glassmorphism rounded-3xl p-8 max-w-md mx-auto text-center border border-[#91d3d1]/20">
-              <h2 className="text-3xl font-bold mb-2">Game Over</h2>
-              
-              <div className="my-6 space-y-4">
-                <div className="space-y-2">
-                  <p className="text-gray-400 text-sm">YOUR SCORE</p>
-                  <p className="text-4xl font-bold">{score}</p>
-                </div>
-                
-                {score > highScore ? (
-                  <div className="py-2 px-4 bg-[#91d3d1]/20 text-[#91d3d1] rounded-full inline-flex items-center space-x-2 animate-pulse">
-                    <Trophy className="w-5 h-5" />
-                    <span>New High Score!</span>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <p className="text-gray-400 text-sm">HIGH SCORE</p>
-                    <p className="text-2xl font-medium">{highScore}</p>
-                  </div>
-                )}
-              </div>
-              
-              <div className="space-y-3">
-                <Button 
-                  onClick={handleTryAgain}
-                  className="game-button w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 rounded-xl py-6 text-lg font-medium shadow-lg shadow-[#91d3d1]/20"
-                >
-                  Try Again
-                </Button>
-                
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="mt-4 rounded-full bg-black/20 backdrop-blur-sm hover:bg-black/30"
-                  onClick={toggleSound}
-                  aria-label={isSoundEnabled ? "Mute sound" : "Enable sound"}
-                >
-                  {isSoundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        {isMobile && gameState === GameState.GAMEPLAY && (
-          <div className="absolute bottom-10 left-0 right-0 flex justify-between px-8">
-            <button
-              className={cn(
-                "w-16 h-16 rounded-full glassmorphism border border-[#91d3d1]/30 touch-control flex items-center justify-center",
-                "active:bg-[#91d3d1]/30 transition-all"
-              )}
-              onTouchStart={handleTouchLeft}
-            >
-              <ChevronLeft className="h-10 w-10 text-[#91d3d1]" />
-            </button>
-            
-            <button
-              className={cn(
-                "w-16 h-16 rounded-full glassmorphism border border-[#91d3d1]/30 touch-control flex items-center justify-center",
-                "active:bg-[#91d3d1]/30 transition-all"
-              )}
-              onTouchStart={handleTouchRight}
-            >
-              <ChevronRight className="h-10 w-10 text-[#91d3d1]" />
-            </button>
-          </div>
-        )}
-        
-        {(!carAssetsLoaded || !gameInitialized) && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-background">
-            <Loader2 className="h-8 w-8 animate-spin text-[#91d3d1] mb-4" />
-            <p className="text-sm text-muted-foreground">Loading game assets...</p>
-          </div>
-        )}
-        
-        <div className="bg-noise absolute inset-0 pointer-events-none opacity-5"></div>
-      </div>
-    </div>
-  );
-};
-
-export default Game;
+          <h3 className="text-lg font-medium mb-
