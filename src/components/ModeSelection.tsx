@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Globe, Key } from 'lucide-react';
+import { ArrowLeft, Globe, Key, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export type GameMode = 'online' | 'onchain';
@@ -11,6 +11,7 @@ interface ModeSelectionProps {
   onBack?: () => void;
   showBackButton?: boolean;
   currentUsername?: string;
+  onChangeUsername?: () => void;
 }
 
 const ModeSelection: React.FC<ModeSelectionProps> = ({
@@ -18,6 +19,7 @@ const ModeSelection: React.FC<ModeSelectionProps> = ({
   onBack,
   showBackButton = false,
   currentUsername,
+  onChangeUsername,
 }) => {
   return (
     <div className="flex flex-col items-center justify-center w-full h-full bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] p-6">
@@ -39,8 +41,22 @@ const ModeSelection: React.FC<ModeSelectionProps> = ({
         </div>
 
         {currentUsername && (
-          <div className="mb-6 text-gray-300">
-            <span className="opacity-70">Current username:</span> <span className="font-medium">{currentUsername}</span>
+          <div className="mb-6 text-gray-300 flex flex-col items-center">
+            <div className="flex items-center mb-2">
+              <User className="h-4 w-4 mr-2 opacity-70" />
+              <span className="opacity-70">Current username:</span> <span className="font-medium ml-1">{currentUsername}</span>
+            </div>
+            
+            {onChangeUsername && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={onChangeUsername} 
+                className="text-xs text-[#91d3d1] hover:text-[#7ec7c5] transition-colors"
+              >
+                Change username
+              </Button>
+            )}
           </div>
         )}
 

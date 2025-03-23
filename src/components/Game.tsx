@@ -17,7 +17,6 @@ const SEED_SOUND = '/seed.m4a';
 const SLOW_TIMER_SOUND = '/5 sec.m4a';
 const BUTTON_SOUND = '/tap.mp3';
 
-// Game pre-state to handle mode selection and username input
 export enum PreGameState {
   MODE_SELECTION = 'mode_selection',
   USERNAME_INPUT = 'username_input',
@@ -47,7 +46,6 @@ const Game: React.FC = () => {
   const [currentHowToPlayPage, setCurrentHowToPlayPage] = useState<number>(0);
   const [isSoundEnabled, setIsSoundEnabled] = useState<boolean>(true);
   
-  // New state for pre-game flow
   const [preGameState, setPreGameState] = useState<PreGameState>(PreGameState.MODE_SELECTION);
   const [selectedMode, setSelectedMode] = useState<GameMode>('online');
   const [username, setUsername] = useState<string>('');
@@ -61,14 +59,12 @@ const Game: React.FC = () => {
   
   const isMobile = useIsMobile();
 
-  // Load saved username and mode if available
   useEffect(() => {
     const savedUsername = localStorage.getItem('username');
     const savedMode = localStorage.getItem('gameMode') as GameMode | null;
     
     if (savedUsername) {
       setUsername(savedUsername);
-      // Skip to start screen if username already exists
       setPreGameState(PreGameState.START_SCREEN);
     }
     
@@ -104,7 +100,6 @@ const Game: React.FC = () => {
         buttonSoundRef.current = buttonSound;
         
         await Promise.all([
-          // Load car sound
           new Promise<void>((resolve) => {
             carSound.addEventListener('canplaythrough', () => {
               console.log("Car sound loaded successfully");
@@ -119,7 +114,6 @@ const Game: React.FC = () => {
             carSound.load();
           }),
           
-          // Load crash sound
           new Promise<void>((resolve) => {
             crashSound.addEventListener('canplaythrough', () => {
               console.log("Crash sound loaded successfully");
@@ -134,7 +128,6 @@ const Game: React.FC = () => {
             crashSound.load();
           }),
           
-          // Load seed sound
           new Promise<void>((resolve) => {
             seedSound.addEventListener('canplaythrough', () => {
               console.log("Seed collection sound loaded successfully");
@@ -149,7 +142,6 @@ const Game: React.FC = () => {
             seedSound.load();
           }),
           
-          // Load slow timer sound
           new Promise<void>((resolve) => {
             slowTimerSound.addEventListener('canplaythrough', () => {
               console.log("Slow timer sound loaded successfully");
@@ -164,7 +156,6 @@ const Game: React.FC = () => {
             slowTimerSound.load();
           }),
           
-          // Load button sound
           new Promise<void>((resolve) => {
             buttonSound.addEventListener('canplaythrough', () => {
               console.log("Button sound loaded successfully");
@@ -365,7 +356,6 @@ const Game: React.FC = () => {
     }
   };
 
-
   const playPickupSound = () => {
     if (!isSoundEnabled || !seedSoundRef.current) return;
     
@@ -443,7 +433,6 @@ const Game: React.FC = () => {
   };
   
   const toggleSound = () => {
-    // Don't play the button sound here to avoid confusion when turning sound off
     setIsSoundEnabled(prev => {
       const newState = !prev;
       
@@ -451,7 +440,6 @@ const Game: React.FC = () => {
         if (gameState === GameState.GAMEPLAY) {
           startEngineSound();
         }
-        // Play button sound after enabling sound
         if (buttonSoundRef.current) {
           setTimeout(() => {
             buttonSoundRef.current?.play().catch(err => {
@@ -543,7 +531,7 @@ const Game: React.FC = () => {
             case PowerUpType.SLOW_SPEED:
               setActiveSlowMode(true);
               setSlowModeTimer(duration);
-              playSlowTimerSound(); // Added sound
+              playSlowTimerSound();
               toast.success('SLOW MODE ACTIVATED', {
                 description: 'Traffic speed reduced',
                 icon: <Clock className="h-5 w-5 text-blue-500" />,
@@ -552,14 +540,14 @@ const Game: React.FC = () => {
             case PowerUpType.SHIELD:
               setActiveShield(true);
               setShieldTimer(duration);
-              playPickupSound(); // Added sound
+              playPickupSound();
               toast.success('SHIELD ACTIVATED', {
                 description: 'Invulnerable for 3s',
                 icon: <Shield className="h-5 w-5 text-cyan-500" />,
               });
               break;
             case PowerUpType.EXTRA_LIFE:
-              playPickupSound(); // Added sound
+              playPickupSound();
               toast.success('EXTRA LIFE', {
                 icon: <Heart className="h-5 w-5 text-red-500" />,
               });
@@ -584,7 +572,7 @@ const Game: React.FC = () => {
           playCollisionSound();
         },
         onSeedCollect: () => {
-          playPickupSound(); // New callback for seed collection sound
+          playPickupSound();
         },
         customAssets: {
           playerCarURL,
@@ -632,13 +620,16 @@ const Game: React.FC = () => {
     }
   }, [shieldTimer]);
   
-  // Mode selection handlers
+  const handleBackToModeSelection = () => {
+    playButtonSound();
+    setPreGameState(PreGameState.MODE_SELECTION);
+  };
+  
   const handleModeSelect = (mode: GameMode) => {
     playButtonSound();
     setSelectedMode(mode);
     localStorage.setItem('gameMode', mode);
     
-    // If username exists already, go straight to start screen
     if (username) {
       setPreGameState(PreGameState.START_SCREEN);
       toast.success(`Welcome, ${username}!`, {
@@ -649,7 +640,6 @@ const Game: React.FC = () => {
     }
   };
   
-  // Username confirmation handler
   const handleUsernameConfirm = (newUsername: string) => {
     playButtonSound();
     setUsername(newUsername);
@@ -661,13 +651,6 @@ const Game: React.FC = () => {
     });
   };
   
-  // Back button handlers
-  const handleBackToModeSelection = () => {
-    playButtonSound();
-    setPreGameState(PreGameState.MODE_SELECTION);
-  };
-  
-  // Change username and mode handler
   const handleChangeUsername = () => {
     playButtonSound();
     setPreGameState(PreGameState.USERNAME_INPUT);
@@ -705,7 +688,7 @@ const Game: React.FC = () => {
   
   const handlePrevPage = () => {
     playButtonSound();
-    setCurrentHowToPlayPage(prev => Math.max(prev - 1, 0));
+    setCurrentHowToPage(prev => Math.max(prev - 1, 0));
   };
   
   const handleTryAgain = () => {
@@ -888,11 +871,11 @@ const Game: React.FC = () => {
       <div className="game-canvas-container relative w-full max-w-[600px]">
         <canvas ref={canvasRef} className="w-full h-full"></canvas>
         
-        {/* Pre-game screens */}
         {preGameState === PreGameState.MODE_SELECTION && (
           <ModeSelection 
             onModeSelect={handleModeSelect} 
             currentUsername={username}
+            onChangeUsername={handleChangeUsername}
           />
         )}
         
@@ -904,7 +887,6 @@ const Game: React.FC = () => {
           />
         )}
         
-        {/* Game UI elements */}
         {gameState === GameState.GAMEPLAY && (
           <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10">
             <div className="flex items-center space-x-2 glassmorphism px-3 py-1 rounded-full">
@@ -955,7 +937,6 @@ const Game: React.FC = () => {
           </div>
         )}
         
-        {/* Main game menu */}
         {preGameState === PreGameState.START_SCREEN && gameState === GameState.START_SCREEN && !showHowToPlay && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
             <div className="glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
@@ -1041,7 +1022,6 @@ const Game: React.FC = () => {
           </div>
         )}
         
-        {/* How to play screen */}
         {gameState === GameState.START_SCREEN && showHowToPlay && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
             <div className="glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
@@ -1101,7 +1081,6 @@ const Game: React.FC = () => {
           </div>
         )}
         
-        {/* Pause screen */}
         {gameState === GameState.PAUSED && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
             <div className="pause-menu glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
@@ -1145,7 +1124,6 @@ const Game: React.FC = () => {
           </div>
         )}
         
-        {/* Game over screen */}
         {gameState === GameState.GAME_OVER && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
             <div className="game-over-modal glassmorphism rounded-3xl p-8 max-w-md mx-auto text-center border border-[#91d3d1]/20">
@@ -1192,7 +1170,6 @@ const Game: React.FC = () => {
           </div>
         )}
         
-        {/* Mobile controls */}
         {isMobile && gameState === GameState.GAMEPLAY && (
           <div className="absolute bottom-10 left-0 right-0 flex justify-between px-8">
             <button
@@ -1217,7 +1194,6 @@ const Game: React.FC = () => {
           </div>
         )}
         
-        {/* Loading screen */}
         {(!carAssetsLoaded || !gameInitialized) && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-background">
             <Loader2 className="h-8 w-8 animate-spin text-[#91d3d1] mb-4" />
