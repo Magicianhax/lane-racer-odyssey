@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { toast } from 'sonner';
@@ -14,6 +13,10 @@ const GAME_SCORE_ABI = [
 
 const CONTRACT_ADDRESS = "0xAF3DF64A108A244a79800ca3263100Eec1a08BAf";
 const SUPERSEED_RPC_URL = "https://sepolia.superseed.xyz/";
+
+// Fixed gas settings
+const FIXED_GAS_PRICE = ethers.utils.parseUnits("0.1", "gwei");
+const FIXED_GAS_LIMIT = 200000; // Setting a higher gas limit to ensure transaction goes through
 
 type Web3ContextType = {
   wallet: {
@@ -182,8 +185,11 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
       
-      // Create transaction and set hash immediately
-      const tx = await contract.submitScore(score);
+      // Create transaction with fixed gas price and limit
+      const tx = await contract.submitScore(score, {
+        gasPrice: FIXED_GAS_PRICE,
+        gasLimit: FIXED_GAS_LIMIT
+      });
       setLastTxHash(tx.hash);
       
       // Wait for transaction to be mined
