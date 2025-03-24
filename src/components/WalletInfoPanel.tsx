@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useWeb3 } from '@/contexts/Web3Context';
-import { Wallet, ExternalLink, Copy, AlertTriangle, Key } from 'lucide-react';
+import { Wallet, ExternalLink, Copy, AlertTriangle, Key, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 export const WalletInfoPanel: React.FC = () => {

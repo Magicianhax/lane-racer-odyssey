@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useWeb3 } from '@/contexts/Web3Context';
-import { Rocket, Loader2 } from 'lucide-react';
+import { Rocket, Loader2, X } from 'lucide-react';
 
 interface UsernameModalProps {
   onComplete: () => void;
@@ -23,16 +23,25 @@ export const UsernameModal: React.FC<UsernameModalProps> = ({ onComplete }) => {
 
   return (
     <div className="glassmorphism p-6 rounded-xl">
-      <div className="text-center mb-4">
-        <div className="inline-flex rounded-full bg-[#91d3d1]/20 p-3 mb-3">
+      <div className="flex justify-between items-center mb-3">
+        <div className="inline-flex rounded-full bg-[#91d3d1]/20 p-3">
           <Rocket className="h-6 w-6 text-[#91d3d1]" />
         </div>
-        <h3 className="text-xl font-bold mb-1">Enter Onchain Mode</h3>
-        <p className="text-sm text-gray-300">
-          Your scores will be saved to the blockchain.
-          <br />A secure wallet will be created for you.
-        </p>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={onComplete}
+          className="h-8 w-8 rounded-full"
+        >
+          <X className="h-4 w-4" />
+        </Button>
       </div>
+      
+      <h3 className="text-xl font-bold mb-1">Enter Onchain Mode</h3>
+      <p className="text-sm text-gray-300 mb-4">
+        Your scores will be saved to the blockchain.
+        <br />A secure wallet will be created for you.
+      </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
