@@ -6,11 +6,13 @@ import { WalletInfoPanel } from '@/components/WalletInfoPanel';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const WalletPage: React.FC = () => {
   const { isConnected } = useWeb3();
   const [showUserModal, setShowUserModal] = useState(!isConnected);
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   const handleSetupComplete = () => {
     setShowUserModal(false);
@@ -20,29 +22,56 @@ const WalletPage: React.FC = () => {
     navigate('/');
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-900 to-zinc-950 text-white">
-      <div className="absolute inset-0 bg-[#91d3d1]/5 mix-blend-overlay pointer-events-none"></div>
-      <div className="container mx-auto px-4 py-8">
-        <Button 
-          variant="ghost" 
-          className="mb-6 text-gray-300 hover:text-white" 
-          onClick={handleBackToHome}
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Home
-        </Button>
+  const renderContent = () => (
+    <div className="container mx-auto px-4 py-8">
+      <Button 
+        variant="ghost" 
+        className="mb-6 text-gray-300 hover:text-white" 
+        onClick={handleBackToHome}
+      >
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        Back to Home
+      </Button>
+      
+      <div className="max-w-md mx-auto">
+        <h1 className="text-2xl font-bold mb-6 text-center text-gradient">Wallet</h1>
         
-        <div className="max-w-md mx-auto">
-          <h1 className="text-2xl font-bold mb-6 text-center">Wallet</h1>
-          
-          {showUserModal ? (
-            <UsernameModal onComplete={handleSetupComplete} />
-          ) : (
-            <WalletInfoPanel />
-          )}
+        {showUserModal ? (
+          <UsernameModal onComplete={handleSetupComplete} />
+        ) : (
+          <WalletInfoPanel />
+        )}
+        
+        <div className="mt-4 text-xs text-center text-zinc-400">
+          <p className="mb-1">Note: This wallet is for game use only.</p>
+          <p>You'll need testnet ETH to submit scores to the blockchain.</p>
         </div>
       </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-zinc-900 to-zinc-950 text-white overflow-hidden">
+      <div className="absolute inset-0 bg-[#91d3d1]/5 mix-blend-overlay pointer-events-none"></div>
+      
+      {isMobile ? (
+        renderContent()
+      ) : (
+        <div className="container mx-auto px-4 py-8 flex flex-col items-center justify-center h-screen">
+          <div className="mobile-frame-container">
+            <div className="mobile-frame">
+              <div className="notch"></div>
+              <div className="side-button left-button"></div>
+              <div className="side-button right-button-top"></div>
+              <div className="side-button right-button-bottom"></div>
+              <div className="mobile-screen">
+                {renderContent()}
+              </div>
+              <div className="home-indicator"></div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

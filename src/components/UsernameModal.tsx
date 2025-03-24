@@ -45,7 +45,7 @@ export const UsernameModal: React.FC<UsernameModalProps> = ({ onComplete }) => {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="username" className="block text-sm font-medium mb-1">
+          <label htmlFor="username" className="block text-sm font-medium mb-1 text-white">
             Username
           </label>
           <Input
@@ -53,7 +53,7 @@ export const UsernameModal: React.FC<UsernameModalProps> = ({ onComplete }) => {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             placeholder="Enter your username"
-            className="w-full"
+            className="w-full bg-black/30 border-zinc-700 text-white"
             required
             disabled={isLoading}
           />
@@ -82,6 +82,7 @@ export const UsernameModal: React.FC<UsernameModalProps> = ({ onComplete }) => {
 
         <div className="text-xs text-center text-gray-400 mt-3">
           By continuing, you'll have a blockchain wallet created for your game profile.
+          <br />This wallet is for game use only and will need testnet ETH to submit scores.
           <br />You can export your private key later if needed.
         </div>
       </form>

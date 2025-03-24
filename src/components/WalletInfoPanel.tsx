@@ -42,14 +42,14 @@ export const WalletInfoPanel: React.FC = () => {
             <Wallet className="h-4 w-4 text-[#91d3d1]" />
           </div>
           <div>
-            <div className="font-medium">Player: {username}</div>
+            <div className="font-medium text-white">Player: {username}</div>
             <div className="text-xs text-gray-400">Onchain Mode Active</div>
           </div>
         </div>
       </div>
       
       <div className="flex items-center mb-3 bg-black/20 p-2 rounded-lg">
-        <div className="flex-1 truncate text-sm">
+        <div className="flex-1 truncate text-sm text-white">
           {wallet.address && shortenAddress(wallet.address)}
         </div>
         <Button 
@@ -64,11 +64,11 @@ export const WalletInfoPanel: React.FC = () => {
       
       <div className="bg-black/20 p-3 rounded-lg mb-3">
         <div className="text-xs text-gray-400 mb-1">Balance</div>
-        <div className="font-mono">{wallet.balance || '0'} ETH</div>
+        <div className="font-mono text-white">{wallet.balance || '0'} ETH</div>
         {Number(wallet.balance || 0) === 0 && (
           <div className="text-xs text-yellow-400 flex items-center mt-2">
             <AlertTriangle className="h-3 w-3 mr-1" />
-            This wallet needs ETH to submit scores
+            This wallet needs testnet ETH to submit scores
           </div>
         )}
       </div>
@@ -87,7 +87,7 @@ export const WalletInfoPanel: React.FC = () => {
                 <Copy className="h-3 w-3" />
               </Button>
             </div>
-            <div className="font-mono text-xs break-all overflow-hidden">
+            <div className="font-mono text-xs break-all overflow-hidden text-white">
               {privateKeyVisible 
                 ? exportPrivateKey() 
                 : (exportPrivateKey() ? shortenPrivateKey(exportPrivateKey()!) : '')}
