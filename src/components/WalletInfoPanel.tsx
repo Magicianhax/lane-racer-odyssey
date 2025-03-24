@@ -132,7 +132,7 @@ export const WalletInfoPanel: React.FC = () => {
                 variant="ghost" 
                 size="icon" 
                 className="h-6 w-6"
-                onClick={() => window.open(`https://sepolia.etherscan.io/tx/${lastTxHash}`, '_blank')}
+                onClick={() => window.open(`https://sepolia-explorer.superseed.xyz/tx/${lastTxHash}`, '_blank')}
               >
                 <ExternalLink className="h-3 w-3 text-[#91d3d1]" />
               </Button>
@@ -197,10 +197,10 @@ export const WalletInfoPanel: React.FC = () => {
             variant="ghost" 
             size="sm" 
             className="text-xs text-[#91d3d1] hover:text-white"
-            onClick={() => window.open(`https://sepolia.etherscan.io/address/${wallet.address}`, '_blank')}
+            onClick={() => window.open(`https://sepolia-explorer.superseed.xyz/address/${wallet.address}`, '_blank')}
           >
             <ExternalLink className="h-3 w-3 mr-1" />
-            View on Etherscan
+            View on SuperSeed Explorer
           </Button>
         </div>
       )}

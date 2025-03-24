@@ -12,8 +12,8 @@ const GAME_SCORE_ABI = [
   "event NewHighScore(address indexed player, uint256 score, uint256 timestamp)"
 ];
 
-const CONTRACT_ADDRESS = "0x651E3CA9d1B63773C38795dc10ef11a71574c95f";
-const SEPOLIA_RPC_URL = "https://sepolia.infura.io/v3/2f846fbed89740ccad6d4641db129b02";
+const CONTRACT_ADDRESS = "0xAF3DF64A108A244a79800ca3263100Eec1a08BAf";
+const SUPERSEED_RPC_URL = "https://sepolia.superseed.xyz/";
 
 type Web3ContextType = {
   wallet: {
@@ -83,7 +83,7 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setIsLoading(true);
       
-      const fallbackProvider = new ethers.providers.JsonRpcProvider(SEPOLIA_RPC_URL);
+      const fallbackProvider = new ethers.providers.JsonRpcProvider(SUPERSEED_RPC_URL);
       const wallet = new ethers.Wallet(privateKey, fallbackProvider);
       
       const gameContract = new ethers.Contract(CONTRACT_ADDRESS, GAME_SCORE_ABI, wallet);
@@ -196,7 +196,7 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
           <div className="flex flex-col gap-1">
             <span>Your score of {score} is now on the blockchain.</span>
             <a 
-              href={`https://sepolia.etherscan.io/tx/${receipt.transactionHash}`} 
+              href={`https://sepolia-explorer.superseed.xyz/tx/${receipt.transactionHash}`} 
               target="_blank" 
               rel="noopener noreferrer"
               className="text-xs underline flex items-center mt-1"
