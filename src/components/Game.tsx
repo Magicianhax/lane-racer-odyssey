@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine, GameState, PowerUpType, GameMode } from '../game/GameEngine';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2, Pause, Play, RefreshCw, HelpCircle, ArrowLeft, Volume2, VolumeX, Globe, Blocks, User, Settings, Home, Rocket } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2, Pause, Play, RefreshCw, HelpCircle, ArrowLeft, Volume2, VolumeX, Blocks, User, Settings, Home, Rocket } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { ModeSelectionScreen, UsernameCreationScreen } from './ModeSelectionComponents';
@@ -65,7 +65,7 @@ const Game: React.FC = () => {
     }
     
     const savedGameMode = localStorage.getItem('gameMode') as GameMode;
-    if (savedGameMode && (savedGameMode === GameMode.ONLINE || savedGameMode === GameMode.ONCHAIN)) {
+    if (savedGameMode && savedGameMode === GameMode.ONCHAIN) {
       setSelectedGameMode(savedGameMode);
     }
   }, []);
@@ -278,7 +278,6 @@ const Game: React.FC = () => {
     };
   }, []);
   
-  // Existing sound handling functions...
   const startEngineSound = () => {
     if (!isSoundEnabled || !carSoundRef.current) return;
     
@@ -620,7 +619,6 @@ const Game: React.FC = () => {
     };
   }, [carAssetsLoaded, playerCarURL, enemyCarURLs, seedImageURL, loadingError]);
   
-  // Existing timer effects...
   useEffect(() => {
     if (slowModeTimer > 0) {
       const interval = setInterval(() => {
@@ -788,7 +786,6 @@ const Game: React.FC = () => {
   
   // Content for how to play screens
   const howToPlayContent = [
-    // Existing content...
     {
       title: "Basic Controls",
       content: (
@@ -1004,12 +1001,8 @@ const Game: React.FC = () => {
               {/* Display username and game mode if available */}
               {username && (
                 <div className="chip text-xs bg-[#91d3d1]/20 text-[#91d3d1] px-3 py-1 rounded-full mb-2 inline-flex items-center">
-                  {selectedGameMode === GameMode.ONLINE ? (
-                    <Globe className="w-3 h-3 mr-1" />
-                  ) : (
-                    <Blocks className="w-3 h-3 mr-1" />
-                  )}
-                  {selectedGameMode === GameMode.ONLINE ? 'ONLINE' : 'ONCHAIN'} • 
+                  <Blocks className="w-3 h-3 mr-1" />
+                  ONCHAIN • 
                   <User className="w-3 h-3 mx-1" /> {username}
                 </div>
               )}
