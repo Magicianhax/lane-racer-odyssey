@@ -5,7 +5,7 @@ import { UsernameModal } from '@/components/UsernameModal';
 import { WalletInfoPanel } from '@/components/WalletInfoPanel';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Play } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 const WalletPage: React.FC = () => {
@@ -24,27 +24,45 @@ const WalletPage: React.FC = () => {
   };
 
   const handleBackToHome = () => {
-    navigate('/');
+    navigate('/game');
+  };
+
+  const handlePlayGame = () => {
+    navigate('/game');
   };
 
   const renderContent = () => (
     <div className="container mx-auto px-4 py-8">
-      <Button 
-        variant="ghost" 
-        className="mb-6 text-white hover:text-white hover:bg-zinc-800/50" 
-        onClick={handleBackToHome}
-      >
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        Back to Home
-      </Button>
+      {isConnected && (
+        <Button 
+          variant="ghost" 
+          className="mb-6 text-white hover:text-white hover:bg-zinc-800/50" 
+          onClick={handleBackToHome}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back
+        </Button>
+      )}
       
       <div className="max-w-md mx-auto">
-        <h1 className="text-2xl font-bold mb-6 text-center text-gradient">Wallet</h1>
+        <h1 className="text-2xl font-bold mb-6 text-center text-gradient">Wallet Setup</h1>
         
         {showUserModal ? (
           <UsernameModal onComplete={handleSetupComplete} />
         ) : (
-          <WalletInfoPanel />
+          <>
+            <WalletInfoPanel />
+            
+            {isConnected && (
+              <Button 
+                onClick={handlePlayGame}
+                className="w-full mt-4 bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 rounded-xl py-3 font-medium"
+              >
+                <Play className="mr-2 h-4 w-4" />
+                Play Game
+              </Button>
+            )}
+          </>
         )}
       </div>
     </div>
