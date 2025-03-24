@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2, Pause, Play, RefreshCw, HelpCircle, ArrowLeft, Volume2, VolumeX, Blocks, User, Settings, Home, Rocket } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
-import { ModeSelectionScreen, UsernameCreationScreen } from './ModeSelectionComponents';
+import { ModeSelectionScreen } from './ModeSelectionComponents';
 import { useWeb3 } from '@/contexts/Web3Context';
 import { OnchainMode } from '@/components/OnchainMode';
 
@@ -659,44 +659,20 @@ const Game: React.FC = () => {
     // Save game mode to localStorage
     localStorage.setItem('gameMode', mode);
     
-    // If user already has a username, ask if they want to update it
+    // Check if user has wallet setup
     const savedUsername = localStorage.getItem('username');
     if (savedUsername) {
       setUsername(savedUsername);
+      // Skip username creation and go straight to start screen
       if (gameEngineRef.current) {
-        gameEngineRef.current.setGameState(GameState.USERNAME_CREATION);
+        gameEngineRef.current.setGameState(GameState.START_SCREEN);
       }
     } else {
-      // Otherwise go to username creation
-      if (gameEngineRef.current) {
-        gameEngineRef.current.setGameState(GameState.USERNAME_CREATION);
-      }
+      // If no username, redirect to wallet page for setup
+      window.location.href = '/wallet';
     }
   };
   
-  // Handler for username submission
-  const handleUsernameSubmit = (newUsername: string) => {
-    playButtonSound();
-    setUsername(newUsername);
-    
-    // Save username to localStorage
-    localStorage.setItem('username', newUsername);
-    
-    // Move to start screen
-    if (gameEngineRef.current) {
-      gameEngineRef.current.setGameState(GameState.START_SCREEN);
-    }
-  };
-  
-  // Handler for username back button
-  const handleUsernameBack = () => {
-    playButtonSound();
-    // Go back to mode selection
-    if (gameEngineRef.current) {
-      gameEngineRef.current.setGameState(GameState.MODE_SELECTION);
-    }
-  };
-
   const handleShowHowToPlay = () => {
     playButtonSound();
     setShowHowToPlay(true);
@@ -980,16 +956,6 @@ const Game: React.FC = () => {
             currentMode={selectedGameMode}
             currentUsername={username}
             onContinue={handleContinueWithCurrentSettings}
-          />
-        )}
-        
-        {/* Username Creation Screen */}
-        {gameState === GameState.USERNAME_CREATION && (
-          <UsernameCreationScreen 
-            onSubmit={handleUsernameSubmit}
-            onBack={handleUsernameBack}
-            mode={selectedGameMode}
-            currentUsername={username}
           />
         )}
         
