@@ -2,10 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine, GameState, PowerUpType, GameMode } from '../game/GameEngine';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2, Pause, Play, RefreshCw, HelpCircle, ArrowLeft, Volume2, VolumeX, Globe, Blocks, User, Settings, Home } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2, Pause, Play, RefreshCw, HelpCircle, ArrowLeft, Volume2, VolumeX, Globe, Blocks, User, Settings, Home, Rocket } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { ModeSelectionScreen, UsernameCreationScreen } from './ModeSelectionComponents';
+import { useWeb3 } from '@/contexts/Web3Context';
+import { OnchainMode } from '@/components/OnchainMode';
 
 const DEFAULT_PLAYER_CAR = '/playercar.png';
 const DEFAULT_ENEMY_CARS = ['/enemycar1.png', '/enemycar2.png', '/enemycar3.png'];
@@ -42,6 +44,9 @@ const Game: React.FC = () => {
   // Add new state for game mode and username
   const [selectedGameMode, setSelectedGameMode] = useState<GameMode>(GameMode.NONE);
   const [username, setUsername] = useState<string>('');
+  
+  // Add Web3 context hooks
+  const { isConnected, submitScore, username: web3Username } = useWeb3();
   
   const carSoundRef = useRef<HTMLAudioElement | null>(null);
   const crashSoundRef = useRef<HTMLAudioElement | null>(null);
@@ -1030,6 +1035,20 @@ const Game: React.FC = () => {
                   How to Play
                 </Button>
                 
+                {/* Add Onchain Mode section */}
+                <div className="w-full border-t border-[#91d3d1]/10 mt-2 pt-4">
+                  <div className="mb-3">
+                    <div className="flex items-center justify-center gap-2 text-[#91d3d1]">
+                      <Rocket className="h-4 w-4" />
+                      <span className="font-medium">Onchain Mode {isConnected ? '(Active)' : ''}</span>
+                    </div>
+                    {isConnected && web3Username && (
+                      <div className="text-xs text-gray-400 mt-1">Playing as {web3Username}</div>
+                    )}
+                  </div>
+                  <OnchainMode />
+                </div>
+                
                 <div className="flex items-center space-x-4 mt-2">
                   {highScore > 0 && (
                     <div className="flex items-center space-x-2 text-[#91d3d1]">
@@ -1192,6 +1211,29 @@ const Game: React.FC = () => {
                   </div>
                 )}
               </div>
+              
+              {/* Add blockchain submission option if connected */}
+              {isConnected && (
+                <div className="mb-4">
+                  <Button 
+                    onClick={() => {
+                      submitScore(score)
+                        .then(() => toast.success("Score submitted to blockchain!"))
+                        .catch(err => {
+                          console.error(err);
+                          toast.error("Failed to submit score");
+                        });
+                    }}
+                    className="w-full bg-gradient-to-r from-[#6366f1] to-[#4f46e5] hover:from-[#4f46e5] hover:to-[#4338ca] text-white py-3 rounded-xl flex items-center justify-center mb-3"
+                  >
+                    <Rocket className="mr-2 h-4 w-4" />
+                    Submit Score to Blockchain
+                  </Button>
+                  <div className="text-xs text-gray-400">
+                    Playing as {web3Username} in Onchain Mode
+                  </div>
+                </div>
+              )}
               
               <div className="space-y-3">
                 <Button 
