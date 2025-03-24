@@ -3,7 +3,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, Blocks, AlertCircle, Check, User, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { GameMode } from '@/game/GameEngine';
+
+// Game Mode Selection Interface
+export enum GameMode {
+  ONCHAIN = 'onchain',
+  NONE = 'none'
+}
 
 // Username validation options
 export interface UsernameValidationResult {

@@ -177,7 +177,7 @@ export const WalletInfoPanel: React.FC = () => {
             variant="ghost"
             size="sm"
             onClick={() => setShowPrivateKey(false)}
-            className="w-full text-white bg-zinc-800/50 hover:bg-zinc-700/50 border-0"
+            className="w-full text-white border-none bg-zinc-800/50 hover:bg-zinc-700/50"
           >
             Hide Private Key
           </Button>
@@ -188,7 +188,7 @@ export const WalletInfoPanel: React.FC = () => {
             variant="ghost"
             size="sm"
             onClick={() => setShowPrivateKey(true)}
-            className="flex items-center justify-center text-white bg-zinc-800/50 hover:bg-zinc-700/50 border-0"
+            className="flex items-center justify-center text-white border-none bg-zinc-800/50 hover:bg-zinc-700/50"
           >
             <Key className="h-3 w-3 mr-1" />
             Export Private Key
@@ -196,7 +196,7 @@ export const WalletInfoPanel: React.FC = () => {
           <Button 
             variant="ghost" 
             size="sm" 
-            className="text-xs text-[#91d3d1] hover:text-white border-0"
+            className="text-xs text-[#91d3d1] hover:text-white"
             onClick={() => window.open(`https://sepolia.etherscan.io/address/${wallet.address}`, '_blank')}
           >
             <ExternalLink className="h-3 w-3 mr-1" />
