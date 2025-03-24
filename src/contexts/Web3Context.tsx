@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { toast } from 'sonner';
@@ -57,11 +58,18 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const checkExistingWallet = async () => {
       try {
+        // Check for stored wallet data
         const savedUserData = localStorage.getItem('gameUserData');
         if (savedUserData) {
           const userData = JSON.parse(savedUserData);
           setUsername(userData.username);
           await initializeWallet(userData.privateKey);
+        } else {
+          // Check if we have a stored username from a previous session
+          const savedUsername = localStorage.getItem('username');
+          if (savedUsername) {
+            setUsername(savedUsername);
+          }
         }
       } catch (error) {
         console.error("Error checking existing wallet:", error);
@@ -120,10 +128,14 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
       const randomWallet = ethers.Wallet.createRandom();
       const privateKey = randomWallet.privateKey;
       
+      // Store the data in localStorage
       localStorage.setItem('gameUserData', JSON.stringify({ 
         username: name,
         privateKey 
       }));
+      
+      // Make sure we also set the username in the regular localStorage
+      localStorage.setItem('username', name);
       
       setUsername(name);
       

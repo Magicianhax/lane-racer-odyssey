@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useWeb3 } from '@/contexts/Web3Context';
 import { Rocket, Loader2, X } from 'lucide-react';
+import { validateUsername } from '@/components/ModeSelectionComponents';
 
 interface UsernameModalProps {
   onComplete: () => void;
@@ -12,10 +13,29 @@ interface UsernameModalProps {
 export const UsernameModal: React.FC<UsernameModalProps> = ({ onComplete }) => {
   const [username, setUsername] = useState('');
   const { createUserWallet, isLoading, error } = useWeb3();
+  const [validationError, setValidationError] = useState<string | null>(null);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setUsername(value);
+    
+    // Only validate if there's input
+    if (value.trim()) {
+      const validation = validateUsername(value);
+      setValidationError(validation.isValid ? null : validation.error);
+    } else {
+      setValidationError(null);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (username.trim()) {
+    
+    // Only proceed if username is valid
+    if (username.trim() && !validationError) {
+      // Save username to localStorage first to avoid duplicate prompts
+      localStorage.setItem('username', username);
+      
       await createUserWallet(username);
       onComplete();
     }
@@ -39,8 +59,8 @@ export const UsernameModal: React.FC<UsernameModalProps> = ({ onComplete }) => {
       
       <h3 className="text-xl font-bold mb-1">Enter Onchain Mode</h3>
       <p className="text-sm text-gray-300 mb-4">
-        Your scores will be saved to the blockchain.
-        <br />A secure wallet will be created for you.
+        Choose a username and get your blockchain wallet.
+        <br />Your scores will be saved to the blockchain.
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -51,12 +71,17 @@ export const UsernameModal: React.FC<UsernameModalProps> = ({ onComplete }) => {
           <Input
             id="username"
             value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Enter your username"
+            onChange={handleInputChange}
+            placeholder="Enter your username (3-16 characters)"
             className="w-full bg-black/30 border-zinc-700 text-white"
             required
             disabled={isLoading}
           />
+          {validationError && (
+            <p className="text-xs text-red-400 mt-1 ml-1">
+              {validationError}
+            </p>
+          )}
         </div>
 
         {error && (
@@ -68,7 +93,7 @@ export const UsernameModal: React.FC<UsernameModalProps> = ({ onComplete }) => {
         <Button 
           type="submit" 
           className="w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900"
-          disabled={isLoading || !username.trim()}
+          disabled={isLoading || !username.trim() || !!validationError}
         >
           {isLoading ? (
             <>
