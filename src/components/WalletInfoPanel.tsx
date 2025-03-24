@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useWeb3 } from '@/contexts/Web3Context';
@@ -85,7 +84,6 @@ export const WalletInfoPanel: React.FC = () => {
         )}
       </div>
       
-      {/* Score submission status */}
       {isSubmittingScore && (
         <div className="bg-[#91d3d1]/10 p-3 rounded-lg mb-3 border border-[#91d3d1]/20">
           <div className="flex items-center text-sm text-white mb-2">
@@ -142,7 +140,6 @@ export const WalletInfoPanel: React.FC = () => {
         </div>
       )}
       
-      {/* Private key section - Updated for better visibility */}
       {showPrivateKey ? (
         <div className="space-y-2">
           <div className="bg-red-500/20 p-3 rounded-lg border border-red-500/30">
@@ -176,10 +173,10 @@ export const WalletInfoPanel: React.FC = () => {
             <p>Keep a copy of this key to access your wallet.</p>
           </div>
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={() => setShowPrivateKey(false)}
-            className="w-full text-white border-zinc-700"
+            className="w-full text-white border-none bg-zinc-800/50 hover:bg-zinc-700/50"
           >
             Hide Private Key
           </Button>
@@ -187,10 +184,10 @@ export const WalletInfoPanel: React.FC = () => {
       ) : (
         <div className="flex flex-col space-y-2">
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={() => setShowPrivateKey(true)}
-            className="flex items-center justify-center text-white border-zinc-700 hover:bg-zinc-800"
+            className="flex items-center justify-center text-white border-none bg-zinc-800/50 hover:bg-zinc-700/50"
           >
             <Key className="h-3 w-3 mr-1" />
             Export Private Key
