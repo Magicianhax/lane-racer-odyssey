@@ -1,49 +1,39 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useWeb3 } from '@/contexts/Web3Context';
-import { UsernameModal } from './UsernameModal';
-import { WalletInfoPanel } from './WalletInfoPanel';
 import { Button } from '@/components/ui/button';
-import { Rocket } from 'lucide-react';
+import { Wallet } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export const OnchainMode: React.FC = () => {
-  const { isConnected, username } = useWeb3();
-  const [showUserModal, setShowUserModal] = useState(false);
+  const { isConnected } = useWeb3();
+  const navigate = useNavigate();
 
-  const handleSetupComplete = () => {
-    setShowUserModal(false);
+  const handleOpenWallet = () => {
+    navigate('/wallet');
   };
 
-  const handleOpenModal = () => {
-    setShowUserModal(true);
-  };
-
-  // If the modal is open, show it
-  if (showUserModal) {
-    return <UsernameModal onComplete={handleSetupComplete} />;
-  }
-
-  // If already connected, show wallet info panel when clicked
+  // If already connected, show active wallet button
   if (isConnected) {
     return (
       <Button 
-        onClick={handleOpenModal}
+        onClick={handleOpenWallet}
         className="w-full bg-gradient-to-r from-[#3b82f6] to-[#2563eb] hover:from-[#2563eb] hover:to-[#1d4ed8] text-white rounded-xl py-6 text-lg font-medium shadow-lg shadow-blue-500/20 mb-4"
       >
-        <Rocket className="mr-2 h-5 w-5" />
-        Onchain Mode (Active)
+        <Wallet className="mr-2 h-5 w-5" />
+        Wallet (Active)
       </Button>
     );
   }
 
-  // If not connected, show a button to enter onchain mode
+  // If not connected, show a button to open wallet page
   return (
     <Button 
-      onClick={handleOpenModal}
+      onClick={handleOpenWallet}
       className="w-full bg-zinc-700/80 hover:bg-zinc-600/80 text-white rounded-xl py-6 text-lg font-medium shadow-lg mb-4"
     >
-      <Rocket className="mr-2 h-5 w-5" />
-      Enter Onchain Mode
+      <Wallet className="mr-2 h-5 w-5" />
+      Wallet
     </Button>
   );
 };
