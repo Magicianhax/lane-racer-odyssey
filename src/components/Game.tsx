@@ -41,11 +41,9 @@ const Game: React.FC = () => {
   const [currentHowToPlayPage, setCurrentHowToPlayPage] = useState<number>(0);
   const [isSoundEnabled, setIsSoundEnabled] = useState<boolean>(true);
   
-  // Add new state for game mode and username
   const [selectedGameMode, setSelectedGameMode] = useState<GameMode>(GameMode.NONE);
   const [username, setUsername] = useState<string>('');
   
-  // Add Web3 context hooks
   const { isConnected, submitScore, username: web3Username } = useWeb3();
   
   const carSoundRef = useRef<HTMLAudioElement | null>(null);
@@ -57,7 +55,6 @@ const Game: React.FC = () => {
   
   const isMobile = useIsMobile();
   
-  // Load username and game mode from localStorage if available
   useEffect(() => {
     const savedUsername = localStorage.getItem('username');
     if (savedUsername) {
@@ -97,7 +94,6 @@ const Game: React.FC = () => {
         buttonSoundRef.current = buttonSound;
         
         await Promise.all([
-          // Load car sound
           new Promise<void>((resolve) => {
             carSound.addEventListener('canplaythrough', () => {
               console.log("Car sound loaded successfully");
@@ -112,7 +108,6 @@ const Game: React.FC = () => {
             carSound.load();
           }),
           
-          // Load crash sound
           new Promise<void>((resolve) => {
             crashSound.addEventListener('canplaythrough', () => {
               console.log("Crash sound loaded successfully");
@@ -127,7 +122,6 @@ const Game: React.FC = () => {
             crashSound.load();
           }),
           
-          // Load seed sound
           new Promise<void>((resolve) => {
             seedSound.addEventListener('canplaythrough', () => {
               console.log("Seed collection sound loaded successfully");
@@ -142,7 +136,6 @@ const Game: React.FC = () => {
             seedSound.load();
           }),
           
-          // Load slow timer sound
           new Promise<void>((resolve) => {
             slowTimerSound.addEventListener('canplaythrough', () => {
               console.log("Slow timer sound loaded successfully");
@@ -157,7 +150,6 @@ const Game: React.FC = () => {
             slowTimerSound.load();
           }),
           
-          // Load button sound
           new Promise<void>((resolve) => {
             buttonSound.addEventListener('canplaythrough', () => {
               console.log("Button sound loaded successfully");
@@ -278,7 +270,6 @@ const Game: React.FC = () => {
     };
   }, []);
   
-  // Existing sound handling functions...
   const startEngineSound = () => {
     if (!isSoundEnabled || !carSoundRef.current) return;
     
@@ -436,7 +427,6 @@ const Game: React.FC = () => {
   };
   
   const toggleSound = () => {
-    // Don't play the button sound here to avoid confusion when turning sound off
     setIsSoundEnabled(prev => {
       const newState = !prev;
       
@@ -444,7 +434,6 @@ const Game: React.FC = () => {
         if (gameState === GameState.GAMEPLAY) {
           startEngineSound();
         }
-        // Play button sound after enabling sound
         if (buttonSoundRef.current) {
           setTimeout(() => {
             buttonSoundRef.current?.play().catch(err => {
@@ -528,7 +517,6 @@ const Game: React.FC = () => {
         seedImageURL
       });
       
-      // Initialize GameEngine
       const gameEngine = new GameEngine({
         canvas: canvasRef.current,
         onScoreChange: (newScore) => setScore(newScore),
@@ -594,16 +582,6 @@ const Game: React.FC = () => {
       setHighScore(gameEngine.getHighScore());
       setGameInitialized(true);
       
-      // Check if user has played before and has a username
-      const savedUsername = localStorage.getItem('username');
-      if (savedUsername) {
-        // If the user has a username, start with START_SCREEN
-        gameEngine.setGameState(GameState.START_SCREEN);
-      } else {
-        // Otherwise start with MODE_SELECTION
-        gameEngine.setGameState(GameState.MODE_SELECTION);
-      }
-      
       if (loadingError) {
         toast.warning(loadingError);
       }
@@ -620,7 +598,6 @@ const Game: React.FC = () => {
     };
   }, [carAssetsLoaded, playerCarURL, enemyCarURLs, seedImageURL, loadingError]);
   
-  // Existing timer effects...
   useEffect(() => {
     if (slowModeTimer > 0) {
       const interval = setInterval(() => {
@@ -653,15 +630,12 @@ const Game: React.FC = () => {
     }
   };
   
-  // Handler for mode selection
   const handleModeSelection = (mode: GameMode) => {
     playButtonSound();
     setSelectedGameMode(mode);
     
-    // Save game mode to localStorage
     localStorage.setItem('gameMode', mode);
     
-    // If user already has a username, ask if they want to update it
     const savedUsername = localStorage.getItem('username');
     if (savedUsername) {
       setUsername(savedUsername);
@@ -669,31 +643,25 @@ const Game: React.FC = () => {
         gameEngineRef.current.setGameState(GameState.USERNAME_CREATION);
       }
     } else {
-      // Otherwise go to username creation
       if (gameEngineRef.current) {
         gameEngineRef.current.setGameState(GameState.USERNAME_CREATION);
       }
     }
   };
   
-  // Handler for username submission
   const handleUsernameSubmit = (newUsername: string) => {
     playButtonSound();
     setUsername(newUsername);
     
-    // Save username to localStorage
     localStorage.setItem('username', newUsername);
     
-    // Move to start screen
     if (gameEngineRef.current) {
       gameEngineRef.current.setGameState(GameState.START_SCREEN);
     }
   };
   
-  // Handler for username back button
   const handleUsernameBack = () => {
     playButtonSound();
-    // Go back to mode selection
     if (gameEngineRef.current) {
       gameEngineRef.current.setGameState(GameState.MODE_SELECTION);
     }
@@ -705,7 +673,6 @@ const Game: React.FC = () => {
     setCurrentHowToPlayPage(0);
   };
   
-  // Handler for going back to mode selection from any screen
   const handleGoToModeSelection = () => {
     playButtonSound();
     if (gameEngineRef.current) {
@@ -713,7 +680,6 @@ const Game: React.FC = () => {
     }
   };
   
-  // Handler for going back to start screen from game over screen
   const handleBackToStartScreen = () => {
     playButtonSound();
     if (gameEngineRef.current) {
@@ -721,7 +687,6 @@ const Game: React.FC = () => {
     }
   };
   
-  // Handler for continuing with current username and mode from the mode selection screen
   const handleContinueWithCurrentSettings = () => {
     playButtonSound();
     if (gameEngineRef.current) {
@@ -786,158 +751,7 @@ const Game: React.FC = () => {
     }
   };
   
-  // Content for how to play screens
   const howToPlayContent = [
-    // Existing content...
     {
-      title: "Basic Controls",
-      content: (
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <h3 className="text-lg font-medium">Keyboard Controls:</h3>
-            <div className="flex items-center space-x-3 mb-2">
-              <div className="px-3 py-1 bg-black/30 rounded">←</div>
-              <span>Move left</span>
-            </div>
-            <div className="flex items-center space-x-3">
-              <div className="px-3 py-1 bg-black/30 rounded">→</div>
-              <span>Move right</span>
-            </div>
-          </div>
-          
-          {isMobile && (
-            <div className="space-y-2 mt-4">
-              <h3 className="text-lg font-medium">Mobile Controls:</h3>
-              <p>Tap left side of screen to move left</p>
-              <p>Tap right side of screen to move right</p>
-            </div>
-          )}
-          
-          <div className="mt-4">
-            <p>Pause button is located at the top right of the screen</p>
-          </div>
-        </div>
-      )
-    },
-    {
-      title: "Game Objectives",
-      content: (
-        <div className="space-y-4">
-          <div>
-            <h3 className="text-lg font-medium mb-2">Main Goal:</h3>
-            <p>Drive through traffic while avoiding crashes and collect seeds to increase your score!</p>
-          </div>
-          
-          <div className="mt-4">
-            <h3 className="text-lg font-medium mb-2">Scoring:</h3>
-            <ul className="space-y-2">
-              <li className="flex items-start">
-                <span className="mr-2">•</span>
-                <div>
-                  <span className="font-medium">Seeds:</span> +10 points each
-                </div>
-              </li>
-              <li className="flex items-start">
-                <span className="mr-2">•</span>
-                <div>
-                  <span className="font-medium">Survival:</span> The longer you survive, the higher your score!
-                </div>
-              </li>
-            </ul>
-          </div>
-        </div>
-      )
-    },
-    {
-      title: "Power-Ups",
-      content: (
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium mb-2">Special Power-Ups:</h3>
-          
-          <div className="space-y-4 mt-2">
-            <div className="p-3 bg-black/20 rounded-lg flex items-center space-x-3">
-              <div className="bg-[#9b87f5] rounded-full p-2">
-                <Clock className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <div className="font-medium">Slow Mode</div>
-                <div className="text-sm text-gray-300">Slows down all traffic for 5 seconds</div>
-              </div>
-            </div>
-            
-            <div className="p-3 bg-black/20 rounded-lg flex items-center space-x-3">
-              <div className="bg-[#4cc9f0] rounded-full p-2">
-                <Shield className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <div className="font-medium">Shield</div>
-                <div className="text-sm text-gray-300">Makes you invulnerable for 3 seconds</div>
-              </div>
-            </div>
-            
-            <div className="p-3 bg-black/20 rounded-lg flex items-center space-x-3">
-              <div className="bg-[#ff5e5e] rounded-full p-2">
-                <Heart className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <div className="font-medium">Extra Life</div>
-                <div className="text-sm text-gray-300">Gives you an additional life</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )
-    },
-    {
-      title: "Tips & Tricks",
-      content: (
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium mb-2">Pro Tips:</h3>
-          
-          <ul className="space-y-3">
-            <li className="flex items-start">
-              <span className="mr-2">•</span>
-              <div>Plan your moves in advance to avoid getting boxed in by cars</div>
-            </li>
-            <li className="flex items-start">
-              <span className="mr-2">•</span>
-              <div>Prioritize collecting power-ups when traffic gets heavy</div>
-            </li>
-            <li className="flex items-start">
-              <span className="mr-2">•</span>
-              <div>Shield power-ups can be used offensively to intentionally crash through cars</div>
-            </li>
-            <li className="flex items-start">
-              <span className="mr-2">•</span>
-              <div>Look ahead for upcoming obstacles and plan your route</div>
-            </li>
-            <li className="flex items-start">
-              <span className="mr-2">•</span>
-              <div>The game gets faster over time - be prepared!</div>
-            </li>
-          </ul>
-        </div>
-      )
-    }
-  ];
-  
-  return (
-    <div className="flex flex-col items-center justify-center w-full h-full">
-      <div className="game-canvas-container relative w-full max-w-[600px]">
-        <canvas ref={canvasRef} className="w-full h-full"></canvas>
-        
-        {gameState === GameState.GAMEPLAY && (
-          <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10">
-            <div className="flex items-center space-x-2 glassmorphism px-3 py-1 rounded-full">
-              {Array.from({ length: lives }).map((_, i) => (
-                <Heart key={i} className="w-5 h-5 text-red-500 fill-red-500" />
-              ))}
-            </div>
-            
-            <div className="glassmorphism px-4 py-1 rounded-full">
-              <div className="hud-text text-xl font-medium">{score}</div>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              {activeSlowMode && (
-                <div className
+
+
