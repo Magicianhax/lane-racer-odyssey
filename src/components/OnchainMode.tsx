@@ -18,7 +18,7 @@ export const OnchainMode: React.FC = () => {
     return (
       <Button 
         onClick={handleOpenWallet}
-        className="w-full bg-gradient-to-r from-[#3b82f6] to-[#2563eb] hover:from-[#2563eb] hover:to-[#1d4ed8] text-white rounded-xl py-6 text-lg font-medium shadow-lg shadow-blue-500/20 mb-4"
+        className="w-full bg-gradient-to-r from-[#f7931a] to-[#e6a338] hover:from-[#e6a338] hover:to-[#d18a1f] text-zinc-900 rounded-xl py-6 text-lg font-medium shadow-lg shadow-[#f7931a]/20 mb-4"
       >
         <Wallet className="mr-2 h-5 w-5" />
         Wallet (Active)
@@ -30,10 +30,10 @@ export const OnchainMode: React.FC = () => {
   return (
     <Button 
       onClick={handleOpenWallet}
-      className="w-full bg-zinc-700/80 hover:bg-zinc-600/80 text-white rounded-xl py-6 text-lg font-medium shadow-lg mb-4"
+      className="w-full bg-gradient-to-r from-[#f7931a] to-[#e6a338] hover:from-[#e6a338] hover:to-[#d18a1f] text-zinc-900 rounded-xl py-6 text-lg font-medium shadow-lg shadow-[#f7931a]/20 mb-4 opacity-80"
     >
       <Wallet className="mr-2 h-5 w-5" />
-      Wallet
+      Setup Wallet
     </Button>
   );
 };
