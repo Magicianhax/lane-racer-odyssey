@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useWeb3 } from '@/contexts/Web3Context';
@@ -142,22 +141,22 @@ export const WalletInfoPanel: React.FC = () => {
         </div>
       )}
       
-      {/* Private key section */}
+      {/* Private key section - Updated for better visibility */}
       {showPrivateKey ? (
         <div className="space-y-2">
-          <div className="bg-red-500/10 p-3 rounded-lg border border-red-500/20">
+          <div className="bg-red-500/20 p-3 rounded-lg border border-red-500/30">
             <div className="flex justify-between items-center mb-1">
-              <div className="text-xs text-red-400 font-medium">PRIVATE KEY</div>
+              <div className="text-sm text-red-400 font-medium">PRIVATE KEY</div>
               <Button 
                 variant="ghost" 
                 size="icon" 
                 onClick={handleCopyPrivateKey}
                 className="h-6 w-6"
               >
-                <Copy className="h-3 w-3" />
+                <Copy className="h-3 w-3 text-red-300" />
               </Button>
             </div>
-            <div className="font-mono text-xs break-all overflow-hidden text-white">
+            <div className="font-mono text-sm break-all overflow-hidden text-white">
               {privateKeyVisible 
                 ? exportPrivateKey() 
                 : (exportPrivateKey() ? shortenPrivateKey(exportPrivateKey()!) : '')}
@@ -166,7 +165,7 @@ export const WalletInfoPanel: React.FC = () => {
               variant="ghost"
               size="sm"
               onClick={() => setPrivateKeyVisible(!privateKeyVisible)}
-              className="text-xs w-full mt-1"
+              className="text-xs w-full mt-1 text-red-300 hover:text-red-200 hover:bg-red-900/20"
             >
               {privateKeyVisible ? 'Hide' : 'Show'} Full Key
             </Button>
@@ -179,7 +178,7 @@ export const WalletInfoPanel: React.FC = () => {
             variant="outline"
             size="sm"
             onClick={() => setShowPrivateKey(false)}
-            className="w-full"
+            className="w-full text-white border-zinc-700"
           >
             Hide Private Key
           </Button>
@@ -190,7 +189,7 @@ export const WalletInfoPanel: React.FC = () => {
             variant="outline"
             size="sm"
             onClick={() => setShowPrivateKey(true)}
-            className="flex items-center justify-center"
+            className="flex items-center justify-center text-white border-zinc-700 hover:bg-zinc-800"
           >
             <Key className="h-3 w-3 mr-1" />
             Export Private Key
@@ -198,7 +197,7 @@ export const WalletInfoPanel: React.FC = () => {
           <Button 
             variant="ghost" 
             size="sm" 
-            className="text-xs"
+            className="text-xs text-[#91d3d1] hover:text-white"
             onClick={() => window.open(`https://sepolia.etherscan.io/address/${wallet.address}`, '_blank')}
           >
             <ExternalLink className="h-3 w-3 mr-1" />

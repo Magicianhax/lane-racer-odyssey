@@ -152,7 +152,6 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
     
     try {
       setIsSubmittingScore(true);
-      setLastTxHash(null);
       setError(null);
       
       toast.loading("Submitting score to blockchain...");
@@ -171,9 +170,11 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
       
+      // Create transaction and set hash immediately
       const tx = await contract.submitScore(score);
       setLastTxHash(tx.hash);
       
+      // Wait for transaction to be mined
       const receipt = await tx.wait();
       console.log("Score submitted:", receipt);
       

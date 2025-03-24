@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useWeb3 } from '@/contexts/Web3Context';
 import { UsernameModal } from '@/components/UsernameModal';
 import { WalletInfoPanel } from '@/components/WalletInfoPanel';
@@ -9,10 +9,15 @@ import { ArrowLeft } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 const WalletPage: React.FC = () => {
-  const { isConnected } = useWeb3();
-  const [showUserModal, setShowUserModal] = useState(!isConnected);
+  const { isConnected, username } = useWeb3();
+  const [showUserModal, setShowUserModal] = useState(false);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+
+  useEffect(() => {
+    // Only show the username modal if the user is not connected
+    setShowUserModal(!isConnected && !username);
+  }, [isConnected, username]);
 
   const handleSetupComplete = () => {
     setShowUserModal(false);
@@ -26,7 +31,7 @@ const WalletPage: React.FC = () => {
     <div className="container mx-auto px-4 py-8">
       <Button 
         variant="ghost" 
-        className="mb-6 text-gray-300 hover:text-white" 
+        className="mb-6 text-white hover:text-white hover:bg-zinc-800/50" 
         onClick={handleBackToHome}
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
@@ -41,11 +46,6 @@ const WalletPage: React.FC = () => {
         ) : (
           <WalletInfoPanel />
         )}
-        
-        <div className="mt-4 text-xs text-center text-zinc-400">
-          <p className="mb-1">Note: This wallet is for game use only.</p>
-          <p>You'll need testnet ETH to submit scores to the blockchain.</p>
-        </div>
       </div>
     </div>
   );
