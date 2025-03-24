@@ -27,6 +27,13 @@ export const WalletInfoPanel: React.FC = () => {
     }
   };
 
+  const handleCopyTxHash = () => {
+    if (lastTxHash) {
+      navigator.clipboard.writeText(lastTxHash);
+      toast.success("Transaction hash copied to clipboard");
+    }
+  };
+
   const shortenAddress = (address: string) => {
     return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
   };
@@ -85,6 +92,22 @@ export const WalletInfoPanel: React.FC = () => {
             <Loader2 className="h-4 w-4 mr-2 animate-spin text-[#91d3d1]" />
             <span>Submitting score to blockchain...</span>
           </div>
+          {lastTxHash && (
+            <div className="flex items-center justify-between text-xs text-gray-300 mb-2">
+              <span className="text-xs text-gray-400">Transaction:</span>
+              <div className="flex items-center">
+                <span className="truncate">{shortenTxHash(lastTxHash)}</span>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-6 w-6 ml-1"
+                  onClick={handleCopyTxHash}
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          )}
           <Progress value={50} className="h-1 bg-black/20" />
         </div>
       )}
@@ -97,18 +120,29 @@ export const WalletInfoPanel: React.FC = () => {
           </div>
           <div className="flex items-center justify-between text-xs text-gray-300">
             <span className="truncate">{shortenTxHash(lastTxHash)}</span>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-6 w-6 ml-1"
-              onClick={() => window.open(`https://sepolia.etherscan.io/tx/${lastTxHash}`, '_blank')}
-            >
-              <ExternalLink className="h-3 w-3 text-[#91d3d1]" />
-            </Button>
+            <div className="flex items-center">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-6 w-6"
+                onClick={handleCopyTxHash}
+              >
+                <Copy className="h-3 w-3" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-6 w-6"
+                onClick={() => window.open(`https://sepolia.etherscan.io/tx/${lastTxHash}`, '_blank')}
+              >
+                <ExternalLink className="h-3 w-3 text-[#91d3d1]" />
+              </Button>
+            </div>
           </div>
         </div>
       )}
       
+      {/* Private key section */}
       {showPrivateKey ? (
         <div className="space-y-2">
           <div className="bg-red-500/10 p-3 rounded-lg border border-red-500/20">

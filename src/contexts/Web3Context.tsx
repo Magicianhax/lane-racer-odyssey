@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { toast } from 'sonner';
@@ -55,11 +54,9 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isSubmittingScore, setIsSubmittingScore] = useState(false);
   const [lastTxHash, setLastTxHash] = useState<string | null>(null);
 
-  // Check for existing wallet on component mount
   useEffect(() => {
     const checkExistingWallet = async () => {
       try {
-        // Check if wallet exists in localStorage
         const savedUserData = localStorage.getItem('gameUserData');
         if (savedUserData) {
           const userData = JSON.parse(savedUserData);
@@ -78,14 +75,11 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setIsLoading(true);
       
-      // Connect to Sepolia testnet
       const fallbackProvider = new ethers.providers.JsonRpcProvider(SEPOLIA_RPC_URL);
       const wallet = new ethers.Wallet(privateKey, fallbackProvider);
       
-      // Create contract instance
       const gameContract = new ethers.Contract(CONTRACT_ADDRESS, GAME_SCORE_ABI, wallet);
       
-      // Get wallet info
       const address = await wallet.getAddress();
       let balance = "0";
       
@@ -95,7 +89,6 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
         console.warn("Failed to fetch balance:", err);
       }
       
-      // Update state
       setWallet({ 
         address, 
         balance,
@@ -124,20 +117,16 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       setError(null);
       
-      // Create a new random wallet
       const randomWallet = ethers.Wallet.createRandom();
       const privateKey = randomWallet.privateKey;
       
-      // Save to localStorage with username
       localStorage.setItem('gameUserData', JSON.stringify({ 
         username: name,
         privateKey 
       }));
       
-      // Set the username
       setUsername(name);
       
-      // Initialize the wallet
       const success = await initializeWallet(privateKey);
       
       if (success) {
@@ -166,10 +155,8 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
       setLastTxHash(null);
       setError(null);
       
-      // Show submitting toast
       toast.loading("Submitting score to blockchain...");
       
-      // Check balance
       if (wallet.address && provider) {
         const balance = await provider.getBalance(wallet.address);
         
@@ -184,15 +171,12 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
       
-      // Submit score to the contract
       const tx = await contract.submitScore(score);
+      setLastTxHash(tx.hash);
       
-      // Wait for transaction to be mined
       const receipt = await tx.wait();
       console.log("Score submitted:", receipt);
       
-      // Set transaction hash and show success message
-      setLastTxHash(receipt.transactionHash);
       toast.dismiss();
       toast.success("Score successfully submitted to blockchain!", {
         description: 
@@ -213,7 +197,6 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error("Error submitting score:", error);
       
-      // Check if it's an out of gas error
       const errorMessage = error.toString();
       if (errorMessage.includes("insufficient funds") || errorMessage.includes("out of gas")) {
         toast.dismiss();
@@ -276,7 +259,6 @@ export const useWeb3 = () => {
   return context;
 };
 
-// Declare window.ethereum
 declare global {
   interface Window {
     ethereum?: any;
