@@ -2,11 +2,12 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useWeb3 } from '@/contexts/Web3Context';
-import { Wallet, ExternalLink, Copy, AlertTriangle, Key, X } from 'lucide-react';
+import { Wallet, ExternalLink, Copy, AlertTriangle, Key, X, Loader2, Check } from 'lucide-react';
 import { toast } from 'sonner';
+import { Progress } from '@/components/ui/progress';
 
 export const WalletInfoPanel: React.FC = () => {
-  const { wallet, username, isLoading, exportPrivateKey } = useWeb3();
+  const { wallet, username, isLoading, exportPrivateKey, isSubmittingScore, lastTxHash } = useWeb3();
   const [showPrivateKey, setShowPrivateKey] = useState(false);
   const [privateKeyVisible, setPrivateKeyVisible] = useState(false);
 
@@ -28,6 +29,10 @@ export const WalletInfoPanel: React.FC = () => {
 
   const shortenAddress = (address: string) => {
     return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+  };
+
+  const shortenTxHash = (hash: string) => {
+    return `${hash.substring(0, 10)}...${hash.substring(hash.length - 8)}`;
   };
 
   const shortenPrivateKey = (key: string) => {
@@ -72,6 +77,37 @@ export const WalletInfoPanel: React.FC = () => {
           </div>
         )}
       </div>
+      
+      {/* Score submission status */}
+      {isSubmittingScore && (
+        <div className="bg-[#91d3d1]/10 p-3 rounded-lg mb-3 border border-[#91d3d1]/20">
+          <div className="flex items-center text-sm text-white mb-2">
+            <Loader2 className="h-4 w-4 mr-2 animate-spin text-[#91d3d1]" />
+            <span>Submitting score to blockchain...</span>
+          </div>
+          <Progress value={50} className="h-1 bg-black/20" />
+        </div>
+      )}
+      
+      {lastTxHash && !isSubmittingScore && (
+        <div className="bg-[#91d3d1]/10 p-3 rounded-lg mb-3 border border-[#91d3d1]/20">
+          <div className="flex items-center text-sm text-white mb-1">
+            <Check className="h-4 w-4 mr-2 text-[#91d3d1]" />
+            <span>Score submitted successfully</span>
+          </div>
+          <div className="flex items-center justify-between text-xs text-gray-300">
+            <span className="truncate">{shortenTxHash(lastTxHash)}</span>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-6 w-6 ml-1"
+              onClick={() => window.open(`https://sepolia.etherscan.io/tx/${lastTxHash}`, '_blank')}
+            >
+              <ExternalLink className="h-3 w-3 text-[#91d3d1]" />
+            </Button>
+          </div>
+        </div>
+      )}
       
       {showPrivateKey ? (
         <div className="space-y-2">
@@ -136,6 +172,11 @@ export const WalletInfoPanel: React.FC = () => {
           </Button>
         </div>
       )}
+      
+      <div className="mt-4 text-xs text-center text-zinc-400">
+        <p className="mb-1">Note: This wallet is for game use only.</p>
+        <p>You'll need testnet ETH to submit scores to the blockchain.</p>
+      </div>
     </div>
   );
 };

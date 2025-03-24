@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { ethers } from 'ethers';
+import { toast } from 'sonner';
 
 // Contract ABI
 const GAME_SCORE_ABI = [
@@ -12,7 +13,7 @@ const GAME_SCORE_ABI = [
 ];
 
 const CONTRACT_ADDRESS = "0x651E3CA9d1B63773C38795dc10ef11a71574c95f";
-const SEPOLIA_RPC_URL = "https://sepolia.infura.io/v3/2f846fbed89740ccad6d4641db129b02"; // Replace with your Infura ID
+const SEPOLIA_RPC_URL = "https://sepolia.infura.io/v3/2f846fbed89740ccad6d4641db129b02";
 
 type Web3ContextType = {
   wallet: {
@@ -30,6 +31,8 @@ type Web3ContextType = {
   submitScore: (score: number) => Promise<void>;
   getPlayerHighScore: () => Promise<number>;
   exportPrivateKey: () => string | null;
+  isSubmittingScore: boolean;
+  lastTxHash: string | null;
 };
 
 const Web3Context = createContext<Web3ContextType | undefined>(undefined);
@@ -49,6 +52,8 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
   const [provider, setProvider] = useState<ethers.providers.Web3Provider | ethers.providers.JsonRpcProvider | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSubmittingScore, setIsSubmittingScore] = useState(false);
+  const [lastTxHash, setLastTxHash] = useState<string | null>(null);
 
   // Check for existing wallet on component mount
   useEffect(() => {
@@ -152,12 +157,32 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
   const submitScore = async (score: number) => {
     if (!contract) {
       setError("No contract connection");
+      toast.error("No contract connection");
       return;
     }
     
     try {
-      setIsLoading(true);
+      setIsSubmittingScore(true);
+      setLastTxHash(null);
       setError(null);
+      
+      // Show submitting toast
+      toast.loading("Submitting score to blockchain...");
+      
+      // Check balance
+      if (wallet.address && provider) {
+        const balance = await provider.getBalance(wallet.address);
+        
+        if (balance.isZero() || balance.lt(ethers.utils.parseEther("0.0001"))) {
+          toast.dismiss();
+          toast.error("Insufficient balance to submit score", {
+            description: "You need testnet ETH to submit scores to the blockchain."
+          });
+          setError("Insufficient balance");
+          setIsSubmittingScore(false);
+          return;
+        }
+      }
       
       // Submit score to the contract
       const tx = await contract.submitScore(score);
@@ -166,11 +191,45 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
       const receipt = await tx.wait();
       console.log("Score submitted:", receipt);
       
-      setIsLoading(false);
+      // Set transaction hash and show success message
+      setLastTxHash(receipt.transactionHash);
+      toast.dismiss();
+      toast.success("Score successfully submitted to blockchain!", {
+        description: 
+          <div className="flex flex-col gap-1">
+            <span>Your score of {score} is now on the blockchain.</span>
+            <a 
+              href={`https://sepolia.etherscan.io/tx/${receipt.transactionHash}`} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-xs underline flex items-center mt-1"
+            >
+              View Transaction
+            </a>
+          </div>
+      });
+      
+      setIsSubmittingScore(false);
     } catch (error) {
       console.error("Error submitting score:", error);
-      setError("Failed to submit score");
-      setIsLoading(false);
+      
+      // Check if it's an out of gas error
+      const errorMessage = error.toString();
+      if (errorMessage.includes("insufficient funds") || errorMessage.includes("out of gas")) {
+        toast.dismiss();
+        toast.error("Insufficient balance to submit score", {
+          description: "You need testnet ETH to submit scores to the blockchain."
+        });
+        setError("Insufficient balance");
+      } else {
+        toast.dismiss();
+        toast.error("Failed to submit score", {
+          description: "There was an error submitting your score to the blockchain."
+        });
+        setError("Failed to submit score");
+      }
+      
+      setIsSubmittingScore(false);
     }
   };
 
@@ -201,7 +260,9 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
     createUserWallet,
     submitScore,
     getPlayerHighScore,
-    exportPrivateKey
+    exportPrivateKey,
+    isSubmittingScore,
+    lastTxHash
   };
 
   return <Web3Context.Provider value={value}>{children}</Web3Context.Provider>;
