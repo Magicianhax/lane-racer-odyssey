@@ -107,12 +107,12 @@ export const OnchainOnboarding: React.FC<OnchainOnboardingProps> = ({ onComplete
     try {
       await refreshBalance();
       
-      // If balance is detected, show a success toast
+      // If balance is detected, show a success toast and go to step 2
       if (Number(wallet.balance || 0) > 0) {
         toast.success("ETH detected in wallet!", {
           description: "You can now proceed to register your username."
         });
-        // Move to username registration instead of completing
+        // Move to username registration step
         setCurrentStep(2);
       }
     } catch (err) {
@@ -169,7 +169,7 @@ export const OnchainOnboarding: React.FC<OnchainOnboardingProps> = ({ onComplete
       // Set username as registered
       setUsernameRegistered(true);
       
-      // Complete onboarding
+      // Complete onboarding only after successful username registration
       toast.success("Username registered successfully!");
       onComplete();
       

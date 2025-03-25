@@ -12,7 +12,16 @@ const Index = () => {
   // Refresh wallet balance when page loads
   useEffect(() => {
     if (isConnected) {
+      // Refresh balance to ensure we have the latest data
       refreshBalance();
+      
+      // Set up an interval to refresh balance periodically
+      const intervalId = setInterval(() => {
+        refreshBalance();
+      }, 30000); // Check every 30 seconds
+      
+      // Clean up interval on component unmount
+      return () => clearInterval(intervalId);
     }
   }, [isConnected, refreshBalance]);
 
