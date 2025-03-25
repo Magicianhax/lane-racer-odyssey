@@ -2,6 +2,7 @@
 import Game from "@/components/Game";
 import { Smartphone } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Web3Provider } from "@/contexts/Web3Context";
 
 const Index = () => {
   const isMobile = useIsMobile();
@@ -12,7 +13,9 @@ const Index = () => {
       <div className="container mx-auto px-4 py-8 flex flex-col items-center justify-center h-screen">
         {isMobile ? (
           <div className="w-full h-full">
-            <Game />
+            <Web3Provider>
+              <Game />
+            </Web3Provider>
           </div>
         ) : (
           <div className="mobile-frame-container">
@@ -22,7 +25,9 @@ const Index = () => {
               <div className="side-button right-button-top"></div>
               <div className="side-button right-button-bottom"></div>
               <div className="mobile-screen">
-                <Game />
+                <Web3Provider>
+                  <Game />
+                </Web3Provider>
               </div>
               <div className="home-indicator"></div>
             </div>

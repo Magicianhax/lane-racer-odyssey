@@ -13,20 +13,20 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <Web3Provider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <Web3Provider>
           <Routes>
-            <Route path="/" element={<Index />} />
             <Route path="/wallet" element={<WalletPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
+            <Route path="/" element={<Index />} />
           </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </Web3Provider>
+        </Web3Provider>
+      </BrowserRouter>
+    </TooltipProvider>
   </QueryClientProvider>
 );
 
