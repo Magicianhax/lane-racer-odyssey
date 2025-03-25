@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -295,12 +294,25 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
         
         <Button
           onClick={handleNextStep}
-          className="w-full mt-2 bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900"
+          className={`w-full mt-2 ${
+            Number(wallet.balance || 0) > 0 
+              ? "bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900" 
+              : "bg-gradient-to-r from-[#91d3d1]/50 to-[#7ec7c5]/50 text-zinc-900/50 cursor-not-allowed"
+          }`}
           disabled={Number(wallet.balance || 0) === 0}
         >
           <ChevronRight className="mr-1 h-4 w-4" />
           Continue to Username Registration
+          {Number(wallet.balance || 0) === 0 && (
+            <span className="ml-1 text-xs">(Need ETH first)</span>
+          )}
         </Button>
+        
+        {Number(wallet.balance || 0) === 0 && (
+          <p className="text-amber-400 text-xs text-center mt-2">
+            You need ETH to continue. Get free testnet ETH using the button above.
+          </p>
+        )}
       </div>
     </>
   );
@@ -456,3 +468,4 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
     </div>
   );
 };
+
