@@ -38,6 +38,7 @@ type Web3ContextType = {
   lastTxHash: string | null;
   withdrawEth: (toAddress: string, amount: string) => Promise<void>;
   isWithdrawing: boolean;
+  refreshBalance: () => Promise<void>;
 };
 
 const Web3Context = createContext<Web3ContextType | undefined>(undefined);
@@ -254,6 +255,22 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const refreshBalance = async (): Promise<void> => {
+    if (!wallet.address || !provider) {
+      return;
+    }
+    
+    try {
+      const newBalance = await provider.getBalance(wallet.address);
+      setWallet(prev => ({ 
+        ...prev, 
+        balance: ethers.utils.formatEther(newBalance) 
+      }));
+    } catch (error) {
+      console.error("Error refreshing balance:", error);
+    }
+  };
+
   const withdrawEth = async (toAddress: string, amount: string) => {
     if (!wallet.address || !wallet.privateKey || !provider) {
       setError("No wallet connection");
@@ -344,13 +361,7 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       // Update balance
-      if (wallet.address) {
-        const newBalance = await provider.getBalance(wallet.address);
-        setWallet(prev => ({ 
-          ...prev, 
-          balance: ethers.utils.formatEther(newBalance) 
-        }));
-      }
+      await refreshBalance();
       
       setIsWithdrawing(false);
     } catch (error) {
@@ -380,7 +391,8 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
     isSubmittingScore,
     lastTxHash,
     withdrawEth,
-    isWithdrawing
+    isWithdrawing,
+    refreshBalance
   };
 
   return <Web3Context.Provider value={value}>{children}</Web3Context.Provider>;

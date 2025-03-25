@@ -1,16 +1,18 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useWeb3 } from '@/contexts/Web3Context';
-import { Wallet, ExternalLink, Copy, AlertTriangle, Key, X, Loader2, Check, ArrowUpRight } from 'lucide-react';
+import { Wallet, ExternalLink, Copy, AlertTriangle, Key, X, Loader2, Check, ArrowUpRight, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Progress } from '@/components/ui/progress';
 import { WithdrawModal } from './WithdrawModal';
 
 export const WalletInfoPanel: React.FC = () => {
-  const { wallet, username, isLoading, exportPrivateKey, isSubmittingScore, lastTxHash, isWithdrawing } = useWeb3();
+  const { wallet, username, isLoading, exportPrivateKey, isSubmittingScore, lastTxHash, isWithdrawing, refreshBalance } = useWeb3();
   const [showPrivateKey, setShowPrivateKey] = useState(false);
   const [privateKeyVisible, setPrivateKeyVisible] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleCopyAddress = () => {
     if (wallet.address) {
@@ -35,8 +37,15 @@ export const WalletInfoPanel: React.FC = () => {
     }
   };
 
+  const handleRefreshBalance = async () => {
+    setIsRefreshing(true);
+    await refreshBalance();
+    setIsRefreshing(false);
+    toast.success("Balance refreshed");
+  };
+
   const shortenAddress = (address: string) => {
-    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+    return `${address.substring(0, a)}...${address.substring(address.length - 4)}`;
   };
 
   const shortenTxHash = (hash: string) => {
@@ -78,16 +87,27 @@ export const WalletInfoPanel: React.FC = () => {
       <div className="bg-black/20 p-3 rounded-lg mb-3">
         <div className="flex items-center justify-between mb-1">
           <div className="text-xs text-gray-400">Balance</div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowWithdrawModal(true)}
-            className="h-6 px-2 text-xs text-[#91d3d1] hover:text-white hover:bg-[#91d3d1]/10"
-            disabled={Number(wallet.balance || 0) === 0 || isSubmittingScore || isWithdrawing}
-          >
-            <ArrowUpRight className="h-3 w-3 mr-1" />
-            Withdraw
-          </Button>
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleRefreshBalance}
+              className="h-6 w-6 p-0 text-zinc-400 hover:text-white hover:bg-zinc-800"
+              disabled={isRefreshing || isSubmittingScore || isWithdrawing}
+            >
+              <RefreshCw className={`h-3 w-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowWithdrawModal(true)}
+              className="h-6 px-2 text-xs text-[#91d3d1] hover:text-white hover:bg-[#91d3d1]/10"
+              disabled={Number(wallet.balance || 0) === 0 || isSubmittingScore || isWithdrawing}
+            >
+              <ArrowUpRight className="h-3 w-3 mr-1" />
+              Withdraw
+            </Button>
+          </div>
         </div>
         <div className="font-mono text-white">{wallet.balance || '0'} ETH</div>
         {Number(wallet.balance || 0) === 0 && (
@@ -124,11 +144,37 @@ export const WalletInfoPanel: React.FC = () => {
         </div>
       )}
       
+      {isWithdrawing && (
+        <div className="bg-[#91d3d1]/10 p-3 rounded-lg mb-3 border border-[#91d3d1]/20">
+          <div className="flex items-center text-sm text-white mb-2">
+            <Loader2 className="h-4 w-4 mr-2 animate-spin text-[#91d3d1]" />
+            <span>Processing withdrawal...</span>
+          </div>
+          {lastTxHash && (
+            <div className="flex items-center justify-between text-xs text-gray-300 mb-2">
+              <span className="text-xs text-gray-400">Transaction:</span>
+              <div className="flex items-center">
+                <span className="truncate">{shortenTxHash(lastTxHash)}</span>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-6 w-6 ml-1"
+                  onClick={handleCopyTxHash}
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          )}
+          <Progress value={50} className="h-1 bg-black/20" />
+        </div>
+      )}
+      
       {lastTxHash && !isSubmittingScore && !isWithdrawing && (
         <div className="bg-[#91d3d1]/10 p-3 rounded-lg mb-3 border border-[#91d3d1]/20">
           <div className="flex items-center text-sm text-white mb-1">
             <Check className="h-4 w-4 mr-2 text-[#91d3d1]" />
-            <span>Score submitted successfully</span>
+            <span>Transaction completed successfully</span>
           </div>
           <div className="flex items-center justify-between text-xs text-gray-300">
             <span className="truncate">{shortenTxHash(lastTxHash)}</span>
