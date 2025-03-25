@@ -8,9 +8,6 @@ import { cn } from '@/lib/utils';
 import { ModeSelectionScreen } from './ModeSelectionComponents';
 import { useWeb3 } from '@/contexts/Web3Context';
 import { OnchainMode } from '@/components/OnchainMode';
-import { Leaderboard } from '@/components/Leaderboard';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { OnchainOnboarding } from '@/components/OnchainOnboarding';
 
 const DEFAULT_PLAYER_CAR = '/playercar.png';
 const DEFAULT_ENEMY_CARS = ['/enemycar1.png', '/enemycar2.png', '/enemycar3.png'];
@@ -43,21 +40,24 @@ const Game: React.FC = () => {
   const [showHowToPlay, setShowHowToPlay] = useState<boolean>(false);
   const [currentHowToPlayPage, setCurrentHowToPlayPage] = useState<number>(0);
   const [isSoundEnabled, setIsSoundEnabled] = useState<boolean>(true);
-  const [showOnboarding, setShowOnboarding] = useState<boolean>(false);
+  
+  // Add new state for game mode and username
   const [selectedGameMode, setSelectedGameMode] = useState<GameMode>(GameMode.NONE);
-  const [showLeaderboard, setShowLeaderboard] = useState<boolean>(false);
   const [username, setUsername] = useState<string>('');
-  const { isConnected, submitScore, username: web3Username, isSubmittingScore, wallet } = useWeb3();
-
+  
+  // Add Web3 context hooks
+  const { isConnected, submitScore, username: web3Username } = useWeb3();
+  
   const carSoundRef = useRef<HTMLAudioElement | null>(null);
   const crashSoundRef = useRef<HTMLAudioElement | null>(null);
   const seedSoundRef = useRef<HTMLAudioElement | null>(null);
   const slowTimerSoundRef = useRef<HTMLAudioElement | null>(null);
   const buttonSoundRef = useRef<HTMLAudioElement | null>(null);
   const soundsLoadedRef = useRef<boolean>(false);
-
+  
   const isMobile = useIsMobile();
-
+  
+  // Load username and game mode from localStorage if available
   useEffect(() => {
     const savedUsername = localStorage.getItem('username');
     if (savedUsername) {
@@ -69,7 +69,7 @@ const Game: React.FC = () => {
       setSelectedGameMode(savedGameMode);
     }
   }, []);
-
+  
   useEffect(() => {
     const preloadSounds = async () => {
       try {
@@ -97,6 +97,7 @@ const Game: React.FC = () => {
         buttonSoundRef.current = buttonSound;
         
         await Promise.all([
+          // Load car sound
           new Promise<void>((resolve) => {
             carSound.addEventListener('canplaythrough', () => {
               console.log("Car sound loaded successfully");
@@ -111,6 +112,7 @@ const Game: React.FC = () => {
             carSound.load();
           }),
           
+          // Load crash sound
           new Promise<void>((resolve) => {
             crashSound.addEventListener('canplaythrough', () => {
               console.log("Crash sound loaded successfully");
@@ -125,6 +127,7 @@ const Game: React.FC = () => {
             crashSound.load();
           }),
           
+          // Load seed sound
           new Promise<void>((resolve) => {
             seedSound.addEventListener('canplaythrough', () => {
               console.log("Seed collection sound loaded successfully");
@@ -139,6 +142,7 @@ const Game: React.FC = () => {
             seedSound.load();
           }),
           
+          // Load slow timer sound
           new Promise<void>((resolve) => {
             slowTimerSound.addEventListener('canplaythrough', () => {
               console.log("Slow timer sound loaded successfully");
@@ -153,6 +157,7 @@ const Game: React.FC = () => {
             slowTimerSound.load();
           }),
           
+          // Load button sound
           new Promise<void>((resolve) => {
             buttonSound.addEventListener('canplaythrough', () => {
               console.log("Button sound loaded successfully");
@@ -272,7 +277,7 @@ const Game: React.FC = () => {
       stopAllSounds();
     };
   }, []);
-
+  
   const startEngineSound = () => {
     if (!isSoundEnabled || !carSoundRef.current) return;
     
@@ -430,6 +435,7 @@ const Game: React.FC = () => {
   };
   
   const toggleSound = () => {
+    // Don't play the button sound here to avoid confusion when turning sound off
     setIsSoundEnabled(prev => {
       const newState = !prev;
       
@@ -437,6 +443,7 @@ const Game: React.FC = () => {
         if (gameState === GameState.GAMEPLAY) {
           startEngineSound();
         }
+        // Play button sound after enabling sound
         if (buttonSoundRef.current) {
           setTimeout(() => {
             buttonSoundRef.current?.play().catch(err => {
@@ -520,6 +527,7 @@ const Game: React.FC = () => {
         seedImageURL
       });
       
+      // Initialize GameEngine
       const gameEngine = new GameEngine({
         canvas: canvasRef.current,
         onScoreChange: (newScore) => setScore(newScore),
@@ -585,27 +593,19 @@ const Game: React.FC = () => {
       setHighScore(gameEngine.getHighScore());
       setGameInitialized(true);
       
-      const checkOnboardingNeeded = async () => {
-        if (selectedGameMode === GameMode.ONCHAIN) {
-          const username = localStorage.getItem('username');
-          
-          if (!username) {
-            setShowOnboarding(true);
-            return;
-          }
-          
-          if (!isConnected || !wallet.address || Number(wallet.balance || 0) === 0) {
-            setShowOnboarding(true);
-            return;
-          }
-          
-          if (gameEngineRef.current) {
-            gameEngineRef.current.setGameState(GameState.START_SCREEN);
-          }
-        }
-      };
+      // Check if user has played before and has a username
+      const savedUsername = localStorage.getItem('username');
+      if (savedUsername) {
+        // If the user has a username, start with START_SCREEN
+        gameEngine.setGameState(GameState.START_SCREEN);
+      } else {
+        // Otherwise start with MODE_SELECTION
+        gameEngine.setGameState(GameState.MODE_SELECTION);
+      }
       
-      checkOnboardingNeeded();
+      if (loadingError) {
+        toast.warning(loadingError);
+      }
     } catch (err) {
       console.error("Error initializing game engine:", err);
       toast.error("Game initialization failed");
@@ -651,37 +651,26 @@ const Game: React.FC = () => {
     }
   };
   
+  // Handler for mode selection
   const handleModeSelection = (mode: GameMode) => {
     playButtonSound();
     setSelectedGameMode(mode);
     
+    // Save game mode to localStorage
     localStorage.setItem('gameMode', mode);
     
-    const checkOnboardingNeeded = async () => {
-      if (mode === GameMode.ONCHAIN) {
-        const username = localStorage.getItem('username');
-        
-        if (!username) {
-          setShowOnboarding(true);
-          return;
-        }
-        
-        if (!isConnected || !wallet.address || Number(wallet.balance || 0) === 0) {
-          setShowOnboarding(true);
-          return;
-        }
-        
-        if (gameEngineRef.current) {
-          gameEngineRef.current.setGameState(GameState.START_SCREEN);
-        }
-      } else {
-        if (gameEngineRef.current) {
-          gameEngineRef.current.setGameState(GameState.START_SCREEN);
-        }
+    // Check if user has wallet setup
+    const savedUsername = localStorage.getItem('username');
+    if (savedUsername) {
+      setUsername(savedUsername);
+      // Skip username creation and go straight to start screen
+      if (gameEngineRef.current) {
+        gameEngineRef.current.setGameState(GameState.START_SCREEN);
       }
-    };
-    
-    checkOnboardingNeeded();
+    } else {
+      // If no username, redirect to wallet page for setup
+      window.location.href = '/wallet';
+    }
   };
   
   const handleShowHowToPlay = () => {
@@ -690,6 +679,7 @@ const Game: React.FC = () => {
     setCurrentHowToPlayPage(0);
   };
   
+  // Handler for going back to mode selection from any screen
   const handleGoToModeSelection = () => {
     playButtonSound();
     if (gameEngineRef.current) {
@@ -697,6 +687,7 @@ const Game: React.FC = () => {
     }
   };
   
+  // Handler for going back to start screen from game over screen
   const handleBackToStartScreen = () => {
     playButtonSound();
     if (gameEngineRef.current) {
@@ -704,6 +695,7 @@ const Game: React.FC = () => {
     }
   };
   
+  // Handler for continuing with current username and mode from the mode selection screen
   const handleContinueWithCurrentSettings = () => {
     playButtonSound();
     if (gameEngineRef.current) {
@@ -768,14 +760,7 @@ const Game: React.FC = () => {
     }
   };
   
-  const handleOnboardingComplete = () => {
-    setShowOnboarding(false);
-    
-    if (gameEngineRef.current) {
-      gameEngineRef.current.setGameState(GameState.START_SCREEN);
-    }
-  };
-  
+  // Content for how to play screens
   const howToPlayContent = [
     {
       title: "Basic Controls",
@@ -909,219 +894,286 @@ const Game: React.FC = () => {
     }
   ];
   
-  const renderStartScreen = () => {
-    if (showHowToPlay) {
-      return (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
-          <div className="glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
-            <div className="flex items-center justify-between mb-4">
+  return (
+    <div className="flex flex-col items-center justify-center w-full h-full">
+      <div className="game-canvas-container relative w-full max-w-[600px]">
+        <canvas ref={canvasRef} className="w-full h-full"></canvas>
+        
+        {gameState === GameState.GAMEPLAY && (
+          <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10">
+            <div className="flex items-center space-x-2 glassmorphism px-3 py-1 rounded-full">
+              {Array.from({ length: lives }).map((_, i) => (
+                <Heart key={i} className="w-5 h-5 text-red-500 fill-red-500" />
+              ))}
+            </div>
+            
+            <div className="glassmorphism px-4 py-1 rounded-full">
+              <div className="hud-text text-xl font-medium">{score}</div>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              {activeSlowMode && (
+                <div className="flex items-center space-x-1 glassmorphism px-3 py-1 rounded-full">
+                  <Clock className="w-4 h-4 text-[#a170fc]" />
+                  <span className="text-sm font-medium">{Math.ceil(slowModeTimer / 1000)}s</span>
+                </div>
+              )}
+              
+              {activeShield && (
+                <div className="flex items-center space-x-1 glassmorphism px-3 py-1 rounded-full">
+                  <Shield className="w-4 h-4 text-[#64d2ff]" />
+                  <span className="text-sm font-medium">{Math.ceil(shieldTimer / 1000)}s</span>
+                </div>
+              )}
+              
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="rounded-full"
-                onClick={handleBackToMenu}
+                className="rounded-full bg-black/20 backdrop-blur-sm hover:bg-black/30"
+                onClick={toggleSound}
+                aria-label={isSoundEnabled ? "Mute sound" : "Enable sound"}
               >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <h2 className="text-2xl font-bold tracking-tight text-white">How to Play</h2>
-              <div className="w-9"></div>
-            </div>
-            
-            <div className="chip text-xs bg-[#91d3d1]/10 text-[#91d3d1] px-3 py-1 rounded-full mb-6 inline-block">
-              {currentHowToPlayPage + 1} of {howToPlayContent.length}
-            </div>
-            
-            <h3 className="text-xl font-medium mb-4 text-[#91d3d1]">{howToPlayContent[currentHowToPlayPage].title}</h3>
-            
-            <div className="text-left mb-6 min-h-[200px]">
-              {howToPlayContent[currentHowToPlayPage].content}
-            </div>
-            
-            <div className="flex justify-between">
-              <Button
-                variant="teal-outline"
-                size="sm"
-                onClick={handlePrevPage}
-                disabled={currentHowToPlayPage === 0}
-                className={cn(
-                  "rounded-full px-4",
-                  currentHowToPlayPage === 0 && "opacity-50 cursor-not-allowed"
-                )}
-              >
-                <ChevronLeft className="h-5 w-5 mr-1" />
-                Previous
+                {isSoundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
               </Button>
               
-              <Button
-                variant="teal-outline"
-                size="sm"
-                onClick={handleNextPage}
-                disabled={currentHowToPlayPage === howToPlayContent.length - 1}
-                className={cn(
-                  "rounded-full px-4",
-                  currentHowToPlayPage === howToPlayContent.length - 1 && "opacity-50 cursor-not-allowed"
-                )}
-              >
-                Next
-                <ChevronRight className="h-5 w-5 ml-1" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      );
-    } else if (showLeaderboard) {
-      return (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
-          <div className="glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto shadow-xl animate-scale-in border border-[#91d3d1]/20" style={{ width: '100%' }}>
-            <div className="flex items-center justify-between mb-4">
               <Button 
-                variant="ghost" 
+                variant="teal" 
                 size="icon" 
-                className="rounded-full"
-                onClick={() => setShowLeaderboard(false)}
+                className="rounded-full hover:bg-[#7ec7c5] transition-colors"
+                onClick={handlePauseGame}
+                aria-label="Pause game"
               >
-                <ArrowLeft className="h-5 w-5" />
+                <Pause className="h-5 w-5" />
               </Button>
-              <h2 className="text-2xl font-bold tracking-tight text-white">Global Scores</h2>
-              <div className="w-9"></div>
             </div>
-            
-            <Leaderboard className="mt-4" />
           </div>
-        </div>
-      );
-    } else {
-      return (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
-          <div className="glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
-            <h1 className="text-5xl font-bold mb-2 tracking-tight text-white text-gradient">Superseed Lane Runner</h1>
-            
-            {username && (
-              <div className="chip text-xs bg-[#91d3d1]/20 text-[#91d3d1] px-3 py-1 rounded-full inline-flex items-center">
-                <Blocks className="w-3 h-3 mr-1" />
-                ONCHAIN • 
-                <User className="w-3 h-3 mx-1" /> {username}
-              </div>
-            )}
-            
-            <div className="chip text-xs bg-[#91d3d1]/10 text-[#91d3d1] px-3 py-1 rounded-full mb-4 inline-block">FAST-PACED ACTION</div>
-            <p className="text-gray-300 mb-6">Navigate through traffic, collect seeds, and survive as long as possible!</p>
-            
-            <div className="flex flex-col space-y-4 items-center">
-              <Button 
-                onClick={handleStartGame}
-                className="game-button w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 rounded-xl py-6 text-lg font-medium shadow-lg shadow-[#91d3d1]/20"
-                disabled={!gameInitialized}
-              >
-                {gameInitialized ? 'Start Game' : <Loader2 className="h-5 w-5 animate-spin" />}
-              </Button>
+        )}
+        
+        {/* Mode Selection Screen */}
+        {gameState === GameState.MODE_SELECTION && (
+          <ModeSelectionScreen 
+            onSelectMode={handleModeSelection}
+            currentMode={selectedGameMode}
+            currentUsername={username}
+            onContinue={handleContinueWithCurrentSettings}
+          />
+        )}
+        
+        {gameState === GameState.START_SCREEN && !showHowToPlay && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
+            <div className="glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
+              <h1 className="text-5xl font-bold mb-2 tracking-tight text-white text-gradient">Superseed Lane Runner</h1>
               
-              <div className="flex w-full gap-3">
+              {/* Display username and game mode if available */}
+              {username && (
+                <div className="chip text-xs bg-[#91d3d1]/20 text-[#91d3d1] px-3 py-1 rounded-full mb-2 inline-flex items-center">
+                  <Blocks className="w-3 h-3 mr-1" />
+                  ONCHAIN • 
+                  <User className="w-3 h-3 mx-1" /> {username}
+                </div>
+              )}
+              
+              <div className="chip text-xs bg-[#91d3d1]/10 text-[#91d3d1] px-3 py-1 rounded-full mb-4 inline-block">FAST-PACED ACTION</div>
+              <p className="text-gray-300 mb-6">Navigate through traffic, collect seeds, and survive as long as possible!</p>
+              
+              <div className="flex flex-col space-y-4 items-center">
+                <Button 
+                  onClick={handleStartGame}
+                  className="game-button w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 rounded-xl py-6 text-lg font-medium shadow-lg shadow-[#91d3d1]/20"
+                  disabled={!gameInitialized}
+                >
+                  {gameInitialized ? 'Start Game' : <Loader2 className="h-5 w-5 animate-spin" />}
+                </Button>
+                
                 <Button 
                   onClick={handleShowHowToPlay}
                   variant="teal-outline"
-                  className="flex-1 rounded-xl py-6 text-base font-medium"
+                  className="w-full rounded-xl py-6 text-lg font-medium"
                 >
                   <HelpCircle className="mr-2 h-5 w-5" />
                   How to Play
                 </Button>
                 
-                <Button 
-                  onClick={() => setShowLeaderboard(true)}
-                  variant="teal-outline"
-                  className="flex-1 rounded-xl py-6 text-base font-medium"
-                >
-                  <Trophy className="mr-2 h-5 w-5 text-yellow-400" />
-                  Leaderboard
-                </Button>
-              </div>
-              
-              <div className="w-full border-t border-[#91d3d1]/10 mt-2 pt-4">
-                <div className="mb-3">
-                  <div className="flex items-center justify-center gap-2 text-[#91d3d1]">
-                    <Rocket className="h-4 w-4" />
-                    <span className="font-medium">Onchain Mode {isConnected ? '(Active)' : ''}</span>
+                {/* Add Onchain Mode section */}
+                <div className="w-full border-t border-[#91d3d1]/10 mt-2 pt-4">
+                  <div className="mb-3">
+                    <div className="flex items-center justify-center gap-2 text-[#91d3d1]">
+                      <Rocket className="h-4 w-4" />
+                      <span className="font-medium">Onchain Mode {isConnected ? '(Active)' : ''}</span>
+                    </div>
+                    {isConnected && web3Username && (
+                      <div className="text-xs text-gray-400 mt-1">Playing as {web3Username}</div>
+                    )}
                   </div>
-                  {isConnected && wallet.address && (
-                    <div className="text-xs text-gray-400 mt-1">Playing as {web3Username}</div>
-                  )}
+                  <OnchainMode />
                 </div>
-                <OnchainMode 
-                  gameMode={selectedGameMode}
-                  onSelectOnchainMode={() => handleModeSelection(GameMode.ONCHAIN)}
-                />
-              </div>
-              
-              <div className="flex items-center space-x-4 mt-2">
-                {highScore > 0 && (
-                  <div className="flex items-center space-x-2 text-[#91d3d1]">
-                    <Trophy className="w-5 h-5" />
-                    <span>High Score: {highScore}</span>
-                  </div>
-                )}
                 
+                <div className="flex items-center space-x-4 mt-2">
+                  {highScore > 0 && (
+                    <div className="flex items-center space-x-2 text-[#91d3d1]">
+                      <Trophy className="w-5 h-5" />
+                      <span>High Score: {highScore}</span>
+                    </div>
+                  )}
+                  
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="rounded-full bg-black/20 backdrop-blur-sm hover:bg-black/30"
+                    onClick={toggleSound}
+                    aria-label={isSoundEnabled ? "Mute sound" : "Enable sound"}
+                  >
+                    {isSoundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+            </div>
+            
+            <div className="absolute -bottom-20 -left-10 opacity-10 rotate-12 transform scale-75">
+              <div className="w-32 h-20 bg-white rounded-md"></div>
+            </div>
+            <div className="absolute top-20 -right-10 opacity-10 -rotate-12 transform scale-75">
+              <div className="w-32 h-20 bg-white rounded-md"></div>
+            </div>
+          </div>
+        )}
+        
+        {gameState === GameState.START_SCREEN && showHowToPlay && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
+            <div className="glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
+              <div className="flex items-center justify-between mb-4">
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="rounded-full bg-black/20 backdrop-blur-sm hover:bg-black/30"
-                  onClick={toggleSound}
-                  aria-label={isSoundEnabled ? "Mute sound" : "Enable sound"}
+                  className="rounded-full"
+                  onClick={handleBackToMenu}
                 >
-                  {isSoundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <h2 className="text-2xl font-bold tracking-tight text-white">How to Play</h2>
+                <div className="w-9"></div>
+              </div>
+              
+              <div className="chip text-xs bg-[#91d3d1]/10 text-[#91d3d1] px-3 py-1 rounded-full mb-6 inline-block">
+                {currentHowToPlayPage + 1} of {howToPlayContent.length}
+              </div>
+              
+              <h3 className="text-xl font-medium mb-4 text-[#91d3d1]">{howToPlayContent[currentHowToPlayPage].title}</h3>
+              
+              <div className="text-left mb-6 min-h-[200px]">
+                {howToPlayContent[currentHowToPlayPage].content}
+              </div>
+              
+              <div className="flex justify-between">
+                <Button
+                  variant="teal-outline"
+                  size="sm"
+                  onClick={handlePrevPage}
+                  disabled={currentHowToPlayPage === 0}
+                  className={cn(
+                    "rounded-full px-4",
+                    currentHowToPlayPage === 0 && "opacity-50 cursor-not-allowed"
+                  )}
+                >
+                  <ChevronLeft className="h-5 w-5 mr-1" />
+                  Previous
+                </Button>
+                
+                <Button
+                  variant="teal-outline"
+                  size="sm"
+                  onClick={handleNextPage}
+                  disabled={currentHowToPlayPage === howToPlayContent.length - 1}
+                  className={cn(
+                    "rounded-full px-4",
+                    currentHowToPlayPage === howToPlayContent.length - 1 && "opacity-50 cursor-not-allowed"
+                  )}
+                >
+                  Next
+                  <ChevronRight className="h-5 w-5 ml-1" />
                 </Button>
               </div>
             </div>
           </div>
-          
-          <div className="absolute -bottom-20 -left-10 opacity-10 rotate-12 transform scale-75">
-            <div className="w-32 h-20 bg-white rounded-md"></div>
-          </div>
-          <div className="absolute top-20 -right-10 opacity-10 -rotate-12 transform scale-75">
-            <div className="w-32 h-20 bg-white rounded-md"></div>
-          </div>
-        </div>
-      );
-    }
-  };
-  
-  const renderGameOverScreen = () => {
-    return (
-      <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
-        <div className="game-over-modal glassmorphism rounded-3xl p-8 max-w-md mx-auto border border-[#91d3d1]/20" style={{ width: '100%' }}>
-          <h2 className="text-3xl font-bold mb-6">Game Over</h2>
-          
-          <Tabs defaultValue="results" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-4">
-              <TabsTrigger value="results" className="text-sm">Your Results</TabsTrigger>
-              <TabsTrigger value="leaderboard" className="text-sm">Leaderboard</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="results" className="space-y-4">
-              {username && (
-                <div className="chip text-xs bg-[#91d3d1]/20 text-[#91d3d1] px-3 py-1 rounded-full inline-flex items-center">
-                  <User className="w-3 h-3 mr-1" /> {username}
-                </div>
-              )}
+        )}
+        
+        {gameState === GameState.PAUSED && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
+            <div className="pause-menu glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
+              <h1 className="text-3xl font-bold mb-6 tracking-tight text-white">Game Paused</h1>
               
-              <div className="space-y-2">
-                <p className="text-gray-400 text-sm">YOUR SCORE</p>
-                <p className="text-4xl font-bold">{score}</p>
+              <div className="flex flex-col space-y-4 items-center">
+                <Button 
+                  onClick={handleResumeGame}
+                  className="game-button w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 rounded-xl py-6 text-lg font-medium shadow-lg shadow-[#91d3d1]/20"
+                >
+                  <Play className="mr-2 h-5 w-5" />
+                  Resume Game
+                </Button>
+                
+                <Button 
+                  onClick={handleRestartGame}
+                  variant="teal-outline"
+                  className="w-full rounded-xl py-6 text-lg font-medium"
+                >
+                  <RefreshCw className="mr-2 h-5 w-5" />
+                  Restart Game
+                </Button>
+                
+                <div className="flex items-center mt-4 space-x-3">
+                  <div className="text-sm text-gray-300">
+                    Current Score: <span className="font-bold text-white">{score}</span>
+                  </div>
+                  
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="rounded-full bg-black/20 backdrop-blur-sm hover:bg-black/30"
+                    onClick={toggleSound}
+                    aria-label={isSoundEnabled ? "Mute sound" : "Enable sound"}
+                  >
+                    {isSoundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {gameState === GameState.GAME_OVER && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
+            <div className="game-over-modal glassmorphism rounded-3xl p-8 max-w-md mx-auto text-center border border-[#91d3d1]/20">
+              <h2 className="text-3xl font-bold mb-2">Game Over</h2>
+              
+              <div className="my-6 space-y-4">
+                {/* Display username in game over screen */}
+                {username && (
+                  <div className="chip text-xs bg-[#91d3d1]/20 text-[#91d3d1] px-3 py-1 rounded-full inline-flex items-center">
+                    <User className="w-3 h-3 mr-1" /> {username}
+                  </div>
+                )}
+                
+                <div className="space-y-2">
+                  <p className="text-gray-400 text-sm">YOUR SCORE</p>
+                  <p className="text-4xl font-bold">{score}</p>
+                </div>
+                
+                {score > highScore ? (
+                  <div className="py-2 px-4 bg-[#91d3d1]/20 text-[#91d3d1] rounded-full inline-flex items-center space-x-2 animate-pulse">
+                    <Trophy className="w-5 h-5" />
+                    <span>New High Score!</span>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-gray-400 text-sm">HIGH SCORE</p>
+                    <p className="text-2xl font-medium">{highScore}</p>
+                  </div>
+                )}
               </div>
               
-              {score > highScore ? (
-                <div className="py-2 px-4 bg-[#91d3d1]/20 text-[#91d3d1] rounded-full inline-flex items-center space-x-2 animate-pulse">
-                  <Trophy className="w-5 h-5" />
-                  <span>New High Score!</span>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <p className="text-gray-400 text-sm">HIGH SCORE</p>
-                  <p className="text-2xl font-medium">{highScore}</p>
-                </div>
-              )}
-              
+              {/* Add blockchain submission option if connected */}
               {isConnected && (
-                <div className="mt-4">
+                <div className="mb-4">
                   <Button 
                     onClick={() => {
                       submitScore(score)
@@ -1132,27 +1184,17 @@ const Game: React.FC = () => {
                         });
                     }}
                     className="w-full bg-gradient-to-r from-[#6366f1] to-[#4f46e5] hover:from-[#4f46e5] hover:to-[#4338ca] text-white py-3 rounded-xl flex items-center justify-center mb-3"
-                    disabled={isSubmittingScore}
                   >
-                    {isSubmittingScore ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Submitting...
-                      </>
-                    ) : (
-                      <>
-                        <Rocket className="mr-2 h-4 w-4" />
-                        Submit Score to Blockchain
-                      </>
-                    )}
+                    <Rocket className="mr-2 h-4 w-4" />
+                    Submit Score to Blockchain
                   </Button>
                   <div className="text-xs text-gray-400">
-                    Playing as {username} in Onchain Mode
+                    Playing as {web3Username} in Onchain Mode
                   </div>
                 </div>
               )}
               
-              <div className="space-y-3 mt-6">
+              <div className="space-y-3">
                 <Button 
                   onClick={handleTryAgain}
                   className="game-button w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 rounded-xl py-6 text-lg font-medium shadow-lg shadow-[#91d3d1]/20"
@@ -1168,174 +1210,56 @@ const Game: React.FC = () => {
                   <Home className="mr-2 h-5 w-5" />
                   Back to Menu
                 </Button>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="leaderboard">
-              <Leaderboard />
-              
-              <div className="mt-6 space-y-3">
-                <Button 
-                  onClick={handleTryAgain}
-                  className="game-button w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 rounded-xl py-5 text-base font-medium shadow-lg shadow-[#91d3d1]/20"
-                >
-                  Play Again
-                </Button>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </div>
-      </div>
-    );
-  };
-
-  return (
-    <div className="relative w-full h-full select-none overflow-hidden bg-zinc-900">
-      <canvas
-        className="w-full h-full object-cover"
-        ref={canvasRef}
-      />
-      
-      {showOnboarding && <OnchainOnboarding onComplete={handleOnboardingComplete} />}
-      
-      {gameState === GameState.GAMEPLAY && (
-        <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10">
-          <div className="flex items-center space-x-2 glassmorphism px-3 py-1 rounded-full">
-            {Array.from({ length: lives }).map((_, i) => (
-              <Heart key={i} className="w-5 h-5 text-red-500 fill-red-500" />
-            ))}
-          </div>
-          
-          <div className="glassmorphism px-4 py-1 rounded-full">
-            <div className="hud-text text-xl font-medium">{score}</div>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            {activeSlowMode && (
-              <div className="flex items-center space-x-1 glassmorphism px-3 py-1 rounded-full">
-                <Clock className="w-4 h-4 text-[#a170fc]" />
-                <span className="text-sm font-medium">{Math.ceil(slowModeTimer / 1000)}s</span>
-              </div>
-            )}
-            
-            {activeShield && (
-              <div className="flex items-center space-x-1 glassmorphism px-3 py-1 rounded-full">
-                <Shield className="w-4 h-4 text-[#64d2ff]" />
-                <span className="text-sm font-medium">{Math.ceil(shieldTimer / 1000)}s</span>
-              </div>
-            )}
-            
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="rounded-full bg-black/20 backdrop-blur-sm hover:bg-black/30"
-              onClick={toggleSound}
-              aria-label={isSoundEnabled ? "Mute sound" : "Enable sound"}
-            >
-              {isSoundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-            </Button>
-            
-            <Button 
-              variant="teal" 
-              size="icon" 
-              className="rounded-full hover:bg-[#7ec7c5] transition-colors"
-              onClick={handlePauseGame}
-              aria-label="Pause game"
-            >
-              <Pause className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
-      )}
-      
-      {gameState === GameState.MODE_SELECTION && (
-        <ModeSelectionScreen 
-          onSelectMode={handleModeSelection}
-          currentMode={selectedGameMode}
-          currentUsername={username}
-          onContinue={handleContinueWithCurrentSettings}
-        />
-      )}
-      
-      {gameState === GameState.START_SCREEN && renderStartScreen()}
-      
-      {gameState === GameState.PAUSED && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
-          <div className="pause-menu glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
-            <h1 className="text-3xl font-bold mb-6 tracking-tight text-white">Game Paused</h1>
-            
-            <div className="flex flex-col space-y-4 items-center">
-              <Button 
-                onClick={handleResumeGame}
-                className="game-button w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 rounded-xl py-6 text-lg font-medium shadow-lg shadow-[#91d3d1]/20"
-              >
-                <Play className="mr-2 h-5 w-5" />
-                Resume Game
-              </Button>
-              
-              <Button 
-                onClick={handleRestartGame}
-                variant="teal-outline"
-                className="w-full rounded-xl py-6 text-lg font-medium"
-              >
-                <RefreshCw className="mr-2 h-5 w-5" />
-                Restart Game
-              </Button>
-              
-              <div className="flex items-center mt-4 space-x-3">
-                <div className="text-sm text-gray-300">
-                  Current Score: <span className="font-bold text-white">{score}</span>
-                </div>
                 
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="rounded-full bg-black/20 backdrop-blur-sm hover:bg-black/30"
-                  onClick={toggleSound}
-                  aria-label={isSoundEnabled ? "Mute sound" : "Enable sound"}
-                >
-                  {isSoundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-                </Button>
+                <div className="flex justify-center mt-4">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="rounded-full bg-black/20 backdrop-blur-sm hover:bg-black/30"
+                    onClick={toggleSound}
+                    aria-label={isSoundEnabled ? "Mute sound" : "Enable sound"}
+                  >
+                    {isSoundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
-      
-      {gameState === GameState.GAME_OVER && renderGameOverScreen()}
-      
-      {isMobile && gameState === GameState.GAMEPLAY && (
-        <div className="absolute bottom-10 left-0 right-0 flex justify-between px-8">
-          <button
-            className={cn(
-              "w-16 h-16 rounded-full glassmorphism border border-[#91d3d1]/30 touch-control flex items-center justify-center",
-              "active:bg-[#91d3d1]/30 transition-all"
-            )}
-            onTouchStart={handleTouchLeft}
-          >
-            <ChevronLeft className="h-10 w-10 text-[#91d3d1]" />
-          </button>
-          
-          <button
-            className={cn(
-              "w-16 h-16 rounded-full glassmorphism border border-[#91d3d1]/30 touch-control flex items-center justify-center",
-              "active:bg-[#91d3d1]/30 transition-all"
-            )}
-            onTouchStart={handleTouchRight}
-          >
-            <ChevronRight className="h-10 w-10 text-[#91d3d1]" />
-          </button>
-        </div>
-      )}
-      
-      {(!carAssetsLoaded || !gameInitialized) && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-background">
-          <Loader2 className="h-8 w-8 animate-spin text-[#91d3d1] mb-4" />
-          <p className="text-sm text-muted-foreground">Loading game assets...</p>
-        </div>
-      )}
-      
-      <div className="bg-noise absolute inset-0 pointer-events-none opacity-5"></div>
+        )}
+        
+        {isMobile && gameState === GameState.GAMEPLAY && (
+          <div className="absolute bottom-10 left-0 right-0 flex justify-between px-8">
+            <button
+              className={cn(
+                "w-16 h-16 rounded-full glassmorphism border border-[#91d3d1]/30 touch-control flex items-center justify-center",
+                "active:bg-[#91d3d1]/30 transition-all"
+              )}
+              onTouchStart={handleTouchLeft}
+            >
+              <ChevronLeft className="h-10 w-10 text-[#91d3d1]" />
+            </button>
+            
+            <button
+              className={cn(
+                "w-16 h-16 rounded-full glassmorphism border border-[#91d3d1]/30 touch-control flex items-center justify-center",
+                "active:bg-[#91d3d1]/30 transition-all"
+              )}
+              onTouchStart={handleTouchRight}
+            >
+              <ChevronRight className="h-10 w-10 text-[#91d3d1]" />
+            </button>
+          </div>
+        )}
+        
+        {(!carAssetsLoaded || !gameInitialized) && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-background">
+            <Loader2 className="h-8 w-8 animate-spin text-[#91d3d1] mb-4" />
+            <p className="text-sm text-muted-foreground">Loading game assets...</p>
+          </div>
+        )}
+        
+        <div className="bg-noise absolute inset-0 pointer-events-none opacity-5"></div>
+      </div>
     </div>
   );
 };

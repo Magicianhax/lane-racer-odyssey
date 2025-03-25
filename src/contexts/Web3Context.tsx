@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { toast } from 'sonner';
@@ -9,29 +8,15 @@ const GAME_SCORE_ABI = [
   "function getPlayerHighScore() external view returns (uint256)",
   "function getTopScores() external view returns (tuple(address player, uint256 score, uint256 timestamp)[])",
   "event ScoreSubmitted(address indexed player, uint256 score, uint256 timestamp)",
-  "event NewHighScore(address indexed player, uint256 score, uint256 timestamp)",
-  "function registerUsername(string memory _username) external",
-  "function isUsernameAvailable(string memory _username) external view returns (bool)",
-  "function usernameToAddress(string memory) external view returns (address)",
-  "function addressToUsername(address) external view returns (string memory)",
-  "function getUsername(address _player) external view returns (string memory)",
-  "event UsernameRegistered(address indexed player, string username)"
+  "event NewHighScore(address indexed player, uint256 score, uint256 timestamp)"
 ];
 
-const CONTRACT_ADDRESS = "0x12fa8f89fF179246270d2438DE35c5694fE08Ab8";
+const CONTRACT_ADDRESS = "0xAF3DF64A108A244a79800ca3263100Eec1a08BAf";
 const SUPERSEED_RPC_URL = "https://sepolia.superseed.xyz/";
 
-// Fixed gas settings - Updating gas price to 1 gwei from 0.1 gwei
-const FIXED_GAS_PRICE = ethers.utils.parseUnits("1", "gwei");
+// Fixed gas settings
+const FIXED_GAS_PRICE = ethers.utils.parseUnits("0.1", "gwei");
 const FIXED_GAS_LIMIT = 200000; // Setting a higher gas limit to ensure transaction goes through
-
-// Leaderboard entry type
-type LeaderboardEntry = {
-  player: string;
-  username: string;
-  score: number;
-  timestamp: number;
-};
 
 type Web3ContextType = {
   wallet: {
@@ -54,9 +39,6 @@ type Web3ContextType = {
   withdrawEth: (toAddress: string, amount: string) => Promise<void>;
   isWithdrawing: boolean;
   refreshBalance: () => Promise<void>;
-  registerUsername: (username: string) => Promise<void>;
-  checkUsernameAvailable: (username: string) => Promise<boolean>;
-  fetchLeaderboard: () => Promise<LeaderboardEntry[]>;
 };
 
 const Web3Context = createContext<Web3ContextType | undefined>(undefined);
@@ -394,109 +376,6 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const registerUsername = async (username: string): Promise<void> => {
-    if (!contract) {
-      setError("No contract connection");
-      toast.error("No contract connection");
-      return;
-    }
-    
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      toast.loading("Registering username on the blockchain...");
-      
-      // Call the contract function to register username
-      const tx = await contract.registerUsername(username, {
-        gasPrice: FIXED_GAS_PRICE,
-        gasLimit: FIXED_GAS_LIMIT
-      });
-      setLastTxHash(tx.hash);
-      
-      // Wait for transaction to be mined
-      const receipt = await tx.wait();
-      console.log("Username registered:", receipt);
-      
-      // Update state
-      setUsername(username);
-      
-      toast.dismiss();
-      toast.success("Username registered successfully!");
-      
-      setIsLoading(false);
-    } catch (error) {
-      console.error("Error registering username:", error);
-      
-      toast.dismiss();
-      toast.error("Failed to register username", {
-        description: "There was an error registering your username on the blockchain."
-      });
-      
-      setError("Failed to register username");
-      setIsLoading(false);
-    }
-  };
-
-  const checkUsernameAvailable = async (username: string): Promise<boolean> => {
-    if (!contract) {
-      setError("No contract connection");
-      return false;
-    }
-    
-    try {
-      // Call the contract to check if username is available
-      return await contract.isUsernameAvailable(username);
-    } catch (error) {
-      console.error("Error checking username availability:", error);
-      setError("Failed to check username availability");
-      return false;
-    }
-  };
-
-  const fetchLeaderboard = async (): Promise<LeaderboardEntry[]> => {
-    if (!contract) {
-      setError("No contract connection");
-      return [];
-    }
-    
-    try {
-      // Call the contract to get top scores
-      const scores = await contract.getTopScores();
-      
-      // Format the data
-      const leaderboard = await Promise.all(scores.map(async (score: any) => {
-        let username = "";
-        try {
-          // Try to get username for the player
-          username = await contract.getUsername(score.player);
-        } catch (err) {
-          console.warn("Could not fetch username for", score.player);
-          username = shortenAddress(score.player);
-        }
-        
-        return {
-          player: score.player,
-          username: username,
-          score: score.score.toNumber(),
-          timestamp: score.timestamp.toNumber(),
-        };
-      }));
-      
-      // Filter out entries with score = 0 (empty spots)
-      return leaderboard.filter((entry: LeaderboardEntry) => entry.score > 0);
-    } catch (error) {
-      console.error("Error fetching leaderboard:", error);
-      setError("Failed to fetch leaderboard");
-      return [];
-    }
-  };
-
-  // Helper function
-  const shortenAddress = (address: string) => {
-    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
-  };
-
   const value = {
     wallet,
     username,
@@ -513,10 +392,7 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
     lastTxHash,
     withdrawEth,
     isWithdrawing,
-    refreshBalance,
-    registerUsername,
-    checkUsernameAvailable,
-    fetchLeaderboard
+    refreshBalance
   };
 
   return <Web3Context.Provider value={value}>{children}</Web3Context.Provider>;
@@ -535,4 +411,3 @@ declare global {
     ethereum?: any;
   }
 }
-

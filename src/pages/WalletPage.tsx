@@ -1,49 +1,30 @@
 
 import React, { useState, useEffect } from 'react';
 import { useWeb3 } from '@/contexts/Web3Context';
-import { OnboardingFlow } from '@/components/OnboardingFlow';
+import { UsernameModal } from '@/components/UsernameModal';
 import { WalletInfoPanel } from '@/components/WalletInfoPanel';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { toast } from 'sonner';
 
 const WalletPage: React.FC = () => {
   const { isConnected, username } = useWeb3();
-  const [isOnboarding, setIsOnboarding] = useState(false);
-  const [onboardingComplete, setOnboardingComplete] = useState(false);
+  const [showUserModal, setShowUserModal] = useState(false);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
   useEffect(() => {
-    // Show onboarding if not connected or no username
-    setIsOnboarding(!isConnected || !username);
-    
-    // Check if user has completed onboarding
-    if (isConnected && username) {
-      setOnboardingComplete(true);
-    }
+    // Only show the username modal if the user is not connected
+    setShowUserModal(!isConnected && !username);
   }, [isConnected, username]);
 
   const handleSetupComplete = () => {
-    setIsOnboarding(false);
-    setOnboardingComplete(true);
+    setShowUserModal(false);
   };
 
   const handleBackToHome = () => {
-    // Only allow going back to home if onboarding is complete
-    if (onboardingComplete) {
-      navigate('/');
-    } else if (isConnected) {
-      // If connected but onboarding not complete, show warning
-      toast.warning("Please complete the onboarding process", {
-        description: "You need to register a username before you can play the game."
-      });
-    } else {
-      // If not connected yet, let them go back
-      navigate('/');
-    }
+    navigate('/');
   };
 
   const renderContent = () => (
@@ -60,8 +41,8 @@ const WalletPage: React.FC = () => {
       <div className="max-w-md mx-auto">
         <h1 className="text-2xl font-bold mb-6 text-center text-gradient">Wallet</h1>
         
-        {isOnboarding ? (
-          <OnboardingFlow onComplete={handleSetupComplete} />
+        {showUserModal ? (
+          <UsernameModal onComplete={handleSetupComplete} />
         ) : (
           <WalletInfoPanel />
         )}
