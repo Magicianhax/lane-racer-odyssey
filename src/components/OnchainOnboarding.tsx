@@ -22,6 +22,7 @@ export const OnchainOnboarding: React.FC<OnchainOnboardingProps> = ({ onComplete
   const [walletCreated, setWalletCreated] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState(false);
   const [refreshingBalance, setRefreshingBalance] = useState(false);
+  const [usernameRegistered, setUsernameRegistered] = useState(false);
   
   // Get Web3 context
   const { 
@@ -38,18 +39,18 @@ export const OnchainOnboarding: React.FC<OnchainOnboardingProps> = ({ onComplete
       const savedUsername = localStorage.getItem('username');
       if (savedUsername) {
         setUsername(savedUsername);
+        setUsernameRegistered(true);
         
         // If we have both wallet and username, onboarding is complete
-        if (Number(wallet.balance || 0) > 0) {
-          onComplete();
-        } else {
-          // If we have no ETH, stay in funding step
-          setCurrentStep(1);
-        }
+        onComplete();
       } else {
         // If we have a wallet with balance, go to username registration
+        // even if no username is registered
         if (Number(wallet.balance || 0) > 0) {
           setCurrentStep(2);
+        } else {
+          // If no balance, stay on step 1 to allow user to get ETH
+          setCurrentStep(1);
         }
       }
     }
@@ -67,8 +68,9 @@ export const OnchainOnboarding: React.FC<OnchainOnboardingProps> = ({ onComplete
           toast.success("ETH detected in wallet!", {
             description: "You can now proceed to register your username."
           });
-          clearInterval(intervalId);
+          // Move to username registration instead of completing
           setCurrentStep(2);
+          clearInterval(intervalId);
         }
       }, 10000);
     }
@@ -110,6 +112,7 @@ export const OnchainOnboarding: React.FC<OnchainOnboardingProps> = ({ onComplete
         toast.success("ETH detected in wallet!", {
           description: "You can now proceed to register your username."
         });
+        // Move to username registration instead of completing
         setCurrentStep(2);
       }
     } catch (err) {
@@ -162,6 +165,9 @@ export const OnchainOnboarding: React.FC<OnchainOnboardingProps> = ({ onComplete
       
       // Update localStorage
       localStorage.setItem('username', username);
+      
+      // Set username as registered
+      setUsernameRegistered(true);
       
       // Complete onboarding
       toast.success("Username registered successfully!");

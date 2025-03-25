@@ -7,12 +7,14 @@ import { useEffect } from "react";
 
 const Index = () => {
   const isMobile = useIsMobile();
-  const { refreshBalance } = useWeb3();
+  const { refreshBalance, isConnected, username } = useWeb3();
   
   // Refresh wallet balance when page loads
   useEffect(() => {
-    refreshBalance();
-  }, [refreshBalance]);
+    if (isConnected) {
+      refreshBalance();
+    }
+  }, [isConnected, refreshBalance]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-900 to-zinc-950 text-white overflow-hidden">

@@ -26,27 +26,31 @@ export const OnchainMode: React.FC<OnchainModeProps> = ({ gameMode, onSelectOnch
   const renderContent = () => {
     // Use the component's state to determine what to render
     if (gameMode === GameMode.ONCHAIN) {
-      if (!username && isConnected) {
-        // If connected but no username, show username form
-        return <OnchainOnboarding onComplete={() => setShowUsernameModal(false)} />;
-      } else if (!isConnected) {
-        // If not connected at all, show connect button
-        return (
-          <div className="flex flex-col space-y-4 w-full items-center">
-            <div className="text-center space-y-2 mb-4">
-              <h3 className="text-lg font-bold">Play On-Chain Mode</h3>
-              <p className="text-sm text-gray-300">Register your scores permanently on the blockchain!</p>
+      // First check if we have a username - this is the most important condition
+      if (!username) {
+        // If we don't have a username, check if wallet is connected
+        if (isConnected) {
+          // If connected but no username, show username form regardless of balance
+          return <OnchainOnboarding onComplete={() => setShowUsernameModal(false)} />;
+        } else {
+          // If not connected at all, show connect button
+          return (
+            <div className="flex flex-col space-y-4 w-full items-center">
+              <div className="text-center space-y-2 mb-4">
+                <h3 className="text-lg font-bold">Play On-Chain Mode</h3>
+                <p className="text-sm text-gray-300">Register your scores permanently on the blockchain!</p>
+              </div>
+              
+              <Button 
+                onClick={() => setShowUsernameModal(true)}
+                className="bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900"
+              >
+                <Rocket className="mr-2 h-4 w-4" />
+                Connect Wallet
+              </Button>
             </div>
-            
-            <Button 
-              onClick={() => setShowUsernameModal(true)}
-              className="bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900"
-            >
-              <Rocket className="mr-2 h-4 w-4" />
-              Connect Wallet
-            </Button>
-          </div>
-        );
+          );
+        }
       } else {
         // If already connected and has username, show the status
         return (
