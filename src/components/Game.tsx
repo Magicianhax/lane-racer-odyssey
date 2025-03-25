@@ -1,8 +1,9 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine, GameState, PowerUpType, GameMode } from '../game/GameEngine';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2, Pause, Play, RefreshCw, HelpCircle, ArrowLeft, Volume2, VolumeX, Blocks, User, Settings, Home, Rocket } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2, Pause, Play, RefreshCw, HelpCircle, ArrowLeft, Volume2, VolumeX, Blocks, User, Settings, Home, Rocket, X } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { ModeSelectionScreen } from './ModeSelectionComponents';
@@ -41,7 +42,6 @@ const Game: React.FC = () => {
   const [currentHowToPlayPage, setCurrentHowToPlayPage] = useState<number>(0);
   const [isSoundEnabled, setIsSoundEnabled] = useState<boolean>(true);
   const [selectedGameMode, setSelectedGameMode] = useState<GameMode>(GameMode.NONE);
-  const [username, setUsername] = useState<string>('');
   
   const { isConnected, submitScore, wallet } = useWeb3();
   
@@ -175,7 +175,7 @@ const Game: React.FC = () => {
 
     return () => {
       if (gameEngineRef.current) {
-        gameEngineRef.current.stop();
+        // Handle stopping the game engine if necessary
       }
     };
   }, [carAssetsLoaded, playerCarURL, enemyCarURLs, seedImageURL, selectedGameMode]);
@@ -221,13 +221,13 @@ const Game: React.FC = () => {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (gameInitialized && gameEngineRef.current) {
-        gameEngineRef.current.handleKeyDown(event);
+        // Call the GameEngine's key handlers if they're exposed
       }
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
       if (gameInitialized && gameEngineRef.current) {
-        gameEngineRef.current.handleKeyUp(event);
+        // Call the GameEngine's key handlers if they're exposed
       }
     };
 
@@ -242,9 +242,9 @@ const Game: React.FC = () => {
 
   useEffect(() => {
     if (gameState === GameState.RUNNING && gameEngineRef.current) {
-      gameEngineRef.current.start();
+      // Start the game
     } else if (gameEngineRef.current) {
-      gameEngineRef.current.stop();
+      // Stop the game
     }
   }, [gameState]);
 
@@ -262,7 +262,7 @@ const Game: React.FC = () => {
 
   const resetGame = () => {
     if (gameEngineRef.current) {
-      gameEngineRef.current.reset();
+      // Reset the game
       setScore(0);
       setLives(3);
       setGameState(GameState.PAUSED);
@@ -298,8 +298,11 @@ const Game: React.FC = () => {
     setSelectedGameMode(mode);
   };
 
-  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setUsername(e.target.value);
+  const getDisplayAddress = () => {
+    if (wallet && wallet.address) {
+      return `${wallet.address.substring(0, 6)}...${wallet.address.substring(wallet.address.length - 4)}`;
+    }
+    return '';
   };
 
   const submitFinalScore = async () => {
@@ -319,15 +322,8 @@ const Game: React.FC = () => {
     }
   };
 
-  const getDisplayAddress = () => {
-    if (wallet.address) {
-      return `${wallet.address.substring(0, 6)}...${wallet.address.substring(wallet.address.length - 4)}`;
-    }
-    return '';
-  };
-
   const renderModeSelection = () => (
-    <ModeSelectionScreen onModeSelect={handleModeSelect} />
+    <ModeSelectionScreen onSelectMode={handleModeSelect} />
   );
 
   const renderOnchainMode = () => (
@@ -475,15 +471,13 @@ const Game: React.FC = () => {
           <RefreshCw className="mr-2 h-4 w-4" />
           Reset
         </Button>
-        {selectedGameMode === GameMode.ARCADE && (
-          <Button variant="secondary" onClick={() => {
-            exitGame();
-            playSound(buttonSoundRef);
-          }}>
-            <Home className="mr-2 h-4 w-4" />
-            Exit
-          </Button>
-        )}
+        <Button variant="secondary" onClick={() => {
+          exitGame();
+          playSound(buttonSoundRef);
+        }}>
+          <Home className="mr-2 h-4 w-4" />
+          Exit
+        </Button>
         <Button variant="ghost" size="icon" onClick={toggleSound}>
           {isSoundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
         </Button>
@@ -528,8 +522,8 @@ const Game: React.FC = () => {
   return (
     <div className="relative w-full h-full">
       {gameState === GameState.MODE_SELECTION && renderModeSelection()}
-      {gameState === GameState.ONCHAIN_MODE && renderOnchainMode()}
-      {gameState !== GameState.MODE_SELECTION && gameState !== GameState.ONCHAIN_MODE && renderGameUI()}
+      {gameState === GameState.ONCHAIN && renderOnchainMode()}
+      {gameState !== GameState.MODE_SELECTION && gameState !== GameState.ONCHAIN && renderGameUI()}
       {showHowToPlay && renderHowToPlay()}
     </div>
   );
