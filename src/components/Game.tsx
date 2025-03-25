@@ -54,6 +54,485 @@ const Game: React.FC = () => {
   
   const isMobile = useIsMobile();
 
-[The code continues exactly as in the original file, but with all instances of `web3Username` replaced with `wallet.address ? `${wallet.address.substring(0, 6)}...${wallet.address.substring(wallet.address.length - 4)}` : ''`]
+  useEffect(() => {
+    if (isFirstTime) {
+      setShowHowToPlay(true);
+      setIsFirstTime(false);
+    }
+  }, [isFirstTime]);
 
-[Note: I apologize, but the full code would exceed the length limit. The modification needed is to replace all instances of `web3Username` with the wallet address display format shown above, while keeping all other code exactly the same as in the original file.]
+  useEffect(() => {
+    const handleResize = () => {
+      if (!canvasRef.current) return;
+      setCanvasSize({
+        width: canvasRef.current.clientWidth,
+        height: canvasRef.current.clientHeight,
+      });
+    };
+
+    window.addEventListener('resize', handleResize);
+    handleResize();
+
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    const loadAssets = async () => {
+      try {
+        const playerCarImage = new Image();
+        playerCarImage.src = playerCarURL;
+
+        const enemyCarImages = enemyCarURLs.map(url => {
+          const img = new Image();
+          img.src = url;
+          return img;
+        });
+
+        const seedImage = new Image();
+        seedImage.src = seedImageURL;
+
+        await Promise.all([
+          new Promise(resolve => playerCarImage.onload = resolve),
+          ...enemyCarImages.map(img => new Promise(resolve => img.onload = resolve)),
+          new Promise(resolve => seedImage.onload = resolve),
+        ]);
+
+        setCarAssetsLoaded(true);
+      } catch (error) {
+        console.error("Error loading car assets:", error);
+        setLoadingError("Failed to load car assets. Please check your internet connection and try again.");
+      }
+    };
+
+    loadAssets();
+  }, [playerCarURL, enemyCarURLs, seedImageURL]);
+
+  useEffect(() => {
+    const loadSounds = () => {
+      carSoundRef.current = new Audio(CAR_SOUND);
+      crashSoundRef.current = new Audio(CRASH_SOUND);
+      seedSoundRef.current = new Audio(SEED_SOUND);
+      slowTimerSoundRef.current = new Audio(SLOW_TIMER_SOUND);
+      buttonSoundRef.current = new Audio(BUTTON_SOUND);
+
+      soundsLoadedRef.current = true;
+    };
+
+    loadSounds();
+
+    return () => {
+      if (carSoundRef.current) carSoundRef.current.pause();
+      if (crashSoundRef.current) crashSoundRef.current.pause();
+      if (seedSoundRef.current) seedSoundRef.current.pause();
+      if (slowTimerSoundRef.current) slowTimerSoundRef.current.pause();
+      if (buttonSoundRef.current) buttonSoundRef.current.pause();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (carAssetsLoaded && canvasRef.current && !gameInitialized) {
+      const playerCarImage = new Image();
+      playerCarImage.src = playerCarURL;
+
+      const enemyCarImages = enemyCarURLs.map(url => {
+        const img = new Image();
+        img.src = url;
+        return img;
+      });
+
+      const seedImage = new Image();
+      seedImage.src = seedImageURL;
+
+      Promise.all([
+        new Promise(resolve => playerCarImage.onload = resolve),
+        ...enemyCarImages.map(img => new Promise(resolve => img.onload = resolve)),
+        new Promise(resolve => seedImage.onload = resolve),
+      ]).then(() => {
+        if (!canvasRef.current) return;
+
+        const gameEngine = new GameEngine(
+          canvasRef.current,
+          setScore,
+          setLives,
+          setGameState,
+          setActiveSlowMode,
+          setActiveShield,
+          setSlowModeTimer,
+          setShieldTimer,
+          playerCarImage,
+          enemyCarImages,
+          seedImage,
+          () => playSound(crashSoundRef),
+          () => playSound(seedSoundRef),
+          selectedGameMode
+        );
+
+        gameEngineRef.current = gameEngine;
+        setGameInitialized(true);
+        setGameState(GameState.PAUSED);
+      });
+    }
+
+    return () => {
+      if (gameEngineRef.current) {
+        gameEngineRef.current.stop();
+      }
+    };
+  }, [carAssetsLoaded, playerCarURL, enemyCarURLs, seedImageURL, selectedGameMode]);
+
+  useEffect(() => {
+    let timerId: NodeJS.Timeout;
+
+    if (activeSlowMode && slowModeTimer > 0) {
+      timerId = setTimeout(() => {
+        setSlowModeTimer(prevTime => prevTime - 1);
+        playSound(slowTimerSoundRef);
+      }, 1000);
+    } else if (slowModeTimer === 0) {
+      setActiveSlowMode(false);
+    }
+
+    return () => clearTimeout(timerId);
+  }, [activeSlowMode, slowModeTimer]);
+
+  useEffect(() => {
+    let timerId: NodeJS.Timeout;
+
+    if (activeShield && shieldTimer > 0) {
+      timerId = setTimeout(() => {
+        setShieldTimer(prevTime => prevTime - 1);
+      }, 1000);
+    } else if (shieldTimer === 0) {
+      setActiveShield(false);
+    }
+
+    return () => clearTimeout(timerId);
+  }, [activeShield, shieldTimer]);
+
+  useEffect(() => {
+    const storedHighScore = localStorage.getItem('highScore') || '0';
+    setHighScore(parseInt(storedHighScore));
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('highScore', highScore.toString());
+  }, [highScore]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (gameInitialized && gameEngineRef.current) {
+        gameEngineRef.current.handleKeyDown(event);
+      }
+    };
+
+    const handleKeyUp = (event: KeyboardEvent) => {
+      if (gameInitialized && gameEngineRef.current) {
+        gameEngineRef.current.handleKeyUp(event);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [gameInitialized]);
+
+  useEffect(() => {
+    if (gameState === GameState.RUNNING && gameEngineRef.current) {
+      gameEngineRef.current.start();
+    } else if (gameEngineRef.current) {
+      gameEngineRef.current.stop();
+    }
+  }, [gameState]);
+
+  const startGame = () => {
+    if (selectedGameMode === GameMode.NONE) {
+      toast.error("Please select a game mode to start.");
+      return;
+    }
+    setGameState(GameState.RUNNING);
+  };
+
+  const pauseGame = () => {
+    setGameState(GameState.PAUSED);
+  };
+
+  const resetGame = () => {
+    if (gameEngineRef.current) {
+      gameEngineRef.current.reset();
+      setScore(0);
+      setLives(3);
+      setGameState(GameState.PAUSED);
+      setActiveSlowMode(false);
+      setActiveShield(false);
+      setSlowModeTimer(0);
+      setShieldTimer(0);
+    }
+  };
+
+  const exitGame = () => {
+    setGameState(GameState.MODE_SELECTION);
+    setScore(0);
+    setLives(3);
+    setActiveSlowMode(false);
+    setActiveShield(false);
+    setSlowModeTimer(0);
+    setShieldTimer(0);
+  };
+
+  const toggleSound = () => {
+    setIsSoundEnabled(prev => !prev);
+  };
+
+  const playSound = (soundRef: React.RefObject<HTMLAudioElement>) => {
+    if (isSoundEnabled && soundRef.current && soundsLoadedRef.current) {
+      soundRef.current.currentTime = 0;
+      soundRef.current.play();
+    }
+  };
+
+  const handleModeSelect = (mode: GameMode) => {
+    setSelectedGameMode(mode);
+  };
+
+  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setUsername(e.target.value);
+  };
+
+  const submitFinalScore = async () => {
+    if (score > highScore) {
+      setHighScore(score);
+    }
+
+    if (isConnected) {
+      try {
+        await submitScore(score);
+      } catch (error) {
+        console.error("Error submitting score:", error);
+        toast.error("Failed to submit score to blockchain.");
+      }
+    } else {
+      toast.info("Connect your wallet to submit your score to the blockchain!");
+    }
+  };
+
+  const getDisplayAddress = () => {
+    if (wallet.address) {
+      return `${wallet.address.substring(0, 6)}...${wallet.address.substring(wallet.address.length - 4)}`;
+    }
+    return '';
+  };
+
+  const renderModeSelection = () => (
+    <ModeSelectionScreen onModeSelect={handleModeSelect} />
+  );
+
+  const renderOnchainMode = () => (
+    <OnchainMode />
+  );
+
+  const renderHowToPlay = () => {
+    const howToPlayContent = [
+      {
+        title: "Welcome to Seed Racer!",
+        description: "Collect seeds to increase your score. Avoid obstacles to stay alive!",
+        image: "/seed.png",
+      },
+      {
+        title: "Controls",
+        description: "Use the left and right arrow keys to move your car.",
+        image: "/playercar.png",
+      },
+      {
+        title: "Power-Ups",
+        description: "Collect the shield to become invincible for 5 seconds. Collect the clock to slow down time for 5 seconds.",
+        image: "/shield.png",
+      },
+    ];
+
+    return (
+      <div className="fixed inset-0 bg-zinc-900 bg-opacity-80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div className="glassmorphism p-6 rounded-xl max-w-md w-full">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold">How to Play</h2>
+            <Button variant="ghost" size="icon" onClick={() => setShowHowToPlay(false)} className="h-8 w-8 rounded-full">
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold">{howToPlayContent[currentHowToPlayPage].title}</h3>
+            <p className="text-sm text-gray-300">{howToPlayContent[currentHowToPlayPage].description}</p>
+            {howToPlayContent[currentHowToPlayPage].image && (
+              <div className="flex justify-center mt-2">
+                <img src={howToPlayContent[currentHowToPlayPage].image} alt="How to Play" className="max-h-20" />
+              </div>
+            )}
+          </div>
+          <div className="flex justify-between">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setCurrentHowToPlayPage(prev => Math.max(0, prev - 1));
+                playSound(buttonSoundRef);
+              }}
+              disabled={currentHowToPlayPage === 0}
+            >
+              <ChevronLeft className="mr-2 h-4 w-4" />
+              Previous
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setCurrentHowToPlayPage(prev => Math.min(howToPlayContent.length - 1, prev + 1));
+                playSound(buttonSoundRef);
+              }}
+              disabled={currentHowToPlayPage === howToPlayContent.length - 1}
+            >
+              Next
+              <ChevronRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderGameUI = () => (
+    <div className="absolute top-0 left-0 w-full h-full flex flex-col">
+      <div className="flex justify-between items-center p-4">
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" onClick={() => {
+            setShowHowToPlay(true);
+            playSound(buttonSoundRef);
+          }}>
+            <HelpCircle className="h-5 w-5" />
+          </Button>
+          {selectedGameMode === GameMode.ONCHAIN && (
+            <Button variant="ghost" size="icon" onClick={() => {
+              setGameState(GameState.MODE_SELECTION);
+              playSound(buttonSoundRef);
+            }}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          )}
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1 text-sm">
+            <Heart className="h-4 w-4 text-red-500" />
+            <span>{lives}</span>
+          </div>
+          <div className="flex items-center gap-1 text-sm">
+            <Trophy className="h-4 w-4 text-yellow-500" />
+            <span>{score}</span>
+          </div>
+          {selectedGameMode === GameMode.ONCHAIN && isConnected && (
+            <div className="text-sm">
+              Wallet: {getDisplayAddress()}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="flex-grow relative">
+        <canvas
+          ref={canvasRef}
+          className="w-full h-full bg-zinc-900"
+          width={canvasSize.width}
+          height={canvasSize.height}
+        />
+        {loadingError && (
+          <div className="absolute inset-0 flex items-center justify-center bg-zinc-900 bg-opacity-50">
+            <div className="text-red-500">{loadingError}</div>
+          </div>
+        )}
+      </div>
+
+      <div className="p-4 flex justify-around items-center">
+        {gameState === GameState.PAUSED ? (
+          <Button onClick={() => {
+            startGame();
+            playSound(buttonSoundRef);
+          }}>
+            <Play className="mr-2 h-4 w-4" />
+            Start
+          </Button>
+        ) : (
+          <Button onClick={() => {
+            pauseGame();
+            playSound(buttonSoundRef);
+          }}>
+            <Pause className="mr-2 h-4 w-4" />
+            Pause
+          </Button>
+        )}
+        <Button variant="destructive" onClick={() => {
+          resetGame();
+          playSound(buttonSoundRef);
+        }}>
+          <RefreshCw className="mr-2 h-4 w-4" />
+          Reset
+        </Button>
+        {selectedGameMode === GameMode.ARCADE && (
+          <Button variant="secondary" onClick={() => {
+            exitGame();
+            playSound(buttonSoundRef);
+          }}>
+            <Home className="mr-2 h-4 w-4" />
+            Exit
+          </Button>
+        )}
+        <Button variant="ghost" size="icon" onClick={toggleSound}>
+          {isSoundEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+        </Button>
+      </div>
+
+      {gameState === GameState.GAME_OVER && (
+        <div className="absolute inset-0 flex items-center justify-center bg-zinc-900 bg-opacity-75">
+          <div className="glassmorphism p-6 rounded-xl">
+            <h2 className="text-2xl font-bold mb-4">Game Over!</h2>
+            <p className="mb-4">Your final score: {score}</p>
+            {score > highScore && (
+              <p className="text-green-500 mb-4">New high score!</p>
+            )}
+            <div className="flex justify-around">
+              <Button onClick={() => {
+                resetGame();
+                startGame();
+                playSound(buttonSoundRef);
+              }}>
+                <Play className="mr-2 h-4 w-4" />
+                Play Again
+              </Button>
+              {selectedGameMode === GameMode.ONCHAIN && (
+                <Button variant="teal" onClick={submitFinalScore} disabled={!isConnected}>
+                  {isConnected ? 'Submit Score' : 'Connect Wallet to Submit'}
+                </Button>
+              )}
+              <Button variant="secondary" onClick={() => {
+                exitGame();
+                playSound(buttonSoundRef);
+              }}>
+                <Home className="mr-2 h-4 w-4" />
+                Exit
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="relative w-full h-full">
+      {gameState === GameState.MODE_SELECTION && renderModeSelection()}
+      {gameState === GameState.ONCHAIN_MODE && renderOnchainMode()}
+      {gameState !== GameState.MODE_SELECTION && gameState !== GameState.ONCHAIN_MODE && renderGameUI()}
+      {showHowToPlay && renderHowToPlay()}
+    </div>
+  );
+};
+
+export default Game;
