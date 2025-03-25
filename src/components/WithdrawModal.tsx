@@ -5,10 +5,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useWeb3 } from '@/contexts/Web3Context';
 import { ArrowRight, AlertCircle } from 'lucide-react';
+import { Form, FormControl, FormField, FormItem, FormLabel } from '@/components/ui/form';
+import { useForm } from 'react-hook-form';
 
 interface WithdrawModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+}
+
+interface WithdrawFormValues {
+  address: string;
+  amount: string;
 }
 
 export const WithdrawModal: React.FC<WithdrawModalProps> = ({ 
@@ -16,21 +23,43 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
   onOpenChange 
 }) => {
   const { withdrawEth, wallet, isWithdrawing } = useWeb3();
-  const [destinationAddress, setDestinationAddress] = useState('');
   const [error, setError] = useState<string | null>(null);
+  
+  const form = useForm<WithdrawFormValues>({
+    defaultValues: {
+      address: '',
+      amount: ''
+    }
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (values: WithdrawFormValues) => {
+    setError(null);
     
-    if (!destinationAddress.trim()) {
+    if (!values.address.trim()) {
       setError("Destination address is required");
       return;
     }
     
+    if (!values.amount.trim()) {
+      setError("Amount is required");
+      return;
+    }
+    
+    const amount = parseFloat(values.amount);
+    if (isNaN(amount) || amount <= 0) {
+      setError("Amount must be a positive number");
+      return;
+    }
+    
+    const walletBalance = parseFloat(wallet.balance || '0');
+    if (amount > walletBalance) {
+      setError(`Amount exceeds available balance (${walletBalance} ETH)`);
+      return;
+    }
+    
     try {
-      await withdrawEth(destinationAddress);
-      setDestinationAddress('');
-      setError(null);
+      await withdrawEth(values.address, values.amount);
+      form.reset();
       onOpenChange(false);
     } catch (err) {
       console.error("Error in withdrawal:", err);
@@ -47,28 +76,61 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
           </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <label htmlFor="address" className="text-sm text-zinc-300">
-                Destination Address
-              </label>
-              {wallet.balance && (
-                <span className="text-xs text-zinc-400">
-                  Available: {wallet.balance} ETH
-                </span>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="address"
+              render={({ field }) => (
+                <FormItem className="space-y-2">
+                  <FormLabel className="text-sm text-zinc-300">
+                    Destination Address
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="0x..."
+                      {...field}
+                      onChange={(e) => {
+                        field.onChange(e);
+                        setError(null);
+                      }}
+                      className="bg-zinc-800 border-zinc-700 placeholder:text-zinc-500"
+                    />
+                  </FormControl>
+                </FormItem>
               )}
-            </div>
+            />
             
-            <Input
-              id="address"
-              placeholder="0x..."
-              value={destinationAddress}
-              onChange={(e) => {
-                setDestinationAddress(e.target.value);
-                setError(null);
-              }}
-              className="bg-zinc-800 border-zinc-700 placeholder:text-zinc-500"
+            <FormField
+              control={form.control}
+              name="amount"
+              render={({ field }) => (
+                <FormItem className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <FormLabel className="text-sm text-zinc-300">
+                      Amount (ETH)
+                    </FormLabel>
+                    {wallet.balance && (
+                      <span className="text-xs text-zinc-400">
+                        Available: {wallet.balance} ETH
+                      </span>
+                    )}
+                  </div>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.0001"
+                      placeholder="0.01"
+                      {...field}
+                      onChange={(e) => {
+                        field.onChange(e);
+                        setError(null);
+                      }}
+                      className="bg-zinc-800 border-zinc-700 placeholder:text-zinc-500"
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
             />
             
             {error && (
@@ -79,31 +141,31 @@ export const WithdrawModal: React.FC<WithdrawModalProps> = ({
             )}
             
             <p className="text-xs text-zinc-500 mt-1">
-              Note: Gas fees will be deducted from your balance. The maximum possible amount will be transferred.
+              Note: Gas fees will be deducted from your balance.
             </p>
-          </div>
-          
-          <DialogFooter className="sm:justify-between">
-            <Button 
-              type="button" 
-              variant="ghost" 
-              onClick={() => onOpenChange(false)}
-              className="text-zinc-400 hover:text-white hover:bg-zinc-800"
-              disabled={isWithdrawing}
-            >
-              Cancel
-            </Button>
-            <Button 
-              type="submit"
-              variant="teal"
-              className="gap-1"
-              disabled={!destinationAddress.trim() || isWithdrawing}
-            >
-              {isWithdrawing ? 'Processing...' : 'Withdraw'}
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </DialogFooter>
-        </form>
+            
+            <DialogFooter className="sm:justify-between">
+              <Button 
+                type="button" 
+                variant="ghost" 
+                onClick={() => onOpenChange(false)}
+                className="text-zinc-400 hover:text-white hover:bg-zinc-800"
+                disabled={isWithdrawing}
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit"
+                variant="teal"
+                className="gap-1"
+                disabled={isWithdrawing}
+              >
+                {isWithdrawing ? 'Processing...' : 'Withdraw'}
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

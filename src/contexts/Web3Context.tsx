@@ -36,7 +36,7 @@ type Web3ContextType = {
   exportPrivateKey: () => string | null;
   isSubmittingScore: boolean;
   lastTxHash: string | null;
-  withdrawEth: (toAddress: string) => Promise<void>;
+  withdrawEth: (toAddress: string, amount: string) => Promise<void>;
   isWithdrawing: boolean;
 };
 
@@ -254,7 +254,7 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const withdrawEth = async (toAddress: string) => {
+  const withdrawEth = async (toAddress: string, amount: string) => {
     if (!wallet.address || !wallet.privateKey || !provider) {
       setError("No wallet connection");
       toast.error("No wallet connection");
@@ -273,12 +273,23 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
       
+      // Parse amount to ETH
+      const amountInEth = ethers.utils.parseEther(amount);
+      
       // Get wallet balance
       const balance = await provider.getBalance(wallet.address);
       
       if (balance.isZero()) {
         toast.error("No ETH to withdraw");
         setError("No balance to withdraw");
+        setIsWithdrawing(false);
+        return;
+      }
+      
+      // Check if amount is greater than balance
+      if (amountInEth.gt(balance)) {
+        toast.error("Amount exceeds your balance");
+        setError("Insufficient balance");
         setIsWithdrawing(false);
         return;
       }
@@ -291,23 +302,21 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
       const gasLimit = 21000; // Standard ETH transfer gas
       const gasCost = gasPrice.mul(gasLimit);
       
-      // Make sure balance is greater than gas cost
-      if (balance.lte(gasCost)) {
-        toast.error("Insufficient balance to cover gas costs");
-        setError("Insufficient balance for gas");
+      // Make sure balance is greater than amount + gas cost
+      if (balance.lt(amountInEth.add(gasCost))) {
+        const maxAmount = ethers.utils.formatEther(balance.sub(gasCost));
+        toast.error(`Insufficient balance to cover amount plus gas costs. Maximum amount: ${maxAmount} ETH`);
+        setError(`Insufficient balance. Max: ${maxAmount} ETH`);
         setIsWithdrawing(false);
         return;
       }
-      
-      // Calculate amount to send (balance - gas cost)
-      const amountToSend = balance.sub(gasCost);
       
       toast.loading("Withdrawing ETH...");
       
       // Send transaction
       const tx = await walletInstance.sendTransaction({
         to: toAddress,
-        value: amountToSend,
+        value: amountInEth,
         gasPrice: gasPrice,
         gasLimit: gasLimit
       });
@@ -322,7 +331,7 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
       toast.success("ETH successfully withdrawn!", {
         description: 
           <div className="flex flex-col gap-1">
-            <span>{ethers.utils.formatEther(amountToSend)} ETH has been sent.</span>
+            <span>{amount} ETH has been sent.</span>
             <a 
               href={`https://sepolia-explorer.superseed.xyz/tx/${receipt.transactionHash}`} 
               target="_blank" 
