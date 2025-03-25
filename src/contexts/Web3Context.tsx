@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { toast } from 'sonner';
@@ -20,8 +21,8 @@ const GAME_SCORE_ABI = [
 const CONTRACT_ADDRESS = "0x12fa8f89fF179246270d2438DE35c5694fE08Ab8";
 const SUPERSEED_RPC_URL = "https://sepolia.superseed.xyz/";
 
-// Fixed gas settings
-const FIXED_GAS_PRICE = ethers.utils.parseUnits("0.1", "gwei");
+// Fixed gas settings - Updating gas price to 1 gwei from 0.1 gwei
+const FIXED_GAS_PRICE = ethers.utils.parseUnits("1", "gwei");
 const FIXED_GAS_LIMIT = 200000; // Setting a higher gas limit to ensure transaction goes through
 
 // Leaderboard entry type
