@@ -5,10 +5,11 @@ import { Input } from '@/components/ui/input';
 import { useWeb3 } from '@/contexts/Web3Context';
 import { 
   Rocket, Loader2, X, Copy, Check, ExternalLink, 
-  Wallet, AlertTriangle, ChevronRight, User
+  Wallet, AlertTriangle, ChevronRight, User, ArrowLeft
 } from 'lucide-react';
 import { validateUsername } from '@/components/ModeSelectionComponents';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 interface OnboardingProps {
   onComplete: () => void;
@@ -21,6 +22,7 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [walletCreated, setWalletCreated] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState(false);
+  const [refreshingBalance, setRefreshingBalance] = useState(false);
   
   // Get Web3 context
   const { 
@@ -28,40 +30,23 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
     isConnected, wallet, checkUsernameAvailable, refreshBalance
   } = useWeb3();
   
+  const navigate = useNavigate();
+  
   // Check for existing wallet on load
   useEffect(() => {
     if (isConnected && wallet.address) {
       setWalletCreated(true);
       
-      // If we have a wallet but no username registered, go to step 2 or 3
+      // If we have a wallet but no username registered, go to step 3
       const savedUsername = localStorage.getItem('username');
-      
-      if (Number(wallet.balance || 0) === 0) {
-        setCurrentStep(2); // Need to fund wallet
-      } else if (!savedUsername) {
-        setCurrentStep(3); // Need username registration
+      if (!savedUsername) {
+        setCurrentStep(3);
+      } else {
+        // If wallet and username exist, complete onboarding
+        onComplete();
       }
     }
-  }, [isConnected, wallet.address, wallet.balance]);
-
-  // Refresh balance periodically on step 2
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    
-    if (currentStep === 2 && wallet.address) {
-      // Initial refresh
-      refreshBalance();
-      
-      // Setup interval to check every 10 seconds
-      interval = setInterval(() => {
-        refreshBalance();
-      }, 10000);
-    }
-    
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [currentStep, wallet.address, refreshBalance]);
+  }, [isConnected, wallet.address, onComplete]);
   
   // Handle wallet creation
   const handleCreateWallet = async () => {
@@ -82,6 +67,13 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
       console.error("Failed to create wallet:", err);
       toast.error("Failed to create wallet");
     }
+  };
+  
+  // Handle refreshing wallet balance
+  const handleRefreshBalance = async () => {
+    setRefreshingBalance(true);
+    await refreshBalance();
+    setRefreshingBalance(false);
   };
   
   // Handle username validation
@@ -121,7 +113,7 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
       toast.success("Username registered successfully!");
       onComplete();
       
-    } catch (err: any) {
+    } catch (err) {
       console.error("Failed to register username:", err);
       
       // Check if it's an "insufficient funds" error
@@ -129,7 +121,8 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
         toast.error("You need ETH to register a username", {
           description: "Please add some testnet ETH to your wallet first."
         });
-        setCurrentStep(2); // Go back to funding step
+        // Go back to funding step
+        setCurrentStep(2);
       } else {
         toast.error("Failed to register username");
       }
@@ -144,6 +137,25 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
       toast.success("Address copied to clipboard");
       
       setTimeout(() => setCopiedAddress(false), 3000);
+    }
+  };
+  
+  // Navigation handlers
+  const handleBackToHome = () => {
+    navigate('/');
+  };
+  
+  const handleNextStep = () => {
+    if (currentStep < 3) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+  
+  const handlePreviousStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    } else {
+      handleBackToHome();
     }
   };
   
@@ -168,23 +180,35 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
         </div>
       </div>
       
-      <Button
-        onClick={handleCreateWallet}
-        className="w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 mt-2"
-        disabled={isLoading}
-      >
-        {isLoading ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Creating Wallet...
-          </>
-        ) : (
-          <>
-            <Wallet className="mr-2 h-4 w-4" />
-            Create Wallet
-          </>
-        )}
-      </Button>
+      {walletCreated ? (
+        // Show continue button if wallet is already created
+        <Button
+          onClick={handleNextStep}
+          className="w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 mt-2"
+        >
+          <ChevronRight className="mr-2 h-4 w-4" />
+          Continue to Fund Wallet
+        </Button>
+      ) : (
+        // Show create wallet button if wallet isn't created yet
+        <Button
+          onClick={handleCreateWallet}
+          className="w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 mt-2"
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Creating Wallet...
+            </>
+          ) : (
+            <>
+              <Wallet className="mr-2 h-4 w-4" />
+              Create Wallet
+            </>
+          )}
+        </Button>
+      )}
     </>
   );
   
@@ -230,7 +254,18 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
         </div>
         
         <div className="border-t border-[#91d3d1]/10 pt-3">
-          <h4 className="font-medium mb-2">Current Balance:</h4>
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="font-medium">Current Balance:</h4>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleRefreshBalance}
+              className="h-6 w-6 p-0"
+              disabled={refreshingBalance}
+            >
+              <Loader2 className={`h-3 w-3 ${refreshingBalance ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
           <div className="flex items-center justify-between">
             <span className="font-mono">{wallet.balance || '0'} ETH</span>
             
@@ -259,12 +294,12 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
         </Button>
         
         <Button
-          onClick={() => setCurrentStep(3)}
+          onClick={handleNextStep}
           className="w-full mt-2 bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900"
           disabled={Number(wallet.balance || 0) === 0}
         >
           <ChevronRight className="mr-1 h-4 w-4" />
-          Continue to Next Step
+          Continue to Username Registration
         </Button>
       </div>
     </>
@@ -321,7 +356,7 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
         <Button 
           onClick={handleRegisterUsername} 
           className="w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900"
-          disabled={isLoading || !username.trim() || !!validationError}
+          disabled={isLoading || !username.trim() || !!validationError || Number(wallet.balance || 0) === 0}
         >
           {isLoading ? (
             <>
@@ -335,6 +370,12 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
             </>
           )}
         </Button>
+        
+        {Number(wallet.balance || 0) === 0 && (
+          <div className="text-amber-400 text-xs text-center">
+            You need ETH to register a username. Go back to step 2 to get ETH.
+          </div>
+        )}
       </div>
     </>
   );
@@ -356,14 +397,24 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
   return (
     <div className="glassmorphism p-6 rounded-xl">
       <div className="flex justify-between items-center mb-3">
-        <div className="inline-flex rounded-full bg-[#91d3d1]/20 p-3">
-          <Rocket className="h-6 w-6 text-[#91d3d1]" />
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={handlePreviousStep}
+          className="h-8 w-8 rounded-full"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        
+        <div className="inline-flex rounded-full bg-[#91d3d1]/20 p-2">
+          <Rocket className="h-5 w-5 text-[#91d3d1]" />
         </div>
+        
         <Button 
           variant="ghost" 
           size="icon" 
           onClick={onComplete}
-          className="h-8 w-8 rounded-full"
+          className="h-8 w-8 rounded-full opacity-50"
         >
           <X className="h-4 w-4" />
         </Button>
@@ -373,8 +424,14 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
       <div className="flex items-center mb-6">
         {[1, 2, 3].map((step) => (
           <React.Fragment key={step}>
-            <div 
-              className={`w-8 h-8 rounded-full flex items-center justify-center ${
+            <button
+              onClick={() => {
+                // Only allow going back to previous steps
+                if (step < currentStep) {
+                  setCurrentStep(step);
+                }
+              }}
+              className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer ${
                 currentStep === step 
                   ? 'bg-[#91d3d1] text-zinc-900 font-medium' 
                   : currentStep > step 
@@ -383,7 +440,7 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
               }`}
             >
               {currentStep > step ? <Check className="h-4 w-4" /> : step}
-            </div>
+            </button>
             {step < 3 && (
               <div 
                 className={`flex-1 h-1 mx-2 ${
