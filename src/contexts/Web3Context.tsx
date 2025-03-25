@@ -24,12 +24,13 @@ type Web3ContextType = {
     balance: string | null;
     privateKey: string | null;
   };
+  username: string | null;
   contract: ethers.Contract | null;
   provider: ethers.providers.Web3Provider | ethers.providers.JsonRpcProvider | null;
   isConnected: boolean;
   isLoading: boolean;
   error: string | null;
-  createUserWallet: () => Promise<void>;
+  createUserWallet: (username: string) => Promise<void>;
   submitScore: (score: number) => Promise<void>;
   getPlayerHighScore: () => Promise<number>;
   exportPrivateKey: () => string | null;
@@ -52,6 +53,7 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
     balance: null,
     privateKey: null
   });
+  const [username, setUsername] = useState<string | null>(null);
   const [contract, setContract] = useState<ethers.Contract | null>(null);
   const [provider, setProvider] = useState<ethers.providers.Web3Provider | ethers.providers.JsonRpcProvider | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -67,7 +69,14 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
         const savedUserData = localStorage.getItem('gameUserData');
         if (savedUserData) {
           const userData = JSON.parse(savedUserData);
+          setUsername(userData.username);
           await initializeWallet(userData.privateKey);
+        } else {
+          // Check if we have a stored username from a previous session
+          const savedUsername = localStorage.getItem('username');
+          if (savedUsername) {
+            setUsername(savedUsername);
+          }
         }
       } catch (error) {
         console.error("Error checking existing wallet:", error);
@@ -113,8 +122,13 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const createUserWallet = async () => {
+  const createUserWallet = async (name: string) => {
     try {
+      if (!name || name.trim() === "") {
+        setError("Username cannot be empty");
+        return;
+      }
+      
       setIsLoading(true);
       setError(null);
       
@@ -123,13 +137,19 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Store the data in localStorage
       localStorage.setItem('gameUserData', JSON.stringify({ 
+        username: name,
         privateKey 
       }));
+      
+      // Make sure we also set the username in the regular localStorage
+      localStorage.setItem('username', name);
+      
+      setUsername(name);
       
       const success = await initializeWallet(privateKey);
       
       if (success) {
-        console.log("Wallet created. Address:", randomWallet.address);
+        console.log("Wallet created for user:", name, "Address:", randomWallet.address);
       }
     } catch (error) {
       console.error("Error creating wallet:", error);
@@ -358,6 +378,7 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const value = {
     wallet,
+    username,
     contract,
     provider,
     isConnected: !!wallet.address,
