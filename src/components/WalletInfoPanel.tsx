@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useWeb3 } from '@/contexts/Web3Context';
@@ -45,7 +44,7 @@ export const WalletInfoPanel: React.FC = () => {
   };
 
   const shortenAddress = (address: string) => {
-    return `${address.substring(0, a)}...${address.substring(address.length - 4)}`;
+    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
   };
 
   const shortenTxHash = (hash: string) => {
