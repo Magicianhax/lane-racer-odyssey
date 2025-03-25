@@ -5,9 +5,10 @@ import { useWeb3 } from '@/contexts/Web3Context';
 import { Rocket, Wallet, User, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { OnchainOnboarding } from './OnchainOnboarding';
+import { GameMode } from '../game/GameEngine';
 
 interface OnchainModeProps {
-  gameMode: 'normal' | 'onchain';
+  gameMode: GameMode;
   onSelectOnchainMode: () => void;
 }
 
@@ -24,7 +25,7 @@ export const OnchainMode: React.FC<OnchainModeProps> = ({ gameMode, onSelectOnch
 
   const renderContent = () => {
     // Use the component's state to determine what to render
-    if (gameMode === 'onchain') {
+    if (gameMode === GameMode.ONCHAIN) {
       if (!username && isConnected) {
         // If connected but no username, show username form
         return <OnchainOnboarding onComplete={() => setShowUsernameModal(false)} />;
