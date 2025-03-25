@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useWeb3 } from '@/contexts/Web3Context';
-import { UsernameModal } from '@/components/UsernameModal';
+import { OnboardingFlow } from '@/components/OnboardingFlow';
 import { WalletInfoPanel } from '@/components/WalletInfoPanel';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -10,17 +10,17 @@ import { useIsMobile } from '@/hooks/use-mobile';
 
 const WalletPage: React.FC = () => {
   const { isConnected, username } = useWeb3();
-  const [showUserModal, setShowUserModal] = useState(false);
+  const [isOnboarding, setIsOnboarding] = useState(false);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
   useEffect(() => {
-    // Only show the username modal if the user is not connected
-    setShowUserModal(!isConnected && !username);
+    // Show onboarding if not connected or no username
+    setIsOnboarding(!isConnected || !username);
   }, [isConnected, username]);
 
   const handleSetupComplete = () => {
-    setShowUserModal(false);
+    setIsOnboarding(false);
   };
 
   const handleBackToHome = () => {
@@ -41,8 +41,8 @@ const WalletPage: React.FC = () => {
       <div className="max-w-md mx-auto">
         <h1 className="text-2xl font-bold mb-6 text-center text-gradient">Wallet</h1>
         
-        {showUserModal ? (
-          <UsernameModal onComplete={handleSetupComplete} />
+        {isOnboarding ? (
+          <OnboardingFlow onComplete={handleSetupComplete} />
         ) : (
           <WalletInfoPanel />
         )}
