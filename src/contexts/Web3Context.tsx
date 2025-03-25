@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { toast } from 'sonner';
@@ -17,11 +16,11 @@ const SUPERSEED_RPC_URL = "https://sepolia.superseed.xyz/";
 
 // Fixed gas settings - updated gas price to 1 gwei
 const FIXED_GAS_PRICE = ethers.utils.parseUnits("1", "gwei");
-const FIXED_GAS_LIMIT = 200000; // Setting a higher gas limit to ensure transaction goes through
+const FIXED_GAS_LIMIT = 500000; // Increased gas limit from 200,000 to 500,000
 
 type Web3ContextType = {
   wallet: {
-    address: string | null;
+    address: string | null; 
     balance: string | null;
     privateKey: string | null;
   };
