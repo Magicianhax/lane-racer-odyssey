@@ -63,11 +63,9 @@ const Game: React.FC = () => {
   const [isSoundEnabled, setIsSoundEnabled] = useState<boolean>(true);
   const [showLeaderboard, setShowLeaderboard] = useState<boolean>(false);
   
-  // Add new state for game mode and username
   const [selectedGameMode, setSelectedGameMode] = useState<GameMode>(GameMode.NONE);
   const [username, setUsername] = useState<string>('');
   
-  // Add Web3 context hooks
   const { isConnected, submitScore, username: web3Username } = useWeb3();
   
   const carSoundRef = useRef<HTMLAudioElement | null>(null);
@@ -79,7 +77,6 @@ const Game: React.FC = () => {
   
   const isMobile = useIsMobile();
   
-  // Load username and game mode from localStorage if available
   useEffect(() => {
     const savedUsername = localStorage.getItem('username');
     if (savedUsername) {
@@ -119,7 +116,6 @@ const Game: React.FC = () => {
         buttonSoundRef.current = buttonSound;
         
         await Promise.all([
-          // Load car sound
           new Promise<void>((resolve) => {
             carSound.addEventListener('canplaythrough', () => {
               console.log("Car sound loaded successfully");
@@ -134,7 +130,6 @@ const Game: React.FC = () => {
             carSound.load();
           }),
           
-          // Load crash sound
           new Promise<void>((resolve) => {
             crashSound.addEventListener('canplaythrough', () => {
               console.log("Crash sound loaded successfully");
@@ -149,7 +144,6 @@ const Game: React.FC = () => {
             crashSound.load();
           }),
           
-          // Load seed sound
           new Promise<void>((resolve) => {
             seedSound.addEventListener('canplaythrough', () => {
               console.log("Seed collection sound loaded successfully");
@@ -164,7 +158,6 @@ const Game: React.FC = () => {
             seedSound.load();
           }),
           
-          // Load slow timer sound
           new Promise<void>((resolve) => {
             slowTimerSound.addEventListener('canplaythrough', () => {
               console.log("Slow timer sound loaded successfully");
@@ -179,7 +172,6 @@ const Game: React.FC = () => {
             slowTimerSound.load();
           }),
           
-          // Load button sound
           new Promise<void>((resolve) => {
             buttonSound.addEventListener('canplaythrough', () => {
               console.log("Button sound loaded successfully");
@@ -457,7 +449,6 @@ const Game: React.FC = () => {
   };
   
   const toggleSound = () => {
-    // Don't play the button sound here to avoid confusion when turning sound off
     setIsSoundEnabled(prev => {
       const newState = !prev;
       
@@ -465,7 +456,6 @@ const Game: React.FC = () => {
         if (gameState === GameState.GAMEPLAY) {
           startEngineSound();
         }
-        // Play button sound after enabling sound
         if (buttonSoundRef.current) {
           setTimeout(() => {
             buttonSoundRef.current?.play().catch(err => {
@@ -549,7 +539,6 @@ const Game: React.FC = () => {
         seedImageURL
       });
       
-      // Initialize GameEngine
       const gameEngine = new GameEngine({
         canvas: canvasRef.current,
         onScoreChange: (newScore) => setScore(newScore),
@@ -615,16 +604,6 @@ const Game: React.FC = () => {
       setHighScore(gameEngine.getHighScore());
       setGameInitialized(true);
       
-      // Check if user has played before and has a username
-      const savedUsername = localStorage.getItem('username');
-      if (savedUsername) {
-        // If the user has a username, start with START_SCREEN
-        gameEngine.setGameState(GameState.START_SCREEN);
-      } else {
-        // Otherwise start with MODE_SELECTION
-        gameEngine.setGameState(GameState.MODE_SELECTION);
-      }
-      
       if (loadingError) {
         toast.warning(loadingError);
       }
@@ -673,24 +652,19 @@ const Game: React.FC = () => {
     }
   };
   
-  // Handler for mode selection
   const handleModeSelection = (mode: GameMode) => {
     playButtonSound();
     setSelectedGameMode(mode);
     
-    // Save game mode to localStorage
     localStorage.setItem('gameMode', mode);
     
-    // Check if user has wallet setup
     const savedUsername = localStorage.getItem('username');
     if (savedUsername) {
       setUsername(savedUsername);
-      // Skip username creation and go straight to start screen
       if (gameEngineRef.current) {
         gameEngineRef.current.setGameState(GameState.START_SCREEN);
       }
     } else {
-      // If no username, redirect to wallet page for setup
       window.location.href = '/wallet';
     }
   };
@@ -701,7 +675,6 @@ const Game: React.FC = () => {
     setCurrentHowToPlayPage(0);
   };
   
-  // Handler for going back to mode selection from any screen
   const handleGoToModeSelection = () => {
     playButtonSound();
     if (gameEngineRef.current) {
@@ -709,7 +682,6 @@ const Game: React.FC = () => {
     }
   };
   
-  // Handler for going back to start screen from game over screen
   const handleBackToStartScreen = () => {
     playButtonSound();
     if (gameEngineRef.current) {
@@ -717,7 +689,6 @@ const Game: React.FC = () => {
     }
   };
   
-  // Handler for continuing with current username and mode from the mode selection screen
   const handleContinueWithCurrentSettings = () => {
     playButtonSound();
     if (gameEngineRef.current) {
@@ -782,7 +753,6 @@ const Game: React.FC = () => {
     }
   };
   
-  // Content for how to play screens
   const howToPlayContent = [
     {
       title: "Basic Controls",
@@ -971,7 +941,6 @@ const Game: React.FC = () => {
           </div>
         )}
         
-        {/* Mode Selection Screen */}
         {gameState === GameState.MODE_SELECTION && (
           <ModeSelectionScreen 
             onSelectMode={handleModeSelection}
@@ -986,7 +955,6 @@ const Game: React.FC = () => {
             <div className="glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
               <h1 className="text-5xl font-bold mb-2 tracking-tight text-white text-gradient">Superseed Lane Runner</h1>
               
-              {/* Display username and game mode if available */}
               {username && (
                 <div className="chip text-xs bg-[#91d3d1]/20 text-[#91d3d1] px-3 py-1 rounded-full mb-2 inline-flex items-center">
                   <Blocks className="w-3 h-3 mr-1" />
@@ -1016,7 +984,6 @@ const Game: React.FC = () => {
                   How to Play
                 </Button>
                 
-                {/* Add Leaderboard Button */}
                 <Button 
                   onClick={() => setShowLeaderboard(true)}
                   variant="teal-outline"
@@ -1026,7 +993,6 @@ const Game: React.FC = () => {
                   Leaderboard
                 </Button>
                 
-                {/* Add Onchain Mode section */}
                 <div className="w-full border-t border-[#91d3d1]/10 mt-2 pt-4">
                   <div className="mb-3">
                     <div className="flex items-center justify-center gap-2 text-[#91d3d1]">
@@ -1178,7 +1144,6 @@ const Game: React.FC = () => {
               <h2 className="text-3xl font-bold mb-2">Game Over</h2>
               
               <div className="my-6 space-y-4">
-                {/* Display username in game over screen */}
                 {username && (
                   <div className="chip text-xs bg-[#91d3d1]/20 text-[#91d3d1] px-3 py-1 rounded-full inline-flex items-center">
                     <User className="w-3 h-3 mr-1" /> {username}
@@ -1203,7 +1168,6 @@ const Game: React.FC = () => {
                 )}
               </div>
               
-              {/* Add blockchain submission option if connected */}
               {isConnected && (
                 <div className="mb-4">
                   <Button 
@@ -1234,13 +1198,12 @@ const Game: React.FC = () => {
                   Try Again
                 </Button>
                 
-                {/* Add Leaderboard Button */}
                 <Button 
                   onClick={() => setShowLeaderboard(true)}
-                  variant="outline"
+                  variant="leaderboard"
                   className="w-full rounded-xl py-3 text-base font-medium flex items-center justify-center"
                 >
-                  <Trophy className="mr-2 h-5 w-5 text-yellow-400" />
+                  <Trophy className="mr-2 h-5 w-5" />
                   View Leaderboard
                 </Button>
                 
@@ -1303,7 +1266,6 @@ const Game: React.FC = () => {
         <div className="bg-noise absolute inset-0 pointer-events-none opacity-5"></div>
       </div>
       
-      {/* Leaderboard Dialog */}
       <LeaderboardDialog 
         open={showLeaderboard} 
         onOpenChange={setShowLeaderboard} 
