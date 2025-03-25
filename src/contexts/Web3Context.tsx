@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { toast } from 'sonner';
@@ -11,7 +12,7 @@ const GAME_SCORE_ABI = [
   "event NewHighScore(address indexed player, uint256 score, uint256 timestamp)"
 ];
 
-const CONTRACT_ADDRESS = "0xAF3DF64A108A244a79800ca3263100Eec1a08BAf";
+const CONTRACT_ADDRESS = "0x705C86Ee2e1423E5E869A297105Aa1333D92CCa4";
 const SUPERSEED_RPC_URL = "https://sepolia.superseed.xyz/";
 
 // Fixed gas settings
