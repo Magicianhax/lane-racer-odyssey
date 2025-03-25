@@ -181,32 +181,52 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
       
       {walletCreated ? (
         // Show continue button if wallet is already created
-        <Button
-          onClick={handleNextStep}
-          className="w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 mt-2"
-        >
-          <ChevronRight className="mr-2 h-4 w-4" />
-          Continue to Fund Wallet
-        </Button>
+        <div className="space-y-3">
+          <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 flex items-center">
+            <Check className="h-4 w-4 text-green-400 mr-2 flex-shrink-0" />
+            <p className="text-sm text-green-400">Wallet created successfully!</p>
+          </div>
+          
+          <Button
+            onClick={handleNextStep}
+            className="w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900"
+          >
+            <ChevronRight className="mr-2 h-4 w-4" />
+            Continue to Fund Wallet
+          </Button>
+        </div>
       ) : (
         // Show create wallet button if wallet isn't created yet
-        <Button
-          onClick={handleCreateWallet}
-          className="w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 mt-2"
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Creating Wallet...
-            </>
-          ) : (
-            <>
-              <Wallet className="mr-2 h-4 w-4" />
-              Create Wallet
-            </>
-          )}
-        </Button>
+        <div className="space-y-3">
+          <Button
+            onClick={handleCreateWallet}
+            className="w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creating Wallet...
+              </>
+            ) : (
+              <>
+                <Wallet className="mr-2 h-4 w-4" />
+                Create Wallet
+              </>
+            )}
+          </Button>
+          
+          <Button
+            onClick={handleNextStep}
+            variant="outline"
+            className={`w-full ${!walletCreated ? "opacity-50 cursor-not-allowed" : ""}`}
+            disabled={!walletCreated}
+          >
+            <ChevronRight className="mr-2 h-4 w-4" />
+            Continue to Next Step
+            {!walletCreated && <span className="ml-1 text-xs">(Create wallet first)</span>}
+          </Button>
+        </div>
       )}
     </>
   );
@@ -468,4 +488,3 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
     </div>
   );
 };
-
