@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useWeb3 } from '@/contexts/Web3Context';
 import { Rocket, Wallet, User, Check } from 'lucide-react';
@@ -11,8 +12,11 @@ interface OnchainModeProps {
 }
 
 export const OnchainMode: React.FC<OnchainModeProps> = ({ gameMode, onSelectOnchainMode }) => {
-  const { isConnected, username, wallet, setShowUsernameModal } = useWeb3();
+  const { isConnected, username, wallet } = useWeb3();
   const navigate = useNavigate();
+  
+  // Add this state for username modal
+  const [showUsernameModal, setShowUsernameModal] = useState<boolean>(false);
 
   const handleSelectOnchainMode = () => {
     onSelectOnchainMode();

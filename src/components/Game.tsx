@@ -45,6 +45,7 @@ const Game: React.FC = () => {
   const [isSoundEnabled, setIsSoundEnabled] = useState<boolean>(true);
   const [showOnboarding, setShowOnboarding] = useState<boolean>(false);
   const [selectedGameMode, setSelectedGameMode] = useState<GameMode>(GameMode.NONE);
+  const [showLeaderboard, setShowLeaderboard] = useState<boolean>(false);
   const [username, setUsername] = useState<string>('');
   const { isConnected, submitScore, username: web3Username, isSubmittingScore, wallet } = useWeb3();
 
@@ -1034,7 +1035,10 @@ const Game: React.FC = () => {
                     <div className="text-xs text-gray-400 mt-1">Playing as {web3Username}</div>
                   )}
                 </div>
-                <OnchainMode />
+                <OnchainMode 
+                  gameMode={selectedGameMode}
+                  onSelectOnchainMode={() => handleModeSelection(GameMode.ONCHAIN)}
+                />
               </div>
               
               <div className="flex items-center space-x-4 mt-2">
