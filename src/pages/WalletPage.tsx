@@ -9,15 +9,15 @@ import { ArrowLeft } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 const WalletPage: React.FC = () => {
-  const { isConnected, username } = useWeb3();
+  const { isConnected } = useWeb3();
   const [showUserModal, setShowUserModal] = useState(false);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
   useEffect(() => {
-    // Only show the username modal if the user is not connected
-    setShowUserModal(!isConnected && !username);
-  }, [isConnected, username]);
+    // Only show the modal if the user is not connected
+    setShowUserModal(!isConnected);
+  }, [isConnected]);
 
   const handleSetupComplete = () => {
     setShowUserModal(false);

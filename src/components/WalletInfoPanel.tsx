@@ -7,7 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { WithdrawModal } from './WithdrawModal';
 
 export const WalletInfoPanel: React.FC = () => {
-  const { wallet, username, isLoading, exportPrivateKey, isSubmittingScore, lastTxHash, isWithdrawing, refreshBalance } = useWeb3();
+  const { wallet, isLoading, exportPrivateKey, isSubmittingScore, lastTxHash, isWithdrawing, refreshBalance } = useWeb3();
   const [showPrivateKey, setShowPrivateKey] = useState(false);
   const [privateKeyVisible, setPrivateKeyVisible] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
@@ -63,7 +63,9 @@ export const WalletInfoPanel: React.FC = () => {
             <Wallet className="h-4 w-4 text-[#91d3d1]" />
           </div>
           <div>
-            <div className="font-medium text-white">Player: {username}</div>
+            <div className="font-medium text-white">
+              {wallet.address ? shortenAddress(wallet.address) : 'Loading...'}
+            </div>
             <div className="text-xs text-gray-400">Onchain Mode Active</div>
           </div>
         </div>
@@ -71,7 +73,7 @@ export const WalletInfoPanel: React.FC = () => {
       
       <div className="flex items-center mb-3 bg-black/20 p-2 rounded-lg">
         <div className="flex-1 truncate text-sm text-white">
-          {wallet.address && shortenAddress(wallet.address)}
+          {wallet.address && wallet.address}
         </div>
         <Button 
           variant="ghost" 
