@@ -10,6 +10,7 @@ import { useWeb3 } from '@/contexts/Web3Context';
 import { OnchainMode } from '@/components/OnchainMode';
 import { Leaderboard } from '@/components/Leaderboard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { OnchainOnboarding } from '@/components/OnchainOnboarding';
 
 const DEFAULT_PLAYER_CAR = '/playercar.png';
 const DEFAULT_ENEMY_CARS = ['/enemycar1.png', '/enemycar2.png', '/enemycar3.png'];
@@ -42,27 +43,20 @@ const Game: React.FC = () => {
   const [showHowToPlay, setShowHowToPlay] = useState<boolean>(false);
   const [currentHowToPlayPage, setCurrentHowToPlayPage] = useState<number>(0);
   const [isSoundEnabled, setIsSoundEnabled] = useState<boolean>(true);
-  
-  // Add new state for game mode and username
+  const [showOnboarding, setShowOnboarding] = useState<boolean>(false);
   const [selectedGameMode, setSelectedGameMode] = useState<GameMode>(GameMode.NONE);
   const [username, setUsername] = useState<string>('');
-  
-  // Add Web3 context hooks
-  const { isConnected, submitScore, username: web3Username, isSubmittingScore } = useWeb3();
-  
-  // Add showLeaderboard state
-  const [showLeaderboard, setShowLeaderboard] = useState<boolean>(false);
-  
+  const { isConnected, submitScore, username: web3Username, isSubmittingScore, wallet } = useWeb3();
+
   const carSoundRef = useRef<HTMLAudioElement | null>(null);
   const crashSoundRef = useRef<HTMLAudioElement | null>(null);
   const seedSoundRef = useRef<HTMLAudioElement | null>(null);
   const slowTimerSoundRef = useRef<HTMLAudioElement | null>(null);
   const buttonSoundRef = useRef<HTMLAudioElement | null>(null);
   const soundsLoadedRef = useRef<boolean>(false);
-  
+
   const isMobile = useIsMobile();
-  
-  // Load username and game mode from localStorage if available
+
   useEffect(() => {
     const savedUsername = localStorage.getItem('username');
     if (savedUsername) {
@@ -74,7 +68,7 @@ const Game: React.FC = () => {
       setSelectedGameMode(savedGameMode);
     }
   }, []);
-  
+
   useEffect(() => {
     const preloadSounds = async () => {
       try {
@@ -102,7 +96,6 @@ const Game: React.FC = () => {
         buttonSoundRef.current = buttonSound;
         
         await Promise.all([
-          // Load car sound
           new Promise<void>((resolve) => {
             carSound.addEventListener('canplaythrough', () => {
               console.log("Car sound loaded successfully");
@@ -117,7 +110,6 @@ const Game: React.FC = () => {
             carSound.load();
           }),
           
-          // Load crash sound
           new Promise<void>((resolve) => {
             crashSound.addEventListener('canplaythrough', () => {
               console.log("Crash sound loaded successfully");
@@ -132,7 +124,6 @@ const Game: React.FC = () => {
             crashSound.load();
           }),
           
-          // Load seed sound
           new Promise<void>((resolve) => {
             seedSound.addEventListener('canplaythrough', () => {
               console.log("Seed collection sound loaded successfully");
@@ -147,7 +138,6 @@ const Game: React.FC = () => {
             seedSound.load();
           }),
           
-          // Load slow timer sound
           new Promise<void>((resolve) => {
             slowTimerSound.addEventListener('canplaythrough', () => {
               console.log("Slow timer sound loaded successfully");
@@ -162,7 +152,6 @@ const Game: React.FC = () => {
             slowTimerSound.load();
           }),
           
-          // Load button sound
           new Promise<void>((resolve) => {
             buttonSound.addEventListener('canplaythrough', () => {
               console.log("Button sound loaded successfully");
@@ -282,7 +271,7 @@ const Game: React.FC = () => {
       stopAllSounds();
     };
   }, []);
-  
+
   const startEngineSound = () => {
     if (!isSoundEnabled || !carSoundRef.current) return;
     
@@ -440,7 +429,6 @@ const Game: React.FC = () => {
   };
   
   const toggleSound = () => {
-    // Don't play the button sound here to avoid confusion when turning sound off
     setIsSoundEnabled(prev => {
       const newState = !prev;
       
@@ -448,7 +436,6 @@ const Game: React.FC = () => {
         if (gameState === GameState.GAMEPLAY) {
           startEngineSound();
         }
-        // Play button sound after enabling sound
         if (buttonSoundRef.current) {
           setTimeout(() => {
             buttonSoundRef.current?.play().catch(err => {
@@ -532,7 +519,6 @@ const Game: React.FC = () => {
         seedImageURL
       });
       
-      // Initialize GameEngine
       const gameEngine = new GameEngine({
         canvas: canvasRef.current,
         onScoreChange: (newScore) => setScore(newScore),
@@ -598,19 +584,22 @@ const Game: React.FC = () => {
       setHighScore(gameEngine.getHighScore());
       setGameInitialized(true);
       
-      // Check if user has played before and has a username
-      const savedUsername = localStorage.getItem('username');
-      if (savedUsername) {
-        // If the user has a username, start with START_SCREEN
-        gameEngine.setGameState(GameState.START_SCREEN);
-      } else {
-        // Otherwise start with MODE_SELECTION
-        gameEngine.setGameState(GameState.MODE_SELECTION);
-      }
+      const checkOnboardingNeeded = async () => {
+        if (selectedGameMode === GameMode.ONCHAIN) {
+          const username = localStorage.getItem('username');
+          
+          if (!isConnected || !wallet.address || !username || Number(wallet.balance || 0) === 0) {
+            setShowOnboarding(true);
+            return;
+          }
+          
+          if (gameEngineRef.current) {
+            gameEngineRef.current.setGameState(GameState.START_SCREEN);
+          }
+        }
+      };
       
-      if (loadingError) {
-        toast.warning(loadingError);
-      }
+      checkOnboardingNeeded();
     } catch (err) {
       console.error("Error initializing game engine:", err);
       toast.error("Game initialization failed");
@@ -656,26 +645,31 @@ const Game: React.FC = () => {
     }
   };
   
-  // Handler for mode selection
   const handleModeSelection = (mode: GameMode) => {
     playButtonSound();
     setSelectedGameMode(mode);
     
-    // Save game mode to localStorage
     localStorage.setItem('gameMode', mode);
     
-    // Check if user has wallet setup
-    const savedUsername = localStorage.getItem('username');
-    if (savedUsername) {
-      setUsername(savedUsername);
-      // Skip username creation and go straight to start screen
-      if (gameEngineRef.current) {
-        gameEngineRef.current.setGameState(GameState.START_SCREEN);
+    const checkOnboardingNeeded = async () => {
+      if (mode === GameMode.ONCHAIN) {
+        const username = localStorage.getItem('username');
+        
+        if (!isConnected || !wallet.address || !username || Number(wallet.balance || 0) === 0) {
+          setShowOnboarding(true);
+        } else {
+          if (gameEngineRef.current) {
+            gameEngineRef.current.setGameState(GameState.START_SCREEN);
+          }
+        }
+      } else {
+        if (gameEngineRef.current) {
+          gameEngineRef.current.setGameState(GameState.START_SCREEN);
+        }
       }
-    } else {
-      // If no username, redirect to wallet page for setup
-      window.location.href = '/wallet';
-    }
+    };
+    
+    checkOnboardingNeeded();
   };
   
   const handleShowHowToPlay = () => {
@@ -684,7 +678,6 @@ const Game: React.FC = () => {
     setCurrentHowToPlayPage(0);
   };
   
-  // Handler for going back to mode selection from any screen
   const handleGoToModeSelection = () => {
     playButtonSound();
     if (gameEngineRef.current) {
@@ -692,7 +685,6 @@ const Game: React.FC = () => {
     }
   };
   
-  // Handler for going back to start screen from game over screen
   const handleBackToStartScreen = () => {
     playButtonSound();
     if (gameEngineRef.current) {
@@ -700,7 +692,6 @@ const Game: React.FC = () => {
     }
   };
   
-  // Handler for continuing with current username and mode from the mode selection screen
   const handleContinueWithCurrentSettings = () => {
     playButtonSound();
     if (gameEngineRef.current) {
@@ -765,7 +756,14 @@ const Game: React.FC = () => {
     }
   };
   
-  // Content for how to play screens
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false);
+    
+    if (gameEngineRef.current) {
+      gameEngineRef.current.setGameState(GameState.START_SCREEN);
+    }
+  };
+  
   const howToPlayContent = [
     {
       title: "Basic Controls",
@@ -899,10 +897,8 @@ const Game: React.FC = () => {
     }
   ];
   
-  // Rendering functions for the different screens
   const renderStartScreen = () => {
     if (showHowToPlay) {
-      // Show How to Play screen
       return (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
           <div className="glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
@@ -962,7 +958,6 @@ const Game: React.FC = () => {
         </div>
       );
     } else if (showLeaderboard) {
-      // Show Leaderboard screen
       return (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
           <div className="glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto shadow-xl animate-scale-in border border-[#91d3d1]/20" style={{ width: '100%' }}>
@@ -984,15 +979,13 @@ const Game: React.FC = () => {
         </div>
       );
     } else {
-      // Show normal start screen
       return (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
           <div className="glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
             <h1 className="text-5xl font-bold mb-2 tracking-tight text-white text-gradient">Superseed Lane Runner</h1>
             
-            {/* Display username and game mode if available */}
             {username && (
-              <div className="chip text-xs bg-[#91d3d1]/20 text-[#91d3d1] px-3 py-1 rounded-full mb-2 inline-flex items-center">
+              <div className="chip text-xs bg-[#91d3d1]/20 text-[#91d3d1] px-3 py-1 rounded-full inline-flex items-center">
                 <Blocks className="w-3 h-3 mr-1" />
                 ONCHAIN • 
                 <User className="w-3 h-3 mx-1" /> {username}
@@ -1031,14 +1024,13 @@ const Game: React.FC = () => {
                 </Button>
               </div>
               
-              {/* Add Onchain Mode section */}
               <div className="w-full border-t border-[#91d3d1]/10 mt-2 pt-4">
                 <div className="mb-3">
                   <div className="flex items-center justify-center gap-2 text-[#91d3d1]">
                     <Rocket className="h-4 w-4" />
                     <span className="font-medium">Onchain Mode {isConnected ? '(Active)' : ''}</span>
                   </div>
-                  {isConnected && web3Username && (
+                  {isConnected && wallet.address && (
                     <div className="text-xs text-gray-400 mt-1">Playing as {web3Username}</div>
                   )}
                 </div>
@@ -1077,7 +1069,6 @@ const Game: React.FC = () => {
     }
   };
   
-  // Game over screen with leaderboard
   const renderGameOverScreen = () => {
     return (
       <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
@@ -1091,7 +1082,6 @@ const Game: React.FC = () => {
             </TabsList>
             
             <TabsContent value="results" className="space-y-4">
-              {/* Display username in game over screen */}
               {username && (
                 <div className="chip text-xs bg-[#91d3d1]/20 text-[#91d3d1] px-3 py-1 rounded-full inline-flex items-center">
                   <User className="w-3 h-3 mr-1" /> {username}
@@ -1115,7 +1105,6 @@ const Game: React.FC = () => {
                 </div>
               )}
               
-              {/* Add blockchain submission option if connected */}
               {isConnected && (
                 <div className="mt-4">
                   <Button 
@@ -1186,150 +1175,152 @@ const Game: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center w-full h-full">
-      <div className="game-canvas-container relative w-full max-w-[600px]">
-        <canvas ref={canvasRef} className="w-full h-full"></canvas>
-        
-        {gameState === GameState.GAMEPLAY && (
-          <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10">
-            <div className="flex items-center space-x-2 glassmorphism px-3 py-1 rounded-full">
-              {Array.from({ length: lives }).map((_, i) => (
-                <Heart key={i} className="w-5 h-5 text-red-500 fill-red-500" />
-              ))}
-            </div>
-            
-            <div className="glassmorphism px-4 py-1 rounded-full">
-              <div className="hud-text text-xl font-medium">{score}</div>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              {activeSlowMode && (
-                <div className="flex items-center space-x-1 glassmorphism px-3 py-1 rounded-full">
-                  <Clock className="w-4 h-4 text-[#a170fc]" />
-                  <span className="text-sm font-medium">{Math.ceil(slowModeTimer / 1000)}s</span>
-                </div>
-              )}
-              
-              {activeShield && (
-                <div className="flex items-center space-x-1 glassmorphism px-3 py-1 rounded-full">
-                  <Shield className="w-4 h-4 text-[#64d2ff]" />
-                  <span className="text-sm font-medium">{Math.ceil(shieldTimer / 1000)}s</span>
-                </div>
-              )}
-              
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="rounded-full bg-black/20 backdrop-blur-sm hover:bg-black/30"
-                onClick={toggleSound}
-                aria-label={isSoundEnabled ? "Mute sound" : "Enable sound"}
-              >
-                {isSoundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-              </Button>
-              
-              <Button 
-                variant="teal" 
-                size="icon" 
-                className="rounded-full hover:bg-[#7ec7c5] transition-colors"
-                onClick={handlePauseGame}
-                aria-label="Pause game"
-              >
-                <Pause className="h-5 w-5" />
-              </Button>
-            </div>
+    <div className="relative w-full h-full select-none overflow-hidden bg-zinc-900">
+      <canvas
+        className="w-full h-full object-cover"
+        ref={canvasRef}
+      />
+      
+      {showOnboarding && <OnchainOnboarding onComplete={handleOnboardingComplete} />}
+      
+      {gameState === GameState.GAMEPLAY && (
+        <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10">
+          <div className="flex items-center space-x-2 glassmorphism px-3 py-1 rounded-full">
+            {Array.from({ length: lives }).map((_, i) => (
+              <Heart key={i} className="w-5 h-5 text-red-500 fill-red-500" />
+            ))}
           </div>
-        )}
-        
-        {/* Mode Selection Screen */}
-        {gameState === GameState.MODE_SELECTION && (
-          <ModeSelectionScreen 
-            onSelectMode={handleModeSelection}
-            currentMode={selectedGameMode}
-            currentUsername={username}
-            onContinue={handleContinueWithCurrentSettings}
-          />
-        )}
-        
-        {gameState === GameState.START_SCREEN && renderStartScreen()}
-        
-        {gameState === GameState.PAUSED && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
-            <div className="pause-menu glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
-              <h1 className="text-3xl font-bold mb-6 tracking-tight text-white">Game Paused</h1>
+          
+          <div className="glassmorphism px-4 py-1 rounded-full">
+            <div className="hud-text text-xl font-medium">{score}</div>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            {activeSlowMode && (
+              <div className="flex items-center space-x-1 glassmorphism px-3 py-1 rounded-full">
+                <Clock className="w-4 h-4 text-[#a170fc]" />
+                <span className="text-sm font-medium">{Math.ceil(slowModeTimer / 1000)}s</span>
+              </div>
+            )}
+            
+            {activeShield && (
+              <div className="flex items-center space-x-1 glassmorphism px-3 py-1 rounded-full">
+                <Shield className="w-4 h-4 text-[#64d2ff]" />
+                <span className="text-sm font-medium">{Math.ceil(shieldTimer / 1000)}s</span>
+              </div>
+            )}
+            
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="rounded-full bg-black/20 backdrop-blur-sm hover:bg-black/30"
+              onClick={toggleSound}
+              aria-label={isSoundEnabled ? "Mute sound" : "Enable sound"}
+            >
+              {isSoundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+            </Button>
+            
+            <Button 
+              variant="teal" 
+              size="icon" 
+              className="rounded-full hover:bg-[#7ec7c5] transition-colors"
+              onClick={handlePauseGame}
+              aria-label="Pause game"
+            >
+              <Pause className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
+      )}
+      
+      {gameState === GameState.MODE_SELECTION && (
+        <ModeSelectionScreen 
+          onSelectMode={handleModeSelection}
+          currentMode={selectedGameMode}
+          currentUsername={username}
+          onContinue={handleContinueWithCurrentSettings}
+        />
+      )}
+      
+      {gameState === GameState.START_SCREEN && renderStartScreen()}
+      
+      {gameState === GameState.PAUSED && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
+          <div className="pause-menu glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
+            <h1 className="text-3xl font-bold mb-6 tracking-tight text-white">Game Paused</h1>
+            
+            <div className="flex flex-col space-y-4 items-center">
+              <Button 
+                onClick={handleResumeGame}
+                className="game-button w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 rounded-xl py-6 text-lg font-medium shadow-lg shadow-[#91d3d1]/20"
+              >
+                <Play className="mr-2 h-5 w-5" />
+                Resume Game
+              </Button>
               
-              <div className="flex flex-col space-y-4 items-center">
-                <Button 
-                  onClick={handleResumeGame}
-                  className="game-button w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 rounded-xl py-6 text-lg font-medium shadow-lg shadow-[#91d3d1]/20"
-                >
-                  <Play className="mr-2 h-5 w-5" />
-                  Resume Game
-                </Button>
-                
-                <Button 
-                  onClick={handleRestartGame}
-                  variant="teal-outline"
-                  className="w-full rounded-xl py-6 text-lg font-medium"
-                >
-                  <RefreshCw className="mr-2 h-5 w-5" />
-                  Restart Game
-                </Button>
-                
-                <div className="flex items-center mt-4 space-x-3">
-                  <div className="text-sm text-gray-300">
-                    Current Score: <span className="font-bold text-white">{score}</span>
-                  </div>
-                  
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="rounded-full bg-black/20 backdrop-blur-sm hover:bg-black/30"
-                    onClick={toggleSound}
-                    aria-label={isSoundEnabled ? "Mute sound" : "Enable sound"}
-                  >
-                    {isSoundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-                  </Button>
+              <Button 
+                onClick={handleRestartGame}
+                variant="teal-outline"
+                className="w-full rounded-xl py-6 text-lg font-medium"
+              >
+                <RefreshCw className="mr-2 h-5 w-5" />
+                Restart Game
+              </Button>
+              
+              <div className="flex items-center mt-4 space-x-3">
+                <div className="text-sm text-gray-300">
+                  Current Score: <span className="font-bold text-white">{score}</span>
                 </div>
+                
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="rounded-full bg-black/20 backdrop-blur-sm hover:bg-black/30"
+                  onClick={toggleSound}
+                  aria-label={isSoundEnabled ? "Mute sound" : "Enable sound"}
+                >
+                  {isSoundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                </Button>
               </div>
             </div>
           </div>
-        )}
-        
-        {gameState === GameState.GAME_OVER && renderGameOverScreen()}
-        
-        {isMobile && gameState === GameState.GAMEPLAY && (
-          <div className="absolute bottom-10 left-0 right-0 flex justify-between px-8">
-            <button
-              className={cn(
-                "w-16 h-16 rounded-full glassmorphism border border-[#91d3d1]/30 touch-control flex items-center justify-center",
-                "active:bg-[#91d3d1]/30 transition-all"
-              )}
-              onTouchStart={handleTouchLeft}
-            >
-              <ChevronLeft className="h-10 w-10 text-[#91d3d1]" />
-            </button>
-            
-            <button
-              className={cn(
-                "w-16 h-16 rounded-full glassmorphism border border-[#91d3d1]/30 touch-control flex items-center justify-center",
-                "active:bg-[#91d3d1]/30 transition-all"
-              )}
-              onTouchStart={handleTouchRight}
-            >
-              <ChevronRight className="h-10 w-10 text-[#91d3d1]" />
-            </button>
-          </div>
-        )}
-        
-        {(!carAssetsLoaded || !gameInitialized) && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-background">
-            <Loader2 className="h-8 w-8 animate-spin text-[#91d3d1] mb-4" />
-            <p className="text-sm text-muted-foreground">Loading game assets...</p>
-          </div>
-        )}
-        
-        <div className="bg-noise absolute inset-0 pointer-events-none opacity-5"></div>
-      </div>
+        </div>
+      )}
+      
+      {gameState === GameState.GAME_OVER && renderGameOverScreen()}
+      
+      {isMobile && gameState === GameState.GAMEPLAY && (
+        <div className="absolute bottom-10 left-0 right-0 flex justify-between px-8">
+          <button
+            className={cn(
+              "w-16 h-16 rounded-full glassmorphism border border-[#91d3d1]/30 touch-control flex items-center justify-center",
+              "active:bg-[#91d3d1]/30 transition-all"
+            )}
+            onTouchStart={handleTouchLeft}
+          >
+            <ChevronLeft className="h-10 w-10 text-[#91d3d1]" />
+          </button>
+          
+          <button
+            className={cn(
+              "w-16 h-16 rounded-full glassmorphism border border-[#91d3d1]/30 touch-control flex items-center justify-center",
+              "active:bg-[#91d3d1]/30 transition-all"
+            )}
+            onTouchStart={handleTouchRight}
+          >
+            <ChevronRight className="h-10 w-10 text-[#91d3d1]" />
+          </button>
+        </div>
+      )}
+      
+      {(!carAssetsLoaded || !gameInitialized) && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-background">
+          <Loader2 className="h-8 w-8 animate-spin text-[#91d3d1] mb-4" />
+          <p className="text-sm text-muted-foreground">Loading game assets...</p>
+        </div>
+      )}
+      
+      <div className="bg-noise absolute inset-0 pointer-events-none opacity-5"></div>
     </div>
   );
 };

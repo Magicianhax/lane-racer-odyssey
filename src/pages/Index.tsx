@@ -2,9 +2,17 @@
 import Game from "@/components/Game";
 import { Smartphone } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useWeb3 } from "@/contexts/Web3Context";
+import { useEffect } from "react";
 
 const Index = () => {
   const isMobile = useIsMobile();
+  const { refreshBalance } = useWeb3();
+  
+  // Refresh wallet balance when page loads
+  useEffect(() => {
+    refreshBalance();
+  }, [refreshBalance]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-900 to-zinc-950 text-white overflow-hidden">
