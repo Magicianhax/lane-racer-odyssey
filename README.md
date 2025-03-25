@@ -1,11 +1,6 @@
-
 # Superseed Lane Runner
 
 A fast-paced lane-switching car game where you collect seeds while avoiding obstacles.
-
-## Project info
-
-**URL**: https://lovable.dev/projects/6ac891d1-4316-46e0-87b2-c2e47b4eca71
 
 ## Game Rules
 
@@ -54,6 +49,112 @@ A fast-paced lane-switching car game where you collect seeds while avoiding obst
 - Paused Game
 - Game Over Screen
 
+## Blockchain Integration
+
+The game integrates with the Superseed blockchain, allowing players to record their high scores on-chain. The game uses a smart contract to store and track player scores.
+
+### Smart Contract Details
+
+Contract Address: [0x705C86Ee2e1423E5E869A297105Aa1333D92CCa4](https://sepolia-explorer.superseed.xyz/address/0x705C86Ee2e1423E5E869A297105Aa1333D92CCa4)
+
+The `GameScoreTracker` smart contract handles all score-related functionality:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.19;
+
+contract GameScoreTracker {
+    struct Score {
+        address player;
+        uint256 score;
+        uint256 timestamp;
+    }
+    
+    // Map player addresses to their best score
+    mapping(address => Score) public playerHighScores;
+    
+    // Array to keep track of all high scores
+    Score[] public topScores;
+    uint256 public constant MAX_TOP_SCORES = 10;
+    
+    // Events
+    event ScoreSubmitted(address indexed player, uint256 score, uint256 timestamp);
+    event NewHighScore(address indexed player, uint256 score, uint256 timestamp);
+    
+    // Submit a new score
+    function submitScore(uint256 _score) external {
+        // Update player's high score if this is better
+        if (_score > playerHighScores[msg.sender].score || playerHighScores[msg.sender].player == address(0)) {
+            playerHighScores[msg.sender] = Score({
+                player: msg.sender,
+                score: _score,
+                timestamp: block.timestamp
+            });
+            
+            emit NewHighScore(msg.sender, _score, block.timestamp);
+            
+            // Check if this score qualifies for the top scores
+            _updateTopScores(Score({
+                player: msg.sender,
+                score: _score,
+                timestamp: block.timestamp
+            }));
+        }
+        
+        emit ScoreSubmitted(msg.sender, _score, block.timestamp);
+    }
+    
+    // Get player's high score
+    function getPlayerHighScore() external view returns (uint256) {
+        return playerHighScores[msg.sender].score;
+    }
+    
+    // Get all top scores
+    function getTopScores() external view returns (Score[] memory) {
+        return topScores;
+    }
+    
+    // Internal function to update top scores
+    function _updateTopScores(Score memory newScore) internal {
+        // If we have fewer than MAX_TOP_SCORES, just add it
+        if (topScores.length < MAX_TOP_SCORES) {
+            topScores.push(newScore);
+            // Sort the array
+            _sortTopScores();
+            return;
+        }
+        
+        // Check if the new score is higher than the lowest score
+        if (newScore.score > topScores[topScores.length - 1].score) {
+            // Replace the lowest score
+            topScores[topScores.length - 1] = newScore;
+            // Sort the array
+            _sortTopScores();
+        }
+    }
+    
+    // Simple bubble sort for the top scores (fine for small arrays)
+    function _sortTopScores() internal {
+        for (uint i = 0; i < topScores.length - 1; i++) {
+            for (uint j = 0; j < topScores.length - i - 1; j++) {
+                if (topScores[j].score < topScores[j + 1].score) {
+                    Score memory temp = topScores[j];
+                    topScores[j] = topScores[j + 1];
+                    topScores[j + 1] = temp;
+                }
+            }
+        }
+    }
+}
+```
+
+### Contract Functionality
+
+1. **Score Submission**: When players finish a game, their score is submitted to the blockchain if they have a wallet connected.
+2. **High Score Tracking**: The contract stores each player's personal high score.
+3. **Global Leaderboard**: The top 10 highest scores across all players are maintained and can be viewed in the game's leaderboard.
+4. **Sorting and Ranking**: Scores are automatically sorted in descending order.
+
 ## How to Play
 
 1. Start the game by clicking the "Start Game" button
@@ -61,63 +162,8 @@ A fast-paced lane-switching car game where you collect seeds while avoiding obst
 3. Collect seeds while avoiding enemy cars
 4. Use power-ups strategically to survive longer
 5. Try to beat your high score with each play
-
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/6ac891d1-4316-46e0-87b2-c2e47b4eca71) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-- HTML5 Canvas for the game rendering
+6. Connect to the blockchain to record your scores
+7. Check the leaderboard to see how you rank globally
 
 ## Game Implementation Details
 
@@ -127,11 +173,4 @@ The game is built using a canvas-based rendering engine with React for the UI co
 - `Game.tsx`: React component that integrates the game engine with the UI
 - Custom sound management for game effects
 - Responsive design that works on both desktop and mobile devices
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/6ac891d1-4316-46e0-87b2-c2e47b4eca71) and click on Share -> Publish.
-
-## I want to use a custom domain - is that possible?
-
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+- Blockchain integration for score tracking and leaderboards
