@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Leaderboard } from './Leaderboard';
 import { Trophy } from 'lucide-react';
+import { ScrollArea } from './ui/scroll-area';
 
 interface LeaderboardDialogProps {
   open: boolean;
@@ -21,7 +22,7 @@ export const LeaderboardDialog: React.FC<LeaderboardDialogProps> = ({
 }) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md bg-zinc-900 text-white border-zinc-800 p-0">
+      <DialogContent className="sm:max-w-md max-h-[90vh] bg-zinc-900 text-white border-zinc-800 p-0 overflow-hidden">
         <DialogHeader className="p-6 pb-0">
           <div className="flex items-center gap-2">
             <Trophy className="h-5 w-5 text-yellow-400" />
@@ -32,9 +33,11 @@ export const LeaderboardDialog: React.FC<LeaderboardDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="p-6 pt-3">
-          <Leaderboard />
-        </div>
+        <ScrollArea className="max-h-[60vh]">
+          <div className="p-6 pt-3">
+            <Leaderboard />
+          </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );

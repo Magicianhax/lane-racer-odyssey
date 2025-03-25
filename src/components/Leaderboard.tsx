@@ -85,10 +85,10 @@ export const Leaderboard: React.FC<{
 
   return (
     <div className={`w-full ${className}`}>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-4">
         <div className="flex items-center">
-          <Trophy className="w-6 h-6 text-yellow-400 mr-2" />
-          <h2 className="text-xl font-bold">Top Players</h2>
+          <Trophy className="w-5 h-5 text-yellow-400 mr-2" />
+          <h2 className="text-lg font-bold">Top Players</h2>
         </div>
         <div className="flex gap-2">
           <Button 
@@ -121,78 +121,78 @@ export const Leaderboard: React.FC<{
           ))}
         </div>
       ) : error ? (
-        <div className="text-center py-6 text-gray-400">
+        <div className="text-center py-4 text-gray-400">
           <div className="mb-2 text-yellow-400">
-            <Award className="w-12 h-12 mx-auto mb-2 opacity-30" />
+            <Award className="w-10 h-10 mx-auto mb-2 opacity-30" />
           </div>
           <p>{error}</p>
           <Button 
             variant="ghost" 
             size="sm" 
             onClick={fetchLeaderboard}
-            className="mt-4"
+            className="mt-3"
           >
             Try Again
           </Button>
         </div>
       ) : topScores.length === 0 ? (
-        <div className="text-center py-6 text-gray-400">
-          <Trophy className="w-12 h-12 mx-auto mb-2 opacity-30" />
+        <div className="text-center py-4 text-gray-400">
+          <Trophy className="w-10 h-10 mx-auto mb-2 opacity-30" />
           <p>No scores submitted yet. Be the first!</p>
         </div>
       ) : (
         <>
-          <div className="space-y-3 max-h-80 overflow-auto pr-2">
+          <div className="space-y-2 max-h-[calc(100%-80px)]">
             {topScores.map((score, index) => {
               const isUser = isCurrentUser(score.player);
               
               return (
                 <div 
                   key={index}
-                  className={`flex items-center p-3 rounded-lg transition-colors ${
+                  className={`flex items-center p-2 rounded-lg transition-colors ${
                     isUser ? 'bg-[#91d3d1]/20 border border-[#91d3d1]/30' : 'bg-black/20'
                   }`}
                 >
                   <div className="mr-3 flex-shrink-0">
                     {index === 0 ? (
-                      <div className="w-8 h-8 flex items-center justify-center bg-yellow-400 text-zinc-900 rounded-full font-bold">
-                        <Trophy className="w-4 h-4" />
+                      <div className="w-7 h-7 flex items-center justify-center bg-yellow-400 text-zinc-900 rounded-full font-bold">
+                        <Trophy className="w-3.5 h-3.5" />
                       </div>
                     ) : index === 1 ? (
-                      <div className="w-8 h-8 flex items-center justify-center bg-gray-300 text-zinc-900 rounded-full font-bold">
-                        <Medal className="w-4 h-4" />
+                      <div className="w-7 h-7 flex items-center justify-center bg-gray-300 text-zinc-900 rounded-full font-bold">
+                        <Medal className="w-3.5 h-3.5" />
                       </div>
                     ) : index === 2 ? (
-                      <div className="w-8 h-8 flex items-center justify-center bg-amber-600 text-zinc-900 rounded-full font-bold">
-                        <Medal className="w-4 h-4" />
+                      <div className="w-7 h-7 flex items-center justify-center bg-amber-600 text-zinc-900 rounded-full font-bold">
+                        <Medal className="w-3.5 h-3.5" />
                       </div>
                     ) : (
-                      <div className="w-8 h-8 flex items-center justify-center bg-zinc-800 text-white rounded-full font-bold text-sm">
+                      <div className="w-7 h-7 flex items-center justify-center bg-zinc-800 text-white rounded-full font-bold text-xs">
                         {index + 1}
                       </div>
                     )}
                   </div>
                   
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center">
-                      <span className="text-sm font-medium truncate">
+                      <span className="text-xs font-medium truncate">
                         {shortenAddress(score.player)}
                       </span>
                       {isUser && (
-                        <span className="ml-2 text-xs bg-[#91d3d1]/30 text-[#91d3d1] px-1.5 py-0.5 rounded-full">
+                        <span className="ml-1.5 text-[10px] bg-[#91d3d1]/30 text-[#91d3d1] px-1.5 py-0.5 rounded-full">
                           You
                         </span>
                       )}
                     </div>
-                    <div className="text-xs text-gray-400 flex items-center mt-1">
-                      <Calendar className="w-3 h-3 mr-1" />
+                    <div className="text-[10px] text-gray-400 flex items-center mt-0.5">
+                      <Calendar className="w-2.5 h-2.5 mr-1" />
                       <span>{formatDate(score.timestamp)}</span>
-                      <Clock className="w-3 h-3 ml-3 mr-1" />
+                      <Clock className="w-2.5 h-2.5 ml-2 mr-1" />
                       <span>{formatTime(score.timestamp)}</span>
                     </div>
                   </div>
                   
-                  <div className="text-xl font-mono font-bold tabular-nums">
+                  <div className="text-base font-mono font-bold tabular-nums">
                     {score.score}
                   </div>
                 </div>
@@ -200,7 +200,7 @@ export const Leaderboard: React.FC<{
             })}
           </div>
           
-          <div className="mt-4 pt-3 border-t border-zinc-800 text-xs text-gray-400 flex justify-between items-center">
+          <div className="mt-3 pt-2 border-t border-zinc-800 text-[10px] text-gray-400 flex justify-between items-center">
             <span>Updated {isRefreshing ? 'now' : 'recently'}</span>
             <span className="text-[#91d3d1]">{topScores.length} top players</span>
           </div>
