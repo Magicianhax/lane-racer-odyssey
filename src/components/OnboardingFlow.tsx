@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { useWeb3 } from '@/contexts/Web3Context';
 import { 
   Rocket, Loader2, X, Copy, Check, ExternalLink, 
-  Wallet, AlertTriangle, ChevronRight, User, ArrowLeft
+  Wallet, AlertTriangle, ChevronRight, User, ArrowLeft, RefreshCw
 } from 'lucide-react';
 import { validateUsername } from '@/components/ModeSelectionComponents';
 import { toast } from 'sonner';
@@ -16,7 +16,9 @@ interface OnboardingProps {
 }
 
 export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
-  // Setup state for multi-step flow
+  // Setup state for multi-step flow - now we only need 2 steps:
+  // 1. Create wallet & fund it
+  // 2. Register username
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [username, setUsername] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -43,17 +45,13 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
       if (savedUsername) {
         setUsername(savedUsername);
         setUsernameRegistered(true);
-        
         // If we have both wallet and username, onboarding is complete
+        onComplete();
+      } else {
+        // If we have a wallet with balance, go to username registration
         if (Number(wallet.balance || 0) > 0) {
-          onComplete();
-        } else {
-          // If we have no ETH, go to funding step
           setCurrentStep(2);
         }
-      } else {
-        // If wallet but no username, go to username registration step
-        setCurrentStep(3);
       }
     }
   }, [isConnected, wallet.address, wallet.balance, onComplete]);
@@ -62,7 +60,6 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
   const handleCreateWallet = async () => {
     try {
       // Generate a temporary username for wallet creation
-      // We'll update this later with the user's real choice
       const tempUsername = `user_${Math.floor(Math.random() * 1000000)}`;
       
       // Call createUserWallet without checking its return value directly
@@ -70,8 +67,6 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
       
       // If we reach here without an error being thrown, we consider it a success
       setWalletCreated(true);
-      // Advance to the "Fund your wallet" step
-      setCurrentStep(2);
       toast.success("Wallet created successfully!");
       
       // Automatically refresh balance after wallet creation
@@ -85,9 +80,43 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
   // Handle refreshing wallet balance
   const handleRefreshBalance = async () => {
     setRefreshingBalance(true);
-    await refreshBalance();
-    setRefreshingBalance(false);
+    try {
+      await refreshBalance();
+      
+      // If balance is detected, show a success toast
+      if (Number(wallet.balance || 0) > 0) {
+        toast.success("ETH detected in wallet!", {
+          description: "You can now proceed to register your username."
+        });
+      }
+    } catch (err) {
+      console.error("Error refreshing balance:", err);
+    } finally {
+      setRefreshingBalance(false);
+    }
   };
+  
+  // Auto-check balance periodically when wallet is created but has no ETH
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+    
+    if (walletCreated && currentStep === 1 && Number(wallet.balance || 0) === 0) {
+      // Check balance every 15 seconds
+      intervalId = setInterval(async () => {
+        await refreshBalance();
+        if (Number(wallet.balance || 0) > 0) {
+          toast.success("ETH detected in wallet!", {
+            description: "You can now proceed to register your username."
+          });
+          clearInterval(intervalId);
+        }
+      }, 15000);
+    }
+    
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [walletCreated, currentStep, wallet.balance, refreshBalance]);
   
   // Handle username validation
   const handleUsernameChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -136,8 +165,8 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
         toast.error("You need ETH to register a username", {
           description: "Please add some testnet ETH to your wallet first."
         });
-        // Go back to funding step
-        setCurrentStep(2);
+        // Go back to wallet funding
+        setCurrentStep(1);
       } else {
         toast.error("Failed to register username");
       }
@@ -156,84 +185,43 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
   };
   
   // Navigation handlers
-  const handleBackToHome = () => {
-    // Only allow returning to home if username is registered
-    if (usernameRegistered) {
-      navigate('/');
-    } else {
-      // Show a warning toast if they try to exit before registering a username
-      toast.warning("Please complete the onboarding process", {
-        description: "You need to register a username before you can play the game."
-      });
-    }
-  };
-  
   const handleNextStep = () => {
-    if (currentStep < 3) {
-      setCurrentStep(currentStep + 1);
+    if (currentStep === 1 && Number(wallet.balance || 0) > 0) {
+      setCurrentStep(2);
     }
   };
   
   const handlePreviousStep = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
-    } else {
-      // If they're in step 1 and try to go back, show warning
-      // Only allow going back to home if username is registered
-      if (usernameRegistered) {
-        navigate('/');
-      } else if (walletCreated) {
-        // If wallet is created but no username, show warning
-        toast.warning("Please complete the onboarding process", {
-          description: "You need to register a username before you can play the game."
-        });
-      } else {
-        // If wallet isn't created yet, let them exit
-        navigate('/');
-      }
     }
   };
   
-  // Step 1: Create Wallet
-  const renderCreateWalletStep = () => (
+  // Step 1: Create Wallet & Fund it
+  const renderWalletCreationStep = () => (
     <>
-      <h3 className="text-xl font-bold mb-2">Step 1: Create Your Wallet</h3>
-      <p className="text-sm text-gray-300 mb-6">
-        First, let's create a new blockchain wallet for your game account.
-      </p>
+      <h3 className="text-xl font-bold mb-2">Step 1: Create & Fund Your Wallet</h3>
       
-      <div className="bg-black/30 p-4 rounded-lg mb-4 border border-[#91d3d1]/20">
-        <div className="flex items-start mb-3">
-          <Wallet className="h-5 w-5 mr-2 text-[#91d3d1] mt-0.5" />
-          <div>
-            <h4 className="font-medium mb-1">What is a wallet?</h4>
-            <p className="text-xs text-gray-300">
-              A blockchain wallet is like a digital bank account that stores your game data and achievements securely. 
-              You'll need it to register a unique username and track your scores on the blockchain.
-            </p>
-          </div>
-        </div>
-      </div>
-      
-      {walletCreated ? (
-        // Show continue button if wallet is already created
-        <div className="space-y-3">
-          <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 flex items-center">
-            <Check className="h-4 w-4 text-green-400 mr-2 flex-shrink-0" />
-            <p className="text-sm text-green-400">Wallet created successfully!</p>
+      {!walletCreated ? (
+        // WALLET CREATION UI
+        <>
+          <p className="text-sm text-gray-300 mb-6">
+            First, let's create a new blockchain wallet for your game account.
+          </p>
+          
+          <div className="bg-black/30 p-4 rounded-lg mb-4 border border-[#91d3d1]/20">
+            <div className="flex items-start mb-3">
+              <Wallet className="h-5 w-5 mr-2 text-[#91d3d1] mt-0.5" />
+              <div>
+                <h4 className="font-medium mb-1">What is a wallet?</h4>
+                <p className="text-xs text-gray-300">
+                  A blockchain wallet is like a digital bank account that stores your game data and achievements securely. 
+                  You'll need it to register a unique username and track your scores on the blockchain.
+                </p>
+              </div>
+            </div>
           </div>
           
-          <Button
-            onClick={handleNextStep}
-            className="w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900"
-          >
-            <ChevronRight className="mr-2 h-4 w-4" />
-            Continue to Fund Wallet
-          </Button>
-        </div>
-      ) : (
-        // Show create wallet button if wallet isn't created yet
-        <div className="space-y-3">
           <Button
             onClick={handleCreateWallet}
             className="w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900"
@@ -251,133 +239,117 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
               </>
             )}
           </Button>
+        </>
+      ) : (
+        // WALLET FUNDING UI - Shown after wallet is created
+        <>
+          <p className="text-sm text-gray-300 mb-4 text-center">
+            Your wallet has been created! Now add some ETH to this address to continue.
+          </p>
           
-          <Button
-            onClick={handleNextStep}
-            variant="outline"
-            className={`w-full ${!walletCreated ? "opacity-50 cursor-not-allowed" : ""}`}
-            disabled={!walletCreated}
-          >
-            <ChevronRight className="mr-2 h-4 w-4" />
-            Continue to Next Step
-            {!walletCreated && <span className="ml-1 text-xs">(Create wallet first)</span>}
-          </Button>
-        </div>
+          <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 flex items-center mb-4">
+            <Check className="h-4 w-4 text-green-400 mr-2 flex-shrink-0" />
+            <p className="text-sm text-green-400">Wallet created successfully!</p>
+          </div>
+          
+          <div className="bg-black/30 p-4 rounded-lg mb-4 border border-[#91d3d1]/20">
+            <div className="mb-4">
+              <h4 className="font-medium mb-3 text-center">Your Wallet Address</h4>
+              <div className="bg-black/30 p-3 rounded flex items-center justify-between border border-[#91d3d1]/20">
+                <code className="text-sm text-white font-mono overflow-hidden overflow-ellipsis mr-2">
+                  {wallet.address}
+                </code>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={handleCopyAddress}
+                  className="h-8 w-8 p-0 bg-[#91d3d1]/10 hover:bg-[#91d3d1]/20"
+                >
+                  {copiedAddress ? (
+                    <Check className="h-4 w-4 text-green-400" />
+                  ) : (
+                    <Copy className="h-4 w-4 text-[#91d3d1]" />
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-center text-gray-300 mt-2">
+                Add some ETH to this address to continue
+              </p>
+            </div>
+            
+            <div className="pt-3 border-t border-[#91d3d1]/10">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-medium">Current Balance:</h4>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRefreshBalance}
+                  className="h-8 w-8 p-0 bg-[#91d3d1]/10 hover:bg-[#91d3d1]/20"
+                  disabled={refreshingBalance}
+                >
+                  <RefreshCw className={`h-4 w-4 text-[#91d3d1] ${refreshingBalance ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-lg">{wallet.balance || '0'} ETH</span>
+                
+                {Number(wallet.balance || 0) === 0 ? (
+                  <div className="text-xs py-1 px-2 bg-yellow-500/20 text-yellow-400 rounded-full">
+                    Waiting for ETH
+                  </div>
+                ) : (
+                  <div className="text-xs py-1 px-2 bg-green-500/20 text-green-400 rounded-full">
+                    Ready!
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.open('https://sepoliafaucet.com/', '_blank')}
+              className="flex items-center justify-center gap-1"
+            >
+              <ExternalLink className="h-3 w-3 mr-1" />
+              Get Free Testnet ETH
+            </Button>
+            
+            {/* Continue button is always visible but only enabled when balance > 0 */}
+            <Button
+              onClick={handleNextStep}
+              className={`w-full mt-2 ${
+                Number(wallet.balance || 0) > 0 
+                  ? "bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900" 
+                  : "bg-gradient-to-r from-[#91d3d1]/50 to-[#7ec7c5]/50 text-zinc-900/50 cursor-not-allowed"
+              }`}
+              disabled={Number(wallet.balance || 0) === 0}
+            >
+              <ChevronRight className="mr-1 h-4 w-4" />
+              Continue to Username Registration
+              {Number(wallet.balance || 0) === 0 && (
+                <span className="ml-1 text-xs">(Need ETH first)</span>
+              )}
+            </Button>
+            
+            {Number(wallet.balance || 0) === 0 && (
+              <p className="text-amber-400 text-xs text-center mt-2">
+                Balance will refresh automatically when ETH is detected.
+                <br />You can also click the refresh button to check manually.
+              </p>
+            )}
+          </div>
+        </>
       )}
     </>
   );
   
-  // Step 2: Fund Wallet
-  const renderFundWalletStep = () => (
+  // Step 2: Register Username
+  const renderUsernameRegistrationStep = () => (
     <>
-      <h3 className="text-xl font-bold mb-2">Step 2: Add ETH to Your Wallet</h3>
-      <p className="text-sm text-gray-300 mb-4">
-        You need a small amount of testnet ETH to register your username.
-      </p>
-      
-      <div className="bg-black/30 p-4 rounded-lg mb-4 border border-[#91d3d1]/20">
-        <div className="mb-3">
-          <h4 className="font-medium mb-1 flex items-center">
-            <AlertTriangle className="h-4 w-4 mr-1 text-yellow-400" />
-            Why do I need ETH?
-          </h4>
-          <p className="text-xs text-gray-300">
-            Registering a username requires a small transaction on the blockchain.
-            This uses "gas" which is paid in ETH. For testing, you can get free ETH from a "faucet".
-          </p>
-        </div>
-        
-        <div className="border-t border-[#91d3d1]/10 pt-3 mb-3">
-          <h4 className="font-medium mb-2">Your Wallet Address:</h4>
-          <div className="bg-black/30 p-2 rounded flex items-center justify-between">
-            <code className="text-xs text-gray-300 font-mono overflow-hidden overflow-ellipsis">
-              {wallet.address}
-            </code>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={handleCopyAddress}
-              className="h-7 w-7 p-0"
-            >
-              {copiedAddress ? (
-                <Check className="h-3 w-3 text-green-400" />
-              ) : (
-                <Copy className="h-3 w-3" />
-              )}
-            </Button>
-          </div>
-        </div>
-        
-        <div className="border-t border-[#91d3d1]/10 pt-3">
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="font-medium">Current Balance:</h4>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleRefreshBalance}
-              className="h-6 w-6 p-0"
-              disabled={refreshingBalance}
-            >
-              <Loader2 className={`h-3 w-3 ${refreshingBalance ? 'animate-spin' : ''}`} />
-            </Button>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="font-mono">{wallet.balance || '0'} ETH</span>
-            
-            {Number(wallet.balance || 0) === 0 ? (
-              <div className="text-xs py-1 px-2 bg-yellow-500/20 text-yellow-400 rounded-full">
-                Needs ETH
-              </div>
-            ) : (
-              <div className="text-xs py-1 px-2 bg-green-500/20 text-green-400 rounded-full">
-                Ready
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-      
-      <div className="flex flex-col gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => window.open('https://sepoliafaucet.com/', '_blank')}
-          className="flex items-center justify-center gap-1"
-        >
-          <ExternalLink className="h-3 w-3 mr-1" />
-          Get Free Testnet ETH
-        </Button>
-        
-        {/* Continue button is always visible but only enabled when balance > 0 */}
-        <Button
-          onClick={handleNextStep}
-          className={`w-full mt-2 ${
-            Number(wallet.balance || 0) > 0 
-              ? "bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900" 
-              : "bg-gradient-to-r from-[#91d3d1]/50 to-[#7ec7c5]/50 text-zinc-900/50 cursor-not-allowed"
-          }`}
-          disabled={Number(wallet.balance || 0) === 0}
-        >
-          <ChevronRight className="mr-1 h-4 w-4" />
-          Continue to Username Registration
-          {Number(wallet.balance || 0) === 0 && (
-            <span className="ml-1 text-xs">(Need ETH first)</span>
-          )}
-        </Button>
-        
-        {Number(wallet.balance || 0) === 0 && (
-          <p className="text-amber-400 text-xs text-center mt-2">
-            You need ETH to continue. Get free testnet ETH using the button above.
-          </p>
-        )}
-      </div>
-    </>
-  );
-  
-  // Step 3: Register Username
-  const renderRegisterUsernameStep = () => (
-    <>
-      <h3 className="text-xl font-bold mb-2">Step 3: Choose Your Username</h3>
+      <h3 className="text-xl font-bold mb-2">Step 2: Choose Your Username</h3>
       <p className="text-sm text-gray-300 mb-4">
         Choose a unique username that will be registered on the blockchain.
       </p>
@@ -459,7 +431,7 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
         
         {Number(wallet.balance || 0) === 0 && (
           <div className="text-amber-400 text-xs text-center">
-            You need ETH to register a username. Go back to step 2 to get ETH.
+            You need ETH to register a username. Go back to step 1 to get ETH.
           </div>
         )}
       </div>
@@ -470,60 +442,42 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
   const renderCurrentStep = () => {
     switch (currentStep) {
       case 1:
-        return renderCreateWalletStep();
+        return renderWalletCreationStep();
       case 2:
-        return renderFundWalletStep();
-      case 3:
-        return renderRegisterUsernameStep();
+        return renderUsernameRegistrationStep();
       default:
-        return renderCreateWalletStep();
+        return renderWalletCreationStep();
     }
   };
   
   return (
     <div className="glassmorphism p-6 rounded-xl">
       <div className="flex justify-between items-center mb-3">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={handlePreviousStep}
-          className="h-8 w-8 rounded-full"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
+        {currentStep > 1 && (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={handlePreviousStep}
+            className="h-8 w-8 rounded-full"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        )}
+        {currentStep === 1 && <div className="w-8 h-8" />} {/* Spacer to keep layout consistent */}
         
         <div className="inline-flex rounded-full bg-[#91d3d1]/20 p-2">
           <Rocket className="h-5 w-5 text-[#91d3d1]" />
         </div>
         
-        {/* Only show X button if username is registered or wallet not created yet */}
-        {(usernameRegistered || !walletCreated) ? (
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={onComplete}
-            className="h-8 w-8 rounded-full opacity-50"
-            disabled={!usernameRegistered && currentStep === 3}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        ) : (
-          <div className="w-8 h-8"></div> /* Placeholder for layout */
-        )}
+        <div className="w-8 h-8"></div> {/* Placeholder for layout */}
       </div>
       
       {/* Step indicator */}
       <div className="flex items-center mb-6">
-        {[1, 2, 3].map((step) => (
+        {[1, 2].map((step) => (
           <React.Fragment key={step}>
             <button
-              onClick={() => {
-                // Only allow going back to previous steps
-                if (step < currentStep) {
-                  setCurrentStep(step);
-                }
-              }}
-              className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer ${
+              className={`w-8 h-8 rounded-full flex items-center justify-center cursor-default ${
                 currentStep === step 
                   ? 'bg-[#91d3d1] text-zinc-900 font-medium' 
                   : currentStep > step 
@@ -533,7 +487,7 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
             >
               {currentStep > step ? <Check className="h-4 w-4" /> : step}
             </button>
-            {step < 3 && (
+            {step < 2 && (
               <div 
                 className={`flex-1 h-1 mx-2 ${
                   currentStep > step ? 'bg-[#91d3d1]/30' : 'bg-zinc-800'
