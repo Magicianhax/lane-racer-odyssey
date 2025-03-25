@@ -1,15 +1,16 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useWeb3 } from '@/contexts/Web3Context';
-import { Wallet, ExternalLink, Copy, AlertTriangle, Key, X, Loader2, Check } from 'lucide-react';
+import { Wallet, ExternalLink, Copy, AlertTriangle, Key, X, Loader2, Check, ArrowUpRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { Progress } from '@/components/ui/progress';
+import { WithdrawModal } from './WithdrawModal';
 
 export const WalletInfoPanel: React.FC = () => {
-  const { wallet, username, isLoading, exportPrivateKey, isSubmittingScore, lastTxHash } = useWeb3();
+  const { wallet, username, isLoading, exportPrivateKey, isSubmittingScore, lastTxHash, isWithdrawing } = useWeb3();
   const [showPrivateKey, setShowPrivateKey] = useState(false);
   const [privateKeyVisible, setPrivateKeyVisible] = useState(false);
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
 
   const handleCopyAddress = () => {
     if (wallet.address) {
@@ -75,7 +76,19 @@ export const WalletInfoPanel: React.FC = () => {
       </div>
       
       <div className="bg-black/20 p-3 rounded-lg mb-3">
-        <div className="text-xs text-gray-400 mb-1">Balance</div>
+        <div className="flex items-center justify-between mb-1">
+          <div className="text-xs text-gray-400">Balance</div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowWithdrawModal(true)}
+            className="h-6 px-2 text-xs text-[#91d3d1] hover:text-white hover:bg-[#91d3d1]/10"
+            disabled={Number(wallet.balance || 0) === 0 || isSubmittingScore || isWithdrawing}
+          >
+            <ArrowUpRight className="h-3 w-3 mr-1" />
+            Withdraw
+          </Button>
+        </div>
         <div className="font-mono text-white">{wallet.balance || '0'} ETH</div>
         {Number(wallet.balance || 0) === 0 && (
           <div className="text-xs text-yellow-400 flex items-center mt-2">
@@ -111,7 +124,7 @@ export const WalletInfoPanel: React.FC = () => {
         </div>
       )}
       
-      {lastTxHash && !isSubmittingScore && (
+      {lastTxHash && !isSubmittingScore && !isWithdrawing && (
         <div className="bg-[#91d3d1]/10 p-3 rounded-lg mb-3 border border-[#91d3d1]/20">
           <div className="flex items-center text-sm text-white mb-1">
             <Check className="h-4 w-4 mr-2 text-[#91d3d1]" />
@@ -209,6 +222,11 @@ export const WalletInfoPanel: React.FC = () => {
         <p className="mb-1">Note: This wallet is for game use only.</p>
         <p>You'll need testnet ETH to submit scores to the blockchain.</p>
       </div>
+
+      <WithdrawModal 
+        isOpen={showWithdrawModal} 
+        onOpenChange={setShowWithdrawModal} 
+      />
     </div>
   );
 };

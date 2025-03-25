@@ -36,6 +36,8 @@ type Web3ContextType = {
   exportPrivateKey: () => string | null;
   isSubmittingScore: boolean;
   lastTxHash: string | null;
+  withdrawEth: (toAddress: string) => Promise<void>;
+  isWithdrawing: boolean;
 };
 
 const Web3Context = createContext<Web3ContextType | undefined>(undefined);
@@ -57,6 +59,7 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
   const [error, setError] = useState<string | null>(null);
   const [isSubmittingScore, setIsSubmittingScore] = useState(false);
   const [lastTxHash, setLastTxHash] = useState<string | null>(null);
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
 
   useEffect(() => {
     const checkExistingWallet = async () => {
@@ -251,6 +254,108 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const withdrawEth = async (toAddress: string) => {
+    if (!wallet.address || !wallet.privateKey || !provider) {
+      setError("No wallet connection");
+      toast.error("No wallet connection");
+      return;
+    }
+    
+    try {
+      setIsWithdrawing(true);
+      setError(null);
+      
+      // Validate destination address
+      if (!ethers.utils.isAddress(toAddress)) {
+        toast.error("Invalid Ethereum address");
+        setError("Invalid address");
+        setIsWithdrawing(false);
+        return;
+      }
+      
+      // Get wallet balance
+      const balance = await provider.getBalance(wallet.address);
+      
+      if (balance.isZero()) {
+        toast.error("No ETH to withdraw");
+        setError("No balance to withdraw");
+        setIsWithdrawing(false);
+        return;
+      }
+      
+      // Create wallet instance
+      const walletInstance = new ethers.Wallet(wallet.privateKey, provider);
+      
+      // Calculate gas needed for the transaction
+      const gasPrice = FIXED_GAS_PRICE;
+      const gasLimit = 21000; // Standard ETH transfer gas
+      const gasCost = gasPrice.mul(gasLimit);
+      
+      // Make sure balance is greater than gas cost
+      if (balance.lte(gasCost)) {
+        toast.error("Insufficient balance to cover gas costs");
+        setError("Insufficient balance for gas");
+        setIsWithdrawing(false);
+        return;
+      }
+      
+      // Calculate amount to send (balance - gas cost)
+      const amountToSend = balance.sub(gasCost);
+      
+      toast.loading("Withdrawing ETH...");
+      
+      // Send transaction
+      const tx = await walletInstance.sendTransaction({
+        to: toAddress,
+        value: amountToSend,
+        gasPrice: gasPrice,
+        gasLimit: gasLimit
+      });
+      
+      setLastTxHash(tx.hash);
+      
+      // Wait for transaction to be mined
+      const receipt = await tx.wait();
+      console.log("ETH withdrawn:", receipt);
+      
+      toast.dismiss();
+      toast.success("ETH successfully withdrawn!", {
+        description: 
+          <div className="flex flex-col gap-1">
+            <span>{ethers.utils.formatEther(amountToSend)} ETH has been sent.</span>
+            <a 
+              href={`https://sepolia-explorer.superseed.xyz/tx/${receipt.transactionHash}`} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-xs underline flex items-center mt-1"
+            >
+              View Transaction
+            </a>
+          </div>
+      });
+      
+      // Update balance
+      if (wallet.address) {
+        const newBalance = await provider.getBalance(wallet.address);
+        setWallet(prev => ({ 
+          ...prev, 
+          balance: ethers.utils.formatEther(newBalance) 
+        }));
+      }
+      
+      setIsWithdrawing(false);
+    } catch (error) {
+      console.error("Error withdrawing ETH:", error);
+      
+      toast.dismiss();
+      toast.error("Failed to withdraw ETH", {
+        description: "There was an error withdrawing your ETH."
+      });
+      setError("Failed to withdraw ETH");
+      setIsWithdrawing(false);
+    }
+  };
+
   const value = {
     wallet,
     username,
@@ -264,7 +369,9 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
     getPlayerHighScore,
     exportPrivateKey,
     isSubmittingScore,
-    lastTxHash
+    lastTxHash,
+    withdrawEth,
+    isWithdrawing
   };
 
   return <Web3Context.Provider value={value}>{children}</Web3Context.Provider>;
