@@ -70,14 +70,14 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
       // We'll update this later with the user's real choice
       const tempUsername = `user_${Math.floor(Math.random() * 1000000)}`;
       
-      const success = await createUserWallet(tempUsername);
+      // Call createUserWallet without checking its return value directly
+      await createUserWallet(tempUsername);
       
-      if (success) {
-        setWalletCreated(true);
-        // Advance to the "Fund your wallet" step
-        setCurrentStep(2);
-        toast.success("Wallet created successfully!");
-      }
+      // If we reach here without an error being thrown, we consider it a success
+      setWalletCreated(true);
+      // Advance to the "Fund your wallet" step
+      setCurrentStep(2);
+      toast.success("Wallet created successfully!");
     } catch (err) {
       console.error("Failed to create wallet:", err);
       toast.error("Failed to create wallet");
