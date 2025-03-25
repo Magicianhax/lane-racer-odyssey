@@ -15,8 +15,8 @@ const GAME_SCORE_ABI = [
 const CONTRACT_ADDRESS = "0x705C86Ee2e1423E5E869A297105Aa1333D92CCa4";
 const SUPERSEED_RPC_URL = "https://sepolia.superseed.xyz/";
 
-// Fixed gas settings
-const FIXED_GAS_PRICE = ethers.utils.parseUnits("0.1", "gwei");
+// Fixed gas settings - updated gas price to 1 gwei
+const FIXED_GAS_PRICE = ethers.utils.parseUnits("1", "gwei");
 const FIXED_GAS_LIMIT = 200000; // Setting a higher gas limit to ensure transaction goes through
 
 type Web3ContextType = {
