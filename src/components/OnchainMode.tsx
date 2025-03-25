@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useWeb3 } from '@/contexts/Web3Context';
 import { Rocket, Wallet, User, Check } from 'lucide-react';
@@ -13,20 +13,11 @@ interface OnchainModeProps {
 }
 
 export const OnchainMode: React.FC<OnchainModeProps> = ({ gameMode, onSelectOnchainMode }) => {
-  const { isConnected, username, wallet, refreshBalance } = useWeb3();
+  const { isConnected, username, wallet } = useWeb3();
   const navigate = useNavigate();
   
-  // State for username modal
+  // Add this state for username modal
   const [showUsernameModal, setShowUsernameModal] = useState<boolean>(false);
-  
-  // Check for wallet with balance but no username on component mount
-  useEffect(() => {
-    if (isConnected && wallet.address && Number(wallet.balance || 0) > 0 && !username) {
-      // If we have a connected wallet with balance but no username,
-      // show the username modal
-      setShowUsernameModal(true);
-    }
-  }, [isConnected, wallet.address, wallet.balance, username]);
 
   const handleSelectOnchainMode = () => {
     onSelectOnchainMode();
