@@ -39,6 +39,7 @@ type Web3ContextType = {
   withdrawEth: (toAddress: string, amount: string) => Promise<void>;
   isWithdrawing: boolean;
   refreshBalance: () => Promise<void>;
+  getTopScores: () => Promise<{ player: string; score: number; timestamp: number; }[]>;
 };
 
 const Web3Context = createContext<Web3ContextType | undefined>(undefined);
@@ -376,6 +377,28 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const getTopScores = async (): Promise<{ player: string; score: number; timestamp: number; }[]> => {
+    if (!contract) {
+      setError("No contract connection");
+      return [];
+    }
+    
+    try {
+      const scores = await contract.getTopScores();
+      
+      // Transform contract data to a more usable format
+      return scores.map((score: any) => ({
+        player: score.player,
+        score: score.score.toNumber(),
+        timestamp: score.timestamp.toNumber()
+      }));
+    } catch (error) {
+      console.error("Error getting top scores:", error);
+      setError("Failed to get top scores");
+      return [];
+    }
+  };
+
   const value = {
     wallet,
     username,
@@ -392,7 +415,8 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
     lastTxHash,
     withdrawEth,
     isWithdrawing,
-    refreshBalance
+    refreshBalance,
+    getTopScores
   };
 
   return <Web3Context.Provider value={value}>{children}</Web3Context.Provider>;

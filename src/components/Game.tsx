@@ -2,12 +2,33 @@ import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine, GameState, PowerUpType, GameMode } from '../game/GameEngine';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, Heart, Shield, Clock, Trophy, Loader2, Pause, Play, RefreshCw, HelpCircle, ArrowLeft, Volume2, VolumeX, Blocks, User, Settings, Home, Rocket } from 'lucide-react';
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  Heart, 
+  Shield, 
+  Clock, 
+  Trophy, 
+  Loader2, 
+  Pause, 
+  Play, 
+  RefreshCw, 
+  HelpCircle, 
+  ArrowLeft, 
+  Volume2, 
+  VolumeX, 
+  Blocks, 
+  User, 
+  Settings, 
+  Home, 
+  Rocket 
+} from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { ModeSelectionScreen } from './ModeSelectionComponents';
 import { useWeb3 } from '@/contexts/Web3Context';
 import { OnchainMode } from '@/components/OnchainMode';
+import { LeaderboardDialog } from './LeaderboardDialog';
 
 const DEFAULT_PLAYER_CAR = '/playercar.png';
 const DEFAULT_ENEMY_CARS = ['/enemycar1.png', '/enemycar2.png', '/enemycar3.png'];
@@ -40,6 +61,7 @@ const Game: React.FC = () => {
   const [showHowToPlay, setShowHowToPlay] = useState<boolean>(false);
   const [currentHowToPlayPage, setCurrentHowToPlayPage] = useState<number>(0);
   const [isSoundEnabled, setIsSoundEnabled] = useState<boolean>(true);
+  const [showLeaderboard, setShowLeaderboard] = useState<boolean>(false);
   
   // Add new state for game mode and username
   const [selectedGameMode, setSelectedGameMode] = useState<GameMode>(GameMode.NONE);
@@ -994,6 +1016,16 @@ const Game: React.FC = () => {
                   How to Play
                 </Button>
                 
+                {/* Add Leaderboard Button */}
+                <Button 
+                  onClick={() => setShowLeaderboard(true)}
+                  variant="teal-outline"
+                  className="w-full rounded-xl py-6 text-lg font-medium"
+                >
+                  <Trophy className="mr-2 h-5 w-5" />
+                  Leaderboard
+                </Button>
+                
                 {/* Add Onchain Mode section */}
                 <div className="w-full border-t border-[#91d3d1]/10 mt-2 pt-4">
                   <div className="mb-3">
@@ -1001,8 +1033,8 @@ const Game: React.FC = () => {
                       <Rocket className="h-4 w-4" />
                       <span className="font-medium">Onchain Mode {isConnected ? '(Active)' : ''}</span>
                     </div>
-                    {isConnected && web3Username && (
-                      <div className="text-xs text-gray-400 mt-1">Playing as {web3Username}</div>
+                    {isConnected && username && (
+                      <div className="text-xs text-gray-400 mt-1">Playing as {username}</div>
                     )}
                   </div>
                   <OnchainMode />
@@ -1189,7 +1221,7 @@ const Game: React.FC = () => {
                     Submit Score to Blockchain
                   </Button>
                   <div className="text-xs text-gray-400">
-                    Playing as {web3Username} in Onchain Mode
+                    Playing as {username} in Onchain Mode
                   </div>
                 </div>
               )}
@@ -1200,6 +1232,16 @@ const Game: React.FC = () => {
                   className="game-button w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 rounded-xl py-6 text-lg font-medium shadow-lg shadow-[#91d3d1]/20"
                 >
                   Try Again
+                </Button>
+                
+                {/* Add Leaderboard Button */}
+                <Button 
+                  onClick={() => setShowLeaderboard(true)}
+                  variant="outline"
+                  className="w-full rounded-xl py-3 text-base font-medium flex items-center justify-center"
+                >
+                  <Trophy className="mr-2 h-5 w-5 text-yellow-400" />
+                  View Leaderboard
                 </Button>
                 
                 <Button 
@@ -1260,6 +1302,12 @@ const Game: React.FC = () => {
         
         <div className="bg-noise absolute inset-0 pointer-events-none opacity-5"></div>
       </div>
+      
+      {/* Leaderboard Dialog */}
+      <LeaderboardDialog 
+        open={showLeaderboard} 
+        onOpenChange={setShowLeaderboard} 
+      />
     </div>
   );
 };
