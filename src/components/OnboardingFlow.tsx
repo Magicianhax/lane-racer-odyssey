@@ -157,7 +157,15 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
   
   // Navigation handlers
   const handleBackToHome = () => {
-    navigate('/');
+    // Only allow returning to home if username is registered
+    if (usernameRegistered) {
+      navigate('/');
+    } else {
+      // Show a warning toast if they try to exit before registering a username
+      toast.warning("Please complete the onboarding process", {
+        description: "You need to register a username before you can play the game."
+      });
+    }
   };
   
   const handleNextStep = () => {
@@ -170,7 +178,19 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     } else {
-      handleBackToHome();
+      // If they're in step 1 and try to go back, show warning
+      // Only allow going back to home if username is registered
+      if (usernameRegistered) {
+        navigate('/');
+      } else if (walletCreated) {
+        // If wallet is created but no username, show warning
+        toast.warning("Please complete the onboarding process", {
+          description: "You need to register a username before you can play the game."
+        });
+      } else {
+        // If wallet isn't created yet, let them exit
+        navigate('/');
+      }
     }
   };
   
@@ -476,15 +496,20 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
           <Rocket className="h-5 w-5 text-[#91d3d1]" />
         </div>
         
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={onComplete}
-          className="h-8 w-8 rounded-full opacity-50"
-          disabled={!usernameRegistered && currentStep === 3}
-        >
-          <X className="h-4 w-4" />
-        </Button>
+        {/* Only show X button if username is registered or wallet not created yet */}
+        {(usernameRegistered || !walletCreated) ? (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={onComplete}
+            className="h-8 w-8 rounded-full opacity-50"
+            disabled={!usernameRegistered && currentStep === 3}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        ) : (
+          <div className="w-8 h-8"></div> /* Placeholder for layout */
+        )}
       </div>
       
       {/* Step indicator */}

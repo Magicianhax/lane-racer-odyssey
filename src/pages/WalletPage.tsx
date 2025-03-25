@@ -7,24 +7,43 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { toast } from 'sonner';
 
 const WalletPage: React.FC = () => {
   const { isConnected, username } = useWeb3();
   const [isOnboarding, setIsOnboarding] = useState(false);
+  const [onboardingComplete, setOnboardingComplete] = useState(false);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
   useEffect(() => {
     // Show onboarding if not connected or no username
     setIsOnboarding(!isConnected || !username);
+    
+    // Check if user has completed onboarding
+    if (isConnected && username) {
+      setOnboardingComplete(true);
+    }
   }, [isConnected, username]);
 
   const handleSetupComplete = () => {
     setIsOnboarding(false);
+    setOnboardingComplete(true);
   };
 
   const handleBackToHome = () => {
-    navigate('/');
+    // Only allow going back to home if onboarding is complete
+    if (onboardingComplete) {
+      navigate('/');
+    } else if (isConnected) {
+      // If connected but onboarding not complete, show warning
+      toast.warning("Please complete the onboarding process", {
+        description: "You need to register a username before you can play the game."
+      });
+    } else {
+      // If not connected yet, let them go back
+      navigate('/');
+    }
   };
 
   const renderContent = () => (
