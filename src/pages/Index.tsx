@@ -9,10 +9,18 @@ const Index = () => {
   const isMobile = useIsMobile();
   const { refreshBalance, isConnected, username } = useWeb3();
   
-  // Refresh wallet balance when page loads
+  // Refresh wallet balance when page loads and periodically
   useEffect(() => {
     if (isConnected) {
+      // Initial refresh
       refreshBalance();
+      
+      // Set up periodic refresh (every 15 seconds)
+      const intervalId = setInterval(() => {
+        refreshBalance();
+      }, 15000);
+      
+      return () => clearInterval(intervalId);
     }
   }, [isConnected, refreshBalance]);
 

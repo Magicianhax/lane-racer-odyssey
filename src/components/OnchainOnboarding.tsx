@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +14,6 @@ interface OnchainOnboardingProps {
 }
 
 export const OnchainOnboarding: React.FC<OnchainOnboardingProps> = ({ onComplete }) => {
-  // Setup state for multi-step flow
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [username, setUsername] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -24,51 +22,40 @@ export const OnchainOnboarding: React.FC<OnchainOnboardingProps> = ({ onComplete
   const [refreshingBalance, setRefreshingBalance] = useState(false);
   const [usernameRegistered, setUsernameRegistered] = useState(false);
   
-  // Get Web3 context
   const { 
     createUserWallet, isLoading, error, registerUsername, 
     isConnected, wallet, checkUsernameAvailable, refreshBalance
   } = useWeb3();
   
-  // Check for existing wallet on load
   useEffect(() => {
     if (isConnected && wallet.address) {
       setWalletCreated(true);
       
-      // Check if we already have a registered username
       const savedUsername = localStorage.getItem('username');
       if (savedUsername) {
         setUsername(savedUsername);
         setUsernameRegistered(true);
-        
-        // If we have both wallet and username, onboarding is complete
         onComplete();
       } else {
-        // If we have a wallet with balance, go to username registration
-        // even if no username is registered
         if (Number(wallet.balance || 0) > 0) {
           setCurrentStep(2);
         } else {
-          // If no balance, stay on step 1 to allow user to get ETH
           setCurrentStep(1);
         }
       }
     }
   }, [isConnected, wallet.address, wallet.balance, onComplete]);
   
-  // Auto-check balance periodically when wallet is created but has no ETH
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
     
     if (walletCreated && currentStep === 1 && Number(wallet.balance || 0) === 0) {
-      // Check balance every 10 seconds
       intervalId = setInterval(async () => {
         await refreshBalance();
         if (Number(wallet.balance || 0) > 0) {
           toast.success("ETH detected in wallet!", {
             description: "You can now proceed to register your username."
           });
-          // Move to username registration instead of completing
           setCurrentStep(2);
           clearInterval(intervalId);
         }
@@ -80,20 +67,12 @@ export const OnchainOnboarding: React.FC<OnchainOnboardingProps> = ({ onComplete
     };
   }, [walletCreated, currentStep, wallet.balance, refreshBalance]);
   
-  // Handle wallet creation
   const handleCreateWallet = async () => {
     try {
-      // Generate a temporary username for wallet creation
       const tempUsername = `user_${Math.floor(Math.random() * 1000000)}`;
-      
-      // Call createUserWallet without checking its return value directly
       await createUserWallet(tempUsername);
-      
-      // If we reach here without an error being thrown, we consider it a success
       setWalletCreated(true);
       toast.success("Wallet created successfully!");
-      
-      // Automatically refresh balance after wallet creation
       await refreshBalance();
     } catch (err) {
       console.error("Failed to create wallet:", err);
@@ -101,18 +80,14 @@ export const OnchainOnboarding: React.FC<OnchainOnboardingProps> = ({ onComplete
     }
   };
   
-  // Handle refreshing wallet balance
   const handleRefreshBalance = async () => {
     setRefreshingBalance(true);
     try {
       await refreshBalance();
-      
-      // If balance is detected, show a success toast
       if (Number(wallet.balance || 0) > 0) {
         toast.success("ETH detected in wallet!", {
           description: "You can now proceed to register your username."
         });
-        // Move to username registration instead of completing
         setCurrentStep(2);
       }
     } catch (err) {
@@ -122,23 +97,19 @@ export const OnchainOnboarding: React.FC<OnchainOnboardingProps> = ({ onComplete
     }
   };
   
-  // Handle copy address
   const handleCopyAddress = () => {
     if (wallet.address) {
       navigator.clipboard.writeText(wallet.address);
       setCopiedAddress(true);
       toast.success("Address copied to clipboard");
-      
       setTimeout(() => setCopiedAddress(false), 3000);
     }
   };
   
-  // Handle username validation
   const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setUsername(value);
     
-    // Local validation
     if (value.trim()) {
       const validation = validateUsername(value);
       setValidationError(validation.isValid ? null : validation.error);
@@ -147,12 +118,10 @@ export const OnchainOnboarding: React.FC<OnchainOnboardingProps> = ({ onComplete
     }
   };
   
-  // Handle username registration
   const handleRegisterUsername = async () => {
     if (!username.trim() || validationError) return;
     
     try {
-      // Check availability first
       const isAvailable = await checkUsernameAvailable(username);
       
       if (!isAvailable) {
@@ -160,28 +129,18 @@ export const OnchainOnboarding: React.FC<OnchainOnboardingProps> = ({ onComplete
         return;
       }
       
-      // Register the username
       await registerUsername(username);
-      
-      // Update localStorage
       localStorage.setItem('username', username);
-      
-      // Set username as registered
       setUsernameRegistered(true);
-      
-      // Complete onboarding
       toast.success("Username registered successfully!");
       onComplete();
-      
     } catch (err) {
       console.error("Failed to register username:", err);
       
-      // Check if it's an "insufficient funds" error
       if (err.toString().includes("insufficient funds")) {
         toast.error("You need ETH to register a username", {
           description: "Please add some testnet ETH to your wallet first."
         });
-        // Go back to wallet funding
         setCurrentStep(1);
       } else {
         toast.error("Failed to register username");
@@ -189,13 +148,11 @@ export const OnchainOnboarding: React.FC<OnchainOnboardingProps> = ({ onComplete
     }
   };
   
-  // Step 1: Create Wallet & Fund it
   const renderWalletCreationStep = () => (
     <>
       <h3 className="text-xl font-bold mb-2">Create & Fund Your Wallet</h3>
       
       {!walletCreated ? (
-        // WALLET CREATION UI
         <>
           <p className="text-sm text-gray-300 mb-6">
             First, create a blockchain wallet to store your game progress and achievements.
@@ -220,7 +177,6 @@ export const OnchainOnboarding: React.FC<OnchainOnboardingProps> = ({ onComplete
           </Button>
         </>
       ) : (
-        // WALLET FUNDING UI - Shown after wallet is created
         <>
           <p className="text-sm text-gray-300 mb-4 text-center">
             Add some ETH to this address to continue.
@@ -296,7 +252,6 @@ export const OnchainOnboarding: React.FC<OnchainOnboardingProps> = ({ onComplete
               Get Free Testnet ETH
             </Button>
             
-            {/* Continue button is always visible but only enabled when balance > 0 */}
             <Button
               onClick={() => setCurrentStep(2)}
               className={`w-full mt-2 ${
@@ -325,7 +280,6 @@ export const OnchainOnboarding: React.FC<OnchainOnboardingProps> = ({ onComplete
     </>
   );
   
-  // Step 2: Register Username
   const renderUsernameRegistrationStep = () => (
     <>
       <h3 className="text-xl font-bold mb-2">Choose Your Username</h3>
@@ -413,7 +367,6 @@ export const OnchainOnboarding: React.FC<OnchainOnboardingProps> = ({ onComplete
           </div>
         </div>
         
-        {/* Step indicator */}
         <div className="flex items-center mb-6">
           {[1, 2].map((step) => (
             <React.Fragment key={step}>

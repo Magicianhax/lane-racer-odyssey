@@ -589,7 +589,12 @@ const Game: React.FC = () => {
         if (selectedGameMode === GameMode.ONCHAIN) {
           const username = localStorage.getItem('username');
           
-          if (!isConnected || !wallet.address || !username || Number(wallet.balance || 0) === 0) {
+          if (!username) {
+            setShowOnboarding(true);
+            return;
+          }
+          
+          if (!isConnected || !wallet.address || Number(wallet.balance || 0) === 0) {
             setShowOnboarding(true);
             return;
           }
@@ -656,12 +661,18 @@ const Game: React.FC = () => {
       if (mode === GameMode.ONCHAIN) {
         const username = localStorage.getItem('username');
         
-        if (!isConnected || !wallet.address || !username || Number(wallet.balance || 0) === 0) {
+        if (!username) {
           setShowOnboarding(true);
-        } else {
-          if (gameEngineRef.current) {
-            gameEngineRef.current.setGameState(GameState.START_SCREEN);
-          }
+          return;
+        }
+        
+        if (!isConnected || !wallet.address || Number(wallet.balance || 0) === 0) {
+          setShowOnboarding(true);
+          return;
+        }
+        
+        if (gameEngineRef.current) {
+          gameEngineRef.current.setGameState(GameState.START_SCREEN);
         }
       } else {
         if (gameEngineRef.current) {
