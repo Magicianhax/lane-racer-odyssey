@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +23,7 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
   const [walletCreated, setWalletCreated] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState(false);
   const [refreshingBalance, setRefreshingBalance] = useState(false);
+  const [usernameRegistered, setUsernameRegistered] = useState(false);
   
   // Get Web3 context
   const { 
@@ -36,16 +38,25 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
     if (isConnected && wallet.address) {
       setWalletCreated(true);
       
-      // If we have a wallet but no username registered, go to step 3
+      // Check if we already have a registered username
       const savedUsername = localStorage.getItem('username');
-      if (!savedUsername) {
-        setCurrentStep(3);
+      if (savedUsername) {
+        setUsername(savedUsername);
+        setUsernameRegistered(true);
+        
+        // If we have both wallet and username, onboarding is complete
+        if (Number(wallet.balance || 0) > 0) {
+          onComplete();
+        } else {
+          // If we have no ETH, go to funding step
+          setCurrentStep(2);
+        }
       } else {
-        // If wallet and username exist, complete onboarding
-        onComplete();
+        // If wallet but no username, go to username registration step
+        setCurrentStep(3);
       }
     }
-  }, [isConnected, wallet.address, onComplete]);
+  }, [isConnected, wallet.address, wallet.balance, onComplete]);
   
   // Handle wallet creation
   const handleCreateWallet = async () => {
@@ -62,6 +73,9 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
       // Advance to the "Fund your wallet" step
       setCurrentStep(2);
       toast.success("Wallet created successfully!");
+      
+      // Automatically refresh balance after wallet creation
+      await refreshBalance();
     } catch (err) {
       console.error("Failed to create wallet:", err);
       toast.error("Failed to create wallet");
@@ -107,6 +121,8 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
       
       // Update localStorage
       localStorage.setItem('username', username);
+      
+      setUsernameRegistered(true);
       
       // Complete onboarding
       toast.success("Username registered successfully!");
@@ -312,6 +328,7 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
           Get Free Testnet ETH
         </Button>
         
+        {/* Continue button is always visible but only enabled when balance > 0 */}
         <Button
           onClick={handleNextStep}
           className={`w-full mt-2 ${
@@ -357,7 +374,7 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
             placeholder="Enter your username (3-16 characters)"
             className="w-full bg-black/30 border-zinc-700 text-white"
             required
-            disabled={isLoading}
+            disabled={isLoading || usernameRegistered}
           />
           {validationError && (
             <p className="text-xs text-red-400 mt-1 ml-1">
@@ -372,36 +389,53 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
           </div>
         )}
         
-        <div className="bg-black/30 p-3 rounded-lg border border-[#91d3d1]/20">
-          <div className="flex items-start">
-            <User className="h-4 w-4 mr-2 text-[#91d3d1] mt-0.5" />
-            <div>
-              <h4 className="text-sm font-medium mb-1">Username Info</h4>
-              <p className="text-xs text-gray-300">
-                Your username will be permanently registered on the blockchain and visible to other players.
-                This requires a small amount of ETH for the transaction fee.
-              </p>
+        {usernameRegistered ? (
+          <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 flex items-center">
+            <Check className="h-4 w-4 text-green-400 mr-2 flex-shrink-0" />
+            <p className="text-sm text-green-400">Username '{username}' registered successfully!</p>
+          </div>
+        ) : (
+          <div className="bg-black/30 p-3 rounded-lg border border-[#91d3d1]/20">
+            <div className="flex items-start">
+              <User className="h-4 w-4 mr-2 text-[#91d3d1] mt-0.5" />
+              <div>
+                <h4 className="text-sm font-medium mb-1">Username Info</h4>
+                <p className="text-xs text-gray-300">
+                  Your username will be permanently registered on the blockchain and visible to other players.
+                  This requires a small amount of ETH for the transaction fee.
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
   
-        <Button 
-          onClick={handleRegisterUsername} 
-          className="w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900"
-          disabled={isLoading || !username.trim() || !!validationError || Number(wallet.balance || 0) === 0}
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Registering...
-            </>
-          ) : (
-            <>
-              <User className="mr-2 h-4 w-4" />
-              Register Username
-            </>
-          )}
-        </Button>
+        {usernameRegistered ? (
+          <Button 
+            onClick={onComplete}
+            className="w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900"
+          >
+            <ChevronRight className="mr-2 h-4 w-4" />
+            Continue to Game
+          </Button>
+        ) : (
+          <Button 
+            onClick={handleRegisterUsername} 
+            className="w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900"
+            disabled={isLoading || !username.trim() || !!validationError || Number(wallet.balance || 0) === 0}
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Registering...
+              </>
+            ) : (
+              <>
+                <User className="mr-2 h-4 w-4" />
+                Register Username
+              </>
+            )}
+          </Button>
+        )}
         
         {Number(wallet.balance || 0) === 0 && (
           <div className="text-amber-400 text-xs text-center">
@@ -447,6 +481,7 @@ export const OnboardingFlow: React.FC<OnboardingProps> = ({ onComplete }) => {
           size="icon" 
           onClick={onComplete}
           className="h-8 w-8 rounded-full opacity-50"
+          disabled={!usernameRegistered && currentStep === 3}
         >
           <X className="h-4 w-4" />
         </Button>
