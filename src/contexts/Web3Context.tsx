@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { toast } from 'sonner';
@@ -7,11 +8,14 @@ const GAME_SCORE_ABI = [
   "function submitScore(uint256 _score) external",
   "function getPlayerHighScore() external view returns (uint256)",
   "function getTopScores() external view returns (tuple(address player, uint256 score, uint256 timestamp)[])",
+  "function getScores(uint256 startIndex, uint256 count) external view returns (tuple(address player, uint256 score, uint256 timestamp)[])",
+  "function getPlayerScores(address player) external view returns (tuple(address player, uint256 score, uint256 timestamp)[])",
+  "function getTotalScores() external view returns (uint256)",
   "event ScoreSubmitted(address indexed player, uint256 score, uint256 timestamp)",
   "event NewHighScore(address indexed player, uint256 score, uint256 timestamp)"
 ];
 
-const CONTRACT_ADDRESS = "0x705C86Ee2e1423E5E869A297105Aa1333D92CCa4";
+const CONTRACT_ADDRESS = "0x454EEca51B63c7488628Ebe608241c4551c4c8a8";
 const SUPERSEED_RPC_URL = "https://sepolia.superseed.xyz/";
 
 // Fixed gas settings - updated gas price to 1 gwei
@@ -40,6 +44,9 @@ type Web3ContextType = {
   isWithdrawing: boolean;
   refreshBalance: () => Promise<void>;
   getTopScores: () => Promise<{ player: string; score: number; timestamp: number; }[]>;
+  getAllScores: (startIndex: number, count: number) => Promise<{ player: string; score: number; timestamp: number; }[]>;
+  getPlayerScores: (address: string) => Promise<{ player: string; score: number; timestamp: number; }[]>;
+  getTotalScores: () => Promise<number>;
 };
 
 const Web3Context = createContext<Web3ContextType | undefined>(undefined);
@@ -399,6 +406,66 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const getAllScores = async (startIndex: number, count: number): Promise<{ player: string; score: number; timestamp: number; }[]> => {
+    if (!contract) {
+      setError("No contract connection");
+      return [];
+    }
+    
+    try {
+      const scores = await contract.getScores(startIndex, count);
+      
+      // Transform contract data to a more usable format
+      return scores.map((score: any) => ({
+        player: score.player,
+        score: score.score.toNumber(),
+        timestamp: score.timestamp.toNumber()
+      }));
+    } catch (error) {
+      console.error("Error getting all scores:", error);
+      setError("Failed to get all scores");
+      return [];
+    }
+  };
+
+  const getPlayerScores = async (address: string): Promise<{ player: string; score: number; timestamp: number; }[]> => {
+    if (!contract) {
+      setError("No contract connection");
+      return [];
+    }
+    
+    try {
+      const scores = await contract.getPlayerScores(address);
+      
+      // Transform contract data to a more usable format
+      return scores.map((score: any) => ({
+        player: score.player,
+        score: score.score.toNumber(),
+        timestamp: score.timestamp.toNumber()
+      }));
+    } catch (error) {
+      console.error("Error getting player scores:", error);
+      setError("Failed to get player scores");
+      return [];
+    }
+  };
+
+  const getTotalScores = async (): Promise<number> => {
+    if (!contract) {
+      setError("No contract connection");
+      return 0;
+    }
+    
+    try {
+      const totalScores = await contract.getTotalScores();
+      return totalScores.toNumber();
+    } catch (error) {
+      console.error("Error getting total scores:", error);
+      setError("Failed to get total scores");
+      return 0;
+    }
+  };
+
   const value = {
     wallet,
     username,
@@ -410,6 +477,9 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
     createUserWallet,
     submitScore,
     getPlayerHighScore,
+    getAllScores,
+    getPlayerScores,
+    getTotalScores,
     exportPrivateKey,
     isSubmittingScore,
     lastTxHash,
