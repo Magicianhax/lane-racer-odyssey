@@ -46,7 +46,7 @@ export const LeaderboardDialog: React.FC<LeaderboardDialogProps> = ({
               </TabsTrigger>
               <TabsTrigger value="all-scores" className="flex items-center gap-1">
                 <List className="h-4 w-4" />
-                <span>All Submissions</span>
+                <span>All Scores</span>
               </TabsTrigger>
             </TabsList>
           </div>

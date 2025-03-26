@@ -113,7 +113,7 @@ export const AllScoresLeaderboard: React.FC<{
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center">
           <Trophy className="w-5 h-5 text-yellow-400 mr-2" />
-          <h2 className="text-lg font-bold">All Score Submissions</h2>
+          <h2 className="text-lg font-bold">All Scores</h2>
         </div>
         <div className="flex gap-2">
           <Button 
@@ -242,7 +242,7 @@ export const AllScoresLeaderboard: React.FC<{
           
           <div className="mt-3 pt-2 border-t border-zinc-800 text-[10px] text-gray-400 flex justify-between items-center">
             <span>Updated {isRefreshing ? 'now' : 'recently'}</span>
-            <span className="text-[#91d3d1]">All player submissions</span>
+            <span className="text-[#91d3d1]">All player scores</span>
           </div>
         </>
       )}

@@ -1,3 +1,4 @@
+
 # Superseed Lane Runner
 
 A fast-paced lane-switching car game where you collect seeds while avoiding obstacles.
@@ -55,7 +56,7 @@ The game integrates with the Superseed blockchain, allowing players to record th
 
 ### Smart Contract Details
 
-Contract Address: [0x705C86Ee2e1423E5E869A297105Aa1333D92CCa4](https://sepolia-explorer.superseed.xyz/address/0x705C86Ee2e1423E5E869A297105Aa1333D92CCa4)
+Contract Address: [0x454EEca51B63c7488628Ebe608241c4551c4c8a8](https://sepolia-explorer.superseed.xyz/address/0x454EEca51B63c7488628Ebe608241c4551c4c8a8?tab=contract)
 
 The `GameScoreTracker` smart contract handles all score-related functionality:
 
@@ -69,58 +70,141 @@ contract GameScoreTracker {
         uint256 score;
         uint256 timestamp;
     }
-    
-    // Map player addresses to their best score
+
+    // Map player addresses to their best score (still useful to track)
     mapping(address => Score) public playerHighScores;
     
-    // Array to keep track of all high scores
+    // Array to store ALL submitted scores
+    Score[] public allScores;
+    
+    // Separate array for top scores (optional)
     Score[] public topScores;
     uint256 public constant MAX_TOP_SCORES = 10;
-    
+
     // Events
     event ScoreSubmitted(address indexed player, uint256 score, uint256 timestamp);
     event NewHighScore(address indexed player, uint256 score, uint256 timestamp);
-    
+
     // Submit a new score
-    function submitScore(uint256 _score) external {
-        // Update player's high score if this is better
-        if (_score > playerHighScores[msg.sender].score || playerHighScores[msg.sender].player == address(0)) {
-            playerHighScores[msg.sender] = Score({
-                player: msg.sender,
-                score: _score,
-                timestamp: block.timestamp
-            });
-            
-            emit NewHighScore(msg.sender, _score, block.timestamp);
-            
-            // Check if this score qualifies for the top scores
-            _updateTopScores(Score({
-                player: msg.sender,
-                score: _score,
-                timestamp: block.timestamp
-            }));
-        }
+    function submitScore(uint256 score) external {
+        // Record the score submission
+        Score memory newScore = Score({
+            player: msg.sender,
+            score: score,
+            timestamp: block.timestamp
+        });
         
-        emit ScoreSubmitted(msg.sender, _score, block.timestamp);
+        // Add score to the complete history
+        allScores.push(newScore);
+        
+        // Emit score submitted event
+        emit ScoreSubmitted(msg.sender, score, block.timestamp);
+        
+        // Update player's personal best if this is better
+        if (score > playerHighScores[msg.sender].score || playerHighScores[msg.sender].player == address(0)) {
+            playerHighScores[msg.sender] = newScore;
+            emit NewHighScore(msg.sender, score, block.timestamp);
+            
+            // Also update the top scores list (optional)
+            updateTopScores(newScore);
+        }
+    }
+
+    // Get player's high score
+    function getPlayerHighScore(address player) external view returns (uint256) {
+        return playerHighScores[player].score;
     }
     
-    // Get player's high score
-    function getPlayerHighScore() external view returns (uint256) {
+    // Get player's high score (for caller)
+    function getMyHighScore() external view returns (uint256) {
         return playerHighScores[msg.sender].score;
     }
     
+    // Get the total number of scores submitted (for pagination)
+    function getTotalScores() external view returns (uint256) {
+        return allScores.length;
+    }
+    
+    // Get scores with pagination
+    function getScores(uint256 startIndex, uint256 count) external view returns (Score[] memory) {
+        // Make sure we don't go past the end of the array
+        uint256 endIndex = startIndex + count;
+        if (endIndex > allScores.length) {
+            endIndex = allScores.length;
+        }
+        
+        // Calculate actual count
+        uint256 actualCount = endIndex - startIndex;
+        
+        // Create result array
+        Score[] memory result = new Score[](actualCount);
+        
+        // Fill result array
+        for (uint256 i = 0; i < actualCount; i++) {
+            result[i] = allScores[startIndex + i];
+        }
+        
+        return result;
+    }
+
+    // Get all scores for a specific player
+    function getPlayerScores(address player) external view returns (Score[] memory) {
+        // First, count how many scores this player has
+        uint256 count = 0;
+        for (uint256 i = 0; i < allScores.length; i++) {
+            if (allScores[i].player == player) {
+                count++;
+            }
+        }
+        
+        // Create result array
+        Score[] memory result = new Score[](count);
+        
+        // Fill result array
+        uint256 resultIndex = 0;
+        for (uint256 i = 0; i < allScores.length; i++) {
+            if (allScores[i].player == player) {
+                result[resultIndex] = allScores[i];
+                resultIndex++;
+            }
+        }
+        
+        return result;
+    }
+
     // Get all top scores
     function getTopScores() external view returns (Score[] memory) {
         return topScores;
     }
-    
-    // Internal function to update top scores
-    function _updateTopScores(Score memory newScore) internal {
+
+    // Internal function to update top scores (optional)
+    function updateTopScores(Score memory newScore) internal {
+        // First check if player already has a score in the top scores
+        int256 existingIndex = -1;
+        
+        for (uint i = 0; i < topScores.length; i++) {
+            if (topScores[i].player == newScore.player) {
+                existingIndex = int256(i);
+                break;
+            }
+        }
+        
+        // If player already has a score in top scores
+        if (existingIndex >= 0) {
+            uint256 index = uint256(existingIndex);
+            
+            // If new score is better than old score, update it
+            if (newScore.score > topScores[index].score) {
+                topScores[index] = newScore;
+                sortTopScores();
+            }
+            return;
+        }
+        
         // If we have fewer than MAX_TOP_SCORES, just add it
         if (topScores.length < MAX_TOP_SCORES) {
             topScores.push(newScore);
-            // Sort the array
-            _sortTopScores();
+            sortTopScores();
             return;
         }
         
@@ -128,13 +212,12 @@ contract GameScoreTracker {
         if (newScore.score > topScores[topScores.length - 1].score) {
             // Replace the lowest score
             topScores[topScores.length - 1] = newScore;
-            // Sort the array
-            _sortTopScores();
+            sortTopScores();
         }
     }
-    
-    // Simple bubble sort for the top scores (fine for small arrays)
-    function _sortTopScores() internal {
+
+    // Simple bubble sort for the top scores
+    function sortTopScores() internal {
         for (uint i = 0; i < topScores.length - 1; i++) {
             for (uint j = 0; j < topScores.length - i - 1; j++) {
                 if (topScores[j].score < topScores[j + 1].score) {
@@ -153,7 +236,8 @@ contract GameScoreTracker {
 1. **Score Submission**: When players finish a game, their score is submitted to the blockchain if they have a wallet connected.
 2. **High Score Tracking**: The contract stores each player's personal high score.
 3. **Global Leaderboard**: The top 10 highest scores across all players are maintained and can be viewed in the game's leaderboard.
-4. **Sorting and Ranking**: Scores are automatically sorted in descending order.
+4. **All Scores History**: All submitted scores are stored and can be viewed with pagination.
+5. **Sorting and Ranking**: Scores are automatically sorted in descending order in the top scores list.
 
 ## How to Play
 
