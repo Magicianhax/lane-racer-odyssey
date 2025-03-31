@@ -6,14 +6,16 @@ import { Button } from '@/components/ui/button';
 import { UsernameModal } from '@/components/UsernameModal';
 import { WalletInfoPanel } from '@/components/WalletInfoPanel';
 import { WithdrawModal } from '@/components/WithdrawModal';
-import { ArrowLeft, ExternalLink, Smartphone } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Smartphone, Loader2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from 'sonner';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const WalletPage: React.FC = () => {
   const { isConnected, username, wallet, refreshBalance } = useWeb3();
   const [showUserModal, setShowUserModal] = useState(false);
   const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   
@@ -21,6 +23,13 @@ const WalletPage: React.FC = () => {
     if (!isConnected) {
       setShowUserModal(true);
     }
+    
+    // Simulate loading time
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
+    
+    return () => clearTimeout(timer);
   }, [isConnected]);
   
   const handleSetupComplete = () => {
@@ -31,6 +40,18 @@ const WalletPage: React.FC = () => {
     navigate('/');
   };
   
+  const LoadingScreen = () => (
+    <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57]">
+      <div className="flex flex-col items-center">
+        <div className="relative w-16 h-16 mb-4">
+          <div className="absolute inset-0 rounded-full bg-[#91d3d1]/20 animate-pulse"></div>
+          <Loader2 className="w-16 h-16 text-[#91d3d1] animate-spin" />
+        </div>
+        <h3 className="text-[#91d3d1] text-xl font-medium">Loading wallet...</h3>
+      </div>
+    </div>
+  );
+  
   const WalletContent = () => (
     <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] p-4 relative">
       {/* Back button inside the frame */}
@@ -39,7 +60,7 @@ const WalletPage: React.FC = () => {
           variant="ghost" 
           size="sm"
           onClick={handleGoBack}
-          className="text-gray-300 hover:text-white flex items-center"
+          className="text-gray-300 hover:text-white hover:bg-gray-800/30 flex items-center"
         >
           <ArrowLeft className="h-4 w-4 mr-1" />
           <span className="text-sm">Back</span>
@@ -61,7 +82,7 @@ const WalletPage: React.FC = () => {
                   <span className="text-[#91d3d1] text-xl">🎮</span>
                 </div>
                 <div>
-                  <div className="text-white font-medium">Player: {username}</div>
+                  <div className="text-white font-medium">{username}</div>
                 </div>
               </div>
               
@@ -118,7 +139,7 @@ const WalletPage: React.FC = () => {
       <div className="container mx-auto px-4 py-8 flex flex-col items-center justify-center h-screen">
         {isMobile ? (
           <div className="w-full h-full">
-            <WalletContent />
+            {isLoading ? <LoadingScreen /> : <WalletContent />}
           </div>
         ) : (
           <div className="mobile-frame-container flex flex-col items-center justify-center">
@@ -128,7 +149,7 @@ const WalletPage: React.FC = () => {
               <div className="side-button right-button-top"></div>
               <div className="side-button right-button-bottom"></div>
               <div className="mobile-screen flex items-center justify-center">
-                <WalletContent />
+                {isLoading ? <LoadingScreen /> : <WalletContent />}
               </div>
               <div className="home-indicator"></div>
             </div>

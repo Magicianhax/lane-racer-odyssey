@@ -21,7 +21,7 @@ export const OnchainMode: React.FC = () => {
         className="w-full bg-gradient-to-r from-[#f7931a] to-[#e6a338] hover:from-[#e6a338] hover:to-[#d18a1f] text-zinc-900 rounded-xl py-6 text-lg font-medium shadow-lg shadow-[#f7931a]/20 mb-4"
       >
         <Wallet className="mr-2 h-5 w-5" />
-        Wallet (Active)
+        Wallet
       </Button>
     );
   }
