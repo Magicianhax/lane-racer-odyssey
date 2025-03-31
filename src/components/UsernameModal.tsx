@@ -42,38 +42,38 @@ export const UsernameModal: React.FC<UsernameModalProps> = ({ onComplete }) => {
   };
 
   return (
-    <div className="glassmorphism p-6 rounded-xl">
-      <div className="flex justify-between items-center mb-3">
-        <div className="inline-flex rounded-full bg-[#91d3d1]/20 p-3">
-          <Rocket className="h-6 w-6 text-[#91d3d1]" />
+    <div className="p-4 rounded-xl">
+      <div className="flex justify-between items-center mb-2">
+        <div className="inline-flex rounded-full bg-[#91d3d1]/20 p-2">
+          <Rocket className="h-5 w-5 text-[#91d3d1]" />
         </div>
         <Button 
           variant="ghost" 
           size="icon" 
           onClick={onComplete}
-          className="h-8 w-8 rounded-full"
+          className="h-6 w-6 rounded-full"
         >
-          <X className="h-4 w-4" />
+          <X className="h-3 w-3" />
         </Button>
       </div>
       
-      <h3 className="text-xl font-bold mb-1">Enter Onchain Mode</h3>
-      <p className="text-sm text-gray-300 mb-4">
+      <h3 className="text-lg font-bold mb-1">Enter Onchain Mode</h3>
+      <p className="text-xs text-gray-300 mb-3">
         Choose a username and get your blockchain wallet.
-        <br />Your scores will be saved to the blockchain.
+        Your scores will be saved to the blockchain.
       </p>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-3">
         <div>
-          <label htmlFor="username" className="block text-sm font-medium mb-1 text-white">
+          <label htmlFor="username" className="block text-xs font-medium mb-1 text-white">
             Username
           </label>
           <Input
             id="username"
             value={username}
             onChange={handleInputChange}
-            placeholder="Enter your username (3-16 characters)"
-            className="w-full bg-black/30 border-zinc-700 text-white"
+            placeholder="Enter username (3-16 chars)"
+            className="w-full bg-black/30 border-zinc-700 text-white text-sm h-9"
             required
             disabled={isLoading}
           />
@@ -85,19 +85,19 @@ export const UsernameModal: React.FC<UsernameModalProps> = ({ onComplete }) => {
         </div>
 
         {error && (
-          <div className="text-red-400 text-sm py-2 px-3 bg-red-400/10 rounded-md">
+          <div className="text-red-400 text-xs py-2 px-3 bg-red-400/10 rounded-md">
             {error}
           </div>
         )}
 
         <Button 
           type="submit" 
-          className="w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900"
+          className="w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 text-sm py-1 h-9"
           disabled={isLoading || !username.trim() || !!validationError}
         >
           {isLoading ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="mr-2 h-3 w-3 animate-spin" />
               Creating wallet...
             </>
           ) : (
@@ -105,10 +105,9 @@ export const UsernameModal: React.FC<UsernameModalProps> = ({ onComplete }) => {
           )}
         </Button>
 
-        <div className="text-xs text-center text-gray-400 mt-3">
+        <div className="text-xs text-center text-gray-400 mt-2">
           By continuing, you'll have a blockchain wallet created for your game profile.
-          <br />This wallet is for game use only and will need testnet ETH to submit scores.
-          <br />You can export your private key later if needed.
+          This wallet is for game use only.
         </div>
       </form>
     </div>

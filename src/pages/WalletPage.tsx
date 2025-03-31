@@ -32,11 +32,24 @@ const WalletPage: React.FC = () => {
   };
   
   const WalletContent = () => (
-    <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] p-4">
-      <div className="max-w-md w-full mx-auto">
+    <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] p-4 relative">
+      {/* Back button inside the frame */}
+      <div className="absolute top-4 left-4 z-10">
+        <Button 
+          variant="ghost" 
+          size="sm"
+          onClick={handleGoBack}
+          className="text-gray-300 hover:text-white flex items-center"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          <span className="text-sm">Back</span>
+        </Button>
+      </div>
+      
+      <div className="max-w-md w-full mx-auto mt-10">
         <h1 className="text-3xl font-bold mb-6 text-center text-gradient">Wallet</h1>
         
-        <div className={`glassmorphism rounded-xl border border-[#91d3d1]/20 p-6 mb-4 ${showUserModal ? 'min-h-[400px]' : ''}`}>
+        <div className={`glassmorphism rounded-xl border border-[#91d3d1]/20 p-6 mb-4 ${showUserModal ? 'min-h-[380px]' : ''}`}>
           <div className="bg-noise absolute inset-0 opacity-5 pointer-events-none" />
           
           {showUserModal ? (
@@ -100,17 +113,6 @@ const WalletPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] text-white overflow-hidden">
       <div className="absolute inset-0 bg-[#91d3d1]/5 mix-blend-overlay pointer-events-none"></div>
-      <div className="absolute top-4 left-4 z-10">
-        <Button 
-          variant="ghost" 
-          size="icon"
-          onClick={handleGoBack}
-          className="text-gray-300 hover:text-white"
-        >
-          <ArrowLeft className="h-5 w-5" />
-          <span className="ml-2">Back to Home</span>
-        </Button>
-      </div>
       
       <div className="container mx-auto px-4 py-8 flex flex-col items-center justify-center h-screen">
         {isMobile ? (
