@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useWeb3 } from '@/contexts/Web3Context';
@@ -45,10 +44,6 @@ const WalletPage: React.FC = () => {
       {/* Background patterns */}
       <div className="absolute inset-0 bg-[#91d3d1]/5 mix-blend-overlay pointer-events-none"></div>
       <div className="absolute inset-0 bg-noise opacity-5 pointer-events-none"></div>
-      
-      {/* Road-like lines for theme consistency */}
-      <div className="absolute left-0 right-0 h-2 bg-[#464646] top-1/3 transform -translate-y-10"></div>
-      <div className="absolute left-0 right-0 h-2 bg-[#464646] top-2/3 transform translate-y-10"></div>
       
       <div className="relative z-10 flex flex-col items-center">
         <div className="relative w-20 h-20 mb-6">
