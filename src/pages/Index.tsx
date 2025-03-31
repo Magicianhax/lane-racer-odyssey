@@ -10,15 +10,8 @@ const Index = () => {
   const isMobile = useIsMobile();
   const [gameState, setGameState] = useState<'main' | 'playing' | 'paused' | 'gameOver'>('main');
 
-  // This function would be passed to Game component to update the game state
-  const updateGameState = (state: 'main' | 'playing' | 'paused' | 'gameOver') => {
-    setGameState(state);
-  };
-
   // This function would be passed to GameMenu to resume the game
   const handleResume = () => {
-    // Add logic to resume the game
-    // For example: gameInstance.resume();
     setGameState('playing');
   };
 
