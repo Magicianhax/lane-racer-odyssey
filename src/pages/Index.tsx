@@ -18,13 +18,13 @@ const Index = () => {
             </Web3Provider>
           </div>
         ) : (
-          <div className="mobile-frame-container">
+          <div className="mobile-frame-container flex flex-col items-center justify-center">
             <div className="mobile-frame shadow-[0_0_40px_5px_rgba(255,255,255,0.15)]">
               <div className="notch"></div>
               <div className="side-button left-button"></div>
               <div className="side-button right-button-top"></div>
               <div className="side-button right-button-bottom"></div>
-              <div className="mobile-screen">
+              <div className="mobile-screen flex items-center justify-center">
                 <Web3Provider>
                   <Game />
                 </Web3Provider>

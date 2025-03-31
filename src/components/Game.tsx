@@ -22,7 +22,10 @@ import {
   Settings, 
   Home, 
   Rocket,
-  Car 
+  Car,
+  Copy,
+  Wallet,
+  ExternalLink
 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
@@ -31,6 +34,7 @@ import { useWeb3 } from '@/contexts/Web3Context';
 import { OnchainMode } from '@/components/OnchainMode';
 import { LeaderboardDialog } from './LeaderboardDialog';
 import CarSelectionDialog from './CarSelectionDialog';
+import { WalletInfoPanel } from './WalletInfoPanel';
 
 const DEFAULT_PLAYER_CAR = '/playercar.png';
 const DEFAULT_ENEMY_CARS = ['/enemycar1.png', '/enemycar2.png', '/enemycar3.png'];
@@ -69,7 +73,7 @@ const Game: React.FC = () => {
   const [selectedGameMode, setSelectedGameMode] = useState<GameMode>(GameMode.NONE);
   const [username, setUsername] = useState<string>('');
   
-  const { isConnected, submitScore, username: web3Username } = useWeb3();
+  const { isConnected, submitScore, username: web3Username, wallet, refreshBalance } = useWeb3();
   
   const carSoundRef = useRef<HTMLAudioElement | null>(null);
   const crashSoundRef = useRef<HTMLAudioElement | null>(null);
@@ -764,6 +768,17 @@ const Game: React.FC = () => {
     }
   };
   
+  const handleCopyAddress = () => {
+    if (wallet.address) {
+      navigator.clipboard.writeText(wallet.address);
+      toast.success("Address copied to clipboard");
+    }
+  };
+  
+  const shortenAddress = (address: string) => {
+    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+  };
+  
   const howToPlayContent = [
     {
       title: "Basic Controls",
@@ -912,7 +927,7 @@ const Game: React.FC = () => {
   
   return (
     <div className="flex flex-col items-center justify-center w-full h-full">
-      <div className="game-canvas-container relative w-full max-w-[600px]">
+      <div className="game-canvas-container relative w-full max-w-[600px] h-full">
         <canvas ref={canvasRef} className="w-full h-full"></canvas>
         
         {gameState === GameState.GAMEPLAY && (
@@ -1182,10 +1197,10 @@ const Game: React.FC = () => {
         
         {gameState === GameState.GAME_OVER && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
-            <div className="game-over-modal glassmorphism rounded-3xl p-8 max-w-md mx-auto text-center border border-[#91d3d1]/20">
+            <div className="game-over-modal glassmorphism rounded-3xl p-6 max-w-md mx-auto text-center border border-[#91d3d1]/20 overflow-y-auto max-h-[90vh]">
               <h2 className="text-3xl font-bold mb-2">Game Over</h2>
               
-              <div className="my-6 space-y-4">
+              <div className="my-4 space-y-4">
                 {username && (
                   <div className="chip text-xs bg-[#91d3d1]/20 text-[#91d3d1] px-3 py-1 rounded-full inline-flex items-center">
                     <User className="w-3 h-3 mr-1" /> {username}
@@ -1212,6 +1227,49 @@ const Game: React.FC = () => {
               
               {isConnected && (
                 <div className="mb-4">
+                  <div className="bg-black/20 p-3 rounded-lg mb-3">
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="flex items-center">
+                        <div className="bg-[#91d3d1]/20 rounded-full p-1 mr-2">
+                          <Wallet className="h-3 w-3 text-[#91d3d1]" />
+                        </div>
+                        <div className="text-sm text-white">Wallet</div>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-6 w-6 p-0"
+                        onClick={() => refreshBalance()}
+                      >
+                        <RefreshCw className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    
+                    <div className="flex items-center justify-between mb-2 text-xs bg-black/20 p-2 rounded-lg">
+                      <span className="truncate text-white">{wallet.address && shortenAddress(wallet.address)}</span>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={handleCopyAddress}
+                        className="h-6 w-6"
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-gray-400">Balance:</span>
+                      <span className="font-mono text-sm text-white">{wallet.balance || '0'} ETH</span>
+                    </div>
+                    
+                    {Number(wallet.balance || 0) === 0 && (
+                      <div className="text-xs text-yellow-400 flex items-center mt-2 justify-center">
+                        <Wallet className="h-3 w-3 mr-1" />
+                        Need ETH to submit score
+                      </div>
+                    )}
+                  </div>
+                  
                   <Button 
                     onClick={() => {
                       submitScore(score)
@@ -1221,7 +1279,11 @@ const Game: React.FC = () => {
                           toast.error("Failed to submit score");
                         });
                     }}
-                    className="w-full bg-gradient-to-r from-[#6366f1] to-[#4f46e5] hover:from-[#4f46e5] hover:to-[#4338ca] text-white py-3 rounded-xl flex items-center justify-center mb-3"
+                    disabled={Number(wallet.balance || 0) === 0}
+                    className={cn(
+                      "w-full bg-gradient-to-r from-[#6366f1] to-[#4f46e5] hover:from-[#4f46e5] hover:to-[#4338ca] text-white py-3 rounded-xl flex items-center justify-center mb-3",
+                      Number(wallet.balance || 0) === 0 && "opacity-50 cursor-not-allowed"
+                    )}
                   >
                     <Rocket className="mr-2 h-4 w-4" />
                     Submit Score to Blockchain
@@ -1235,7 +1297,7 @@ const Game: React.FC = () => {
               <div className="space-y-3">
                 <Button 
                   onClick={handleTryAgain}
-                  className="game-button w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 rounded-xl py-6 text-lg font-medium shadow-lg shadow-[#91d3d1]/20"
+                  className="game-button w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 rounded-xl py-4 text-lg font-medium shadow-lg shadow-[#91d3d1]/20"
                 >
                   Try Again
                 </Button>
@@ -1252,7 +1314,7 @@ const Game: React.FC = () => {
                 <Button 
                   onClick={handleBackToStartScreen}
                   variant="teal-outline"
-                  className="w-full rounded-xl py-6 text-lg font-medium"
+                  className="w-full rounded-xl py-4 text-lg font-medium"
                 >
                   <Home className="mr-2 h-5 w-5" />
                   Back to Menu
@@ -1318,6 +1380,12 @@ const Game: React.FC = () => {
         onOpenChange={setShowCarSelection}
         onSelectCar={handleSelectCar}
         selectedCar={playerCarURL}
+      />
+      
+      <WalletInfoPanel
+        open={isConnected}
+        wallet={wallet}
+        refreshBalance={refreshBalance}
       />
     </div>
   );
