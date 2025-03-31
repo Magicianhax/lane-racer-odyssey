@@ -41,14 +41,28 @@ const WalletPage: React.FC = () => {
   };
   
   const LoadingScreen = () => (
-    <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57]">
-      <div className="flex flex-col items-center">
-        <div className="relative w-16 h-16 mb-4">
+    <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] relative overflow-hidden">
+      {/* Background patterns */}
+      <div className="absolute inset-0 bg-[#91d3d1]/5 mix-blend-overlay pointer-events-none"></div>
+      <div className="absolute inset-0 bg-noise opacity-5 pointer-events-none"></div>
+      
+      {/* Road-like lines for theme consistency */}
+      <div className="absolute left-0 right-0 h-2 bg-[#464646] top-1/3 transform -translate-y-10"></div>
+      <div className="absolute left-0 right-0 h-2 bg-[#464646] top-2/3 transform translate-y-10"></div>
+      
+      <div className="relative z-10 flex flex-col items-center">
+        <div className="relative w-20 h-20 mb-6">
           <div className="absolute inset-0 rounded-full bg-[#91d3d1]/20 animate-pulse"></div>
-          <Loader2 className="w-16 h-16 text-[#91d3d1] animate-spin" />
+          <div className="absolute inset-0 rounded-full border-4 border-[#91d3d1]/30 animate-spin"></div>
+          <Loader2 className="w-20 h-20 text-[#91d3d1] animate-spin" />
         </div>
-        <h3 className="text-[#91d3d1] text-xl font-medium">Loading wallet...</h3>
+        <h3 className="text-[#91d3d1] text-2xl font-medium mb-2">Loading wallet</h3>
+        <p className="text-gray-400 text-sm animate-pulse">Connecting to blockchain...</p>
       </div>
+      
+      {/* Moving particles for dynamic effect */}
+      <div className="absolute w-2 h-2 rounded-full bg-[#ffcd3c] top-1/4 left-1/4 animate-float"></div>
+      <div className="absolute w-3 h-3 rounded-full bg-[#91d3d1]/40 bottom-1/3 right-1/3 animate-bounce-subtle"></div>
     </div>
   );
   
@@ -60,7 +74,7 @@ const WalletPage: React.FC = () => {
           variant="ghost" 
           size="sm"
           onClick={handleGoBack}
-          className="text-gray-300 hover:text-white hover:bg-gray-800/30 flex items-center"
+          className="text-gray-300 hover:text-white hover:bg-gray-800/30 focus:bg-gray-800/30 focus:text-white active:bg-gray-800/50 focus:ring-0 focus:ring-offset-0"
         >
           <ArrowLeft className="h-4 w-4 mr-1" />
           <span className="text-sm">Back</span>
