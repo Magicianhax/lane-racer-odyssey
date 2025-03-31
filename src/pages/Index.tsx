@@ -30,7 +30,7 @@ const Index = () => {
           <div className="w-full h-full relative">
             <Web3Provider>
               <GameMenu gameState={gameState} onResume={handleResume} />
-              <Game onGameStateChange={updateGameState} />
+              <Game />
             </Web3Provider>
           </div>
         ) : (
@@ -43,7 +43,7 @@ const Index = () => {
               <div className="mobile-screen relative">
                 <Web3Provider>
                   <GameMenu gameState={gameState} onResume={handleResume} />
-                  <Game onGameStateChange={updateGameState} />
+                  <Game />
                 </Web3Provider>
               </div>
               <div className="home-indicator"></div>

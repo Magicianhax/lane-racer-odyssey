@@ -17,7 +17,7 @@ interface GameMenuProps {
 }
 
 const GameMenu: React.FC<GameMenuProps> = ({ onResume, gameState }) => {
-  const { connectWallet, disconnectWallet, isConnected, walletAddress, balance } = useWeb3();
+  const { createUserWallet, isConnected, wallet, username } = useWeb3();
   const navigate = useNavigate();
   const [volume, setVolume] = useState<number[]>([50]);
   const [isMuted, setIsMuted] = useState(false);
@@ -154,11 +154,11 @@ const GameMenu: React.FC<GameMenuProps> = ({ onResume, gameState }) => {
               <div className="bg-zinc-800/50 rounded-md p-2 text-xs">
                 <div className="flex justify-between mb-1">
                   <span className="text-zinc-400">Address:</span>
-                  <span>{formatAddress(walletAddress || '')}</span>
+                  <span>{formatAddress(wallet.address || '')}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-zinc-400">Balance:</span>
-                  <span>{balance} ETH</span>
+                  <span>{wallet.balance} ETH</span>
                 </div>
               </div>
             ) : (
@@ -166,7 +166,7 @@ const GameMenu: React.FC<GameMenuProps> = ({ onResume, gameState }) => {
                 variant="teal" 
                 size="sm" 
                 className="w-full"
-                onClick={connectWallet}
+                onClick={() => createUserWallet(username || 'Player')}
               >
                 Connect Wallet
               </Button>
