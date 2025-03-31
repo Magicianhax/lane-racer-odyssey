@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine, GameState, PowerUpType, GameMode } from '../game/GameEngine';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { Slider } from '@/components/ui/slider';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -22,7 +23,8 @@ import {
   Settings, 
   Home, 
   Rocket,
-  Car 
+  Car,
+  Wallet
 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
@@ -80,6 +82,8 @@ const Game: React.FC = () => {
   
   const isMobile = useIsMobile();
   
+  const [volumeLevel, setVolumeLevel] = useState<number>(80);
+  
   useEffect(() => {
     const savedUsername = localStorage.getItem('username');
     if (savedUsername) {
@@ -89,6 +93,29 @@ const Game: React.FC = () => {
     const savedGameMode = localStorage.getItem('gameMode') as GameMode;
     if (savedGameMode && savedGameMode === GameMode.ONCHAIN) {
       setSelectedGameMode(savedGameMode);
+    }
+  }, []);
+  
+  useEffect(() => {
+    // Update volume level for all audio elements
+    if (carSoundRef.current) carSoundRef.current.volume = (volumeLevel / 100) * 0.3;
+    if (crashSoundRef.current) crashSoundRef.current.volume = (volumeLevel / 100) * 0.7;
+    if (seedSoundRef.current) seedSoundRef.current.volume = (volumeLevel / 100) * 0.5;
+    if (slowTimerSoundRef.current) slowTimerSoundRef.current.volume = (volumeLevel / 100) * 0.4;
+    if (buttonSoundRef.current) buttonSoundRef.current.volume = (volumeLevel / 100) * 0.3;
+  }, [volumeLevel]);
+  
+  // Load volume preference from localStorage
+  useEffect(() => {
+    const savedVolume = localStorage.getItem('gameVolumeLevel');
+    if (savedVolume !== null) {
+      const volumeValue = parseInt(savedVolume, 10);
+      setVolumeLevel(volumeValue);
+      
+      // Update mute state
+      if (volumeValue === 0) {
+        setIsSoundEnabled(false);
+      }
     }
   }, []);
   
@@ -294,6 +321,25 @@ const Game: React.FC = () => {
       stopAllSounds();
     };
   }, []);
+  
+  const handleVolumeChange = (value: number[]) => {
+    setVolumeLevel(value[0]);
+    
+    // Save volume preference to localStorage
+    localStorage.setItem('gameVolumeLevel', value[0].toString());
+    
+    // Update mute state
+    if (value[0] === 0) {
+      stopAllSounds();
+      setIsSoundEnabled(false);
+    } else if (!isSoundEnabled) {
+      setIsSoundEnabled(true);
+      
+      if (gameState === GameState.GAMEPLAY) {
+        startEngineSound();
+      }
+    }
+  };
   
   const startEngineSound = () => {
     if (!isSoundEnabled || !carSoundRef.current) return;
@@ -910,6 +956,102 @@ const Game: React.FC = () => {
     }
   }, []);
   
+  const VolumeControl = () => (
+    <div className="flex items-center space-x-2 mb-4 mt-2 max-w-[300px] mx-auto">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="rounded-full flex-shrink-0"
+        onClick={() => {
+          if (isSoundEnabled && volumeLevel > 0) {
+            // Save current volume before muting
+            localStorage.setItem('previousVolume', volumeLevel.toString());
+            handleVolumeChange([0]);
+          } else {
+            // Restore previous volume or default to 80
+            const previousVolume = localStorage.getItem('previousVolume');
+            handleVolumeChange([previousVolume ? parseInt(previousVolume, 10) : 80]);
+          }
+        }}
+      >
+        {isSoundEnabled && volumeLevel > 0 ? (
+          <Volume2 className="h-5 w-5" />
+        ) : (
+          <VolumeX className="h-5 w-5" />
+        )}
+      </Button>
+      
+      <div className="flex-grow">
+        <Slider
+          defaultValue={[volumeLevel]}
+          max={100}
+          min={0}
+          step={1}
+          value={[volumeLevel]}
+          onValueChange={handleVolumeChange}
+          className="flex-grow"
+        />
+      </div>
+      
+      <div className="w-8 text-center text-sm text-white/70">
+        {volumeLevel}%
+      </div>
+    </div>
+  );
+  
+  // Mini wallet display component for the game over screen
+  const WalletMiniDisplay = () => {
+    const { wallet, isConnected, refreshBalance } = useWeb3();
+    
+    return (
+      <div className="glassmorphism p-4 rounded-xl mt-4 mb-2">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center">
+            <Wallet className="w-4 h-4 mr-2 text-[#91d3d1]" />
+            <span className="text-sm font-medium">Wallet</span>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="rounded-full bg-black/20 hover:bg-black/30 h-6 w-6" 
+            onClick={() => refreshBalance()}
+          >
+            <RefreshCw className="h-3 w-3" />
+          </Button>
+        </div>
+        
+        {isConnected ? (
+          <div className="text-xs text-gray-300">
+            <div className="flex items-center justify-between mb-1">
+              <span>Balance:</span>
+              <span className="font-mono">
+                {wallet.balance ? parseFloat(wallet.balance).toFixed(4) : '0.0000'} ETH
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Address:</span>
+              <span className="font-mono truncate max-w-[150px]">
+                {wallet.address?.substring(0, 6)}...{wallet.address?.substring(wallet.address.length - 4)}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="text-xs text-center text-gray-300">
+            <p>Connect wallet to play onchain</p>
+            <Button
+              variant="teal"
+              size="sm"
+              className="mt-2 w-full text-xs py-1 h-auto"
+              onClick={() => window.location.href = '/wallet'}
+            >
+              Connect Wallet
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  };
+  
   return (
     <div className="flex flex-col items-center justify-center w-full h-full">
       <div className="game-canvas-container relative w-full max-w-[600px]">
@@ -1057,6 +1199,9 @@ const Game: React.FC = () => {
                     {isSoundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
                   </Button>
                 </div>
+                
+                {/* Add volume slider */}
+                <VolumeControl />
               </div>
             </div>
             
@@ -1160,20 +1305,12 @@ const Game: React.FC = () => {
                   Main Menu
                 </Button>
                 
+                <VolumeControl />
+                
                 <div className="flex items-center mt-4 space-x-3">
                   <div className="text-sm text-gray-300">
                     Current Score: <span className="font-bold text-white">{score}</span>
                   </div>
-                  
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="rounded-full bg-black/20 backdrop-blur-sm hover:bg-black/30"
-                    onClick={toggleSound}
-                    aria-label={isSoundEnabled ? "Mute sound" : "Enable sound"}
-                  >
-                    {isSoundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-                  </Button>
                 </div>
               </div>
             </div>
@@ -1210,7 +1347,7 @@ const Game: React.FC = () => {
                 )}
               </div>
               
-              {isConnected && (
+              {isConnected ? (
                 <div className="mb-4">
                   <Button 
                     onClick={() => {
@@ -1230,9 +1367,22 @@ const Game: React.FC = () => {
                     Playing as {username} in Onchain Mode
                   </div>
                 </div>
+              ) : (
+                <div className="mb-4">
+                  <Button 
+                    onClick={() => window.location.href = '/wallet'}
+                    className="w-full bg-gradient-to-r from-[#6366f1] to-[#4f46e5] hover:from-[#4f46e5] hover:to-[#4338ca] text-white py-3 rounded-xl flex items-center justify-center mb-3"
+                  >
+                    <Wallet className="mr-2 h-4 w-4" />
+                    Connect Wallet for Onchain Play
+                  </Button>
+                </div>
               )}
               
-              <div className="space-y-3">
+              {/* Display wallet info */}
+              <WalletMiniDisplay />
+              
+              <div className="space-y-3 mt-4">
                 <Button 
                   onClick={handleTryAgain}
                   className="game-button w-full bg-gradient-to-r from-[#91d3d1] to-[#7ec7c5] hover:from-[#7ec7c5] hover:to-[#6abfbd] text-zinc-900 rounded-xl py-6 text-lg font-medium shadow-lg shadow-[#91d3d1]/20"
@@ -1258,17 +1408,7 @@ const Game: React.FC = () => {
                   Back to Menu
                 </Button>
                 
-                <div className="flex justify-center mt-4">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="rounded-full bg-black/20 backdrop-blur-sm hover:bg-black/30"
-                    onClick={toggleSound}
-                    aria-label={isSoundEnabled ? "Mute sound" : "Enable sound"}
-                  >
-                    {isSoundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-                  </Button>
-                </div>
+                <VolumeControl />
               </div>
             </div>
           </div>
