@@ -57,7 +57,7 @@ const WalletPage: React.FC = () => {
       {isMobile ? (
         renderContent()
       ) : (
-        <div className="container mx-auto px-4 py-8 flex flex-col items-center justify-center h-screen">
+        <div className="container mx-auto px-4 py-8 flex flex-col items-center justify-center h-screen bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57]">
           <div className="mobile-frame-container">
             <div className="mobile-frame">
               <div className="notch"></div>
