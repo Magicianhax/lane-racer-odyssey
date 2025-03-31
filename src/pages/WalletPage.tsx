@@ -12,6 +12,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 const WalletPage: React.FC = () => {
   const { isConnected, username, wallet, refreshBalance } = useWeb3();
   const [showUserModal, setShowUserModal] = useState(false);
+  const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   
@@ -56,7 +57,18 @@ const WalletPage: React.FC = () => {
       
       {!showUserModal && (
         <div className="max-w-md w-full mx-auto">
-          <WithdrawModal />
+          <Button
+            variant="teal"
+            className="w-full mb-4"
+            onClick={() => setWithdrawModalOpen(true)}
+          >
+            Withdraw ETH
+          </Button>
+          
+          <WithdrawModal 
+            isOpen={withdrawModalOpen} 
+            onOpenChange={setWithdrawModalOpen} 
+          />
           
           <div className="mt-6 text-center">
             <p className="text-xs text-gray-400 mb-2">
