@@ -19,7 +19,7 @@ const Index = () => {
           </div>
         ) : (
           <div className="mobile-frame-container">
-            <div className="mobile-frame">
+            <div className="mobile-frame shadow-[0_0_40px_5px_rgba(255,255,255,0.15)]">
               <div className="notch"></div>
               <div className="side-button left-button"></div>
               <div className="side-button right-button-top"></div>
