@@ -756,6 +756,14 @@ const Game: React.FC = () => {
     }
   };
   
+  const handleGoToMainMenu = () => {
+    playButtonSound();
+    stopAllSounds();
+    if (gameEngineRef.current) {
+      gameEngineRef.current.setGameState(GameState.START_SCREEN);
+    }
+  };
+  
   const howToPlayContent = [
     {
       title: "Basic Controls",
@@ -1141,6 +1149,15 @@ const Game: React.FC = () => {
                 >
                   <RefreshCw className="mr-2 h-5 w-5" />
                   Restart Game
+                </Button>
+                
+                <Button 
+                  onClick={handleGoToMainMenu}
+                  variant="teal-outline"
+                  className="w-full rounded-xl py-6 text-lg font-medium"
+                >
+                  <Home className="mr-2 h-5 w-5" />
+                  Main Menu
                 </Button>
                 
                 <div className="flex items-center mt-4 space-x-3">
