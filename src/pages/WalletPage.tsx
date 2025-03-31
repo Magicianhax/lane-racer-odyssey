@@ -56,13 +56,12 @@ const WalletPage: React.FC = () => {
             <UsernameModal onComplete={handleSetupComplete} />
           ) : (
             <>
-              <div className="flex items-center mb-4">
+              <div className="flex items-center mb-4 justify-center">
                 <div className="bg-[#2a3a4a] rounded-full p-2 mr-3">
                   <span className="text-[#91d3d1] text-xl">🎮</span>
                 </div>
                 <div>
                   <div className="text-white font-medium">Player: {username}</div>
-                  <div className="text-gray-400 text-xs">Onchain Mode Active</div>
                 </div>
               </div>
               
@@ -72,27 +71,29 @@ const WalletPage: React.FC = () => {
                 onWithdraw={() => setWithdrawModalOpen(true)}
               />
               
-              <Button
-                variant="outline"
-                className="w-full mt-4 bg-gray-800/50 border-gray-700 text-gray-200 hover:bg-gray-700/50"
-                onClick={() => {
-                  if (wallet.privateKey) {
-                    navigator.clipboard.writeText(wallet.privateKey);
-                    toast.success("Private key copied to clipboard");
-                  }
-                }}
-              >
-                <span className="mr-2">🔐</span> Export Private Key
-              </Button>
-              
-              <a 
-                href={`https://sepolia-explorer.superseed.xyz/address/${wallet.address}`}
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center justify-center mt-4 text-[#91d3d1] text-sm hover:underline"
-              >
-                <ExternalLink className="h-4 w-4 mr-1" /> View on SuperSeed Explorer
-              </a>
+              <div className="flex flex-col items-center mt-4 space-y-3">
+                <Button
+                  variant="outline"
+                  className="w-full bg-gray-800/50 border-gray-700 text-gray-200 hover:bg-gray-700/50"
+                  onClick={() => {
+                    if (wallet.privateKey) {
+                      navigator.clipboard.writeText(wallet.privateKey);
+                      toast.success("Private key copied to clipboard");
+                    }
+                  }}
+                >
+                  <span className="mr-2">🔐</span> Export Private Key
+                </Button>
+                
+                <a 
+                  href={`https://sepolia-explorer.superseed.xyz/address/${wallet.address}`}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center text-[#91d3d1] text-sm hover:underline"
+                >
+                  <ExternalLink className="h-4 w-4 mr-1" /> View on SuperSeed Explorer
+                </a>
+              </div>
               
               <div className="mt-6 text-center text-gray-400 text-xs">
                 <p className="mb-1">Note: This wallet is for game use only.</p>
@@ -133,7 +134,7 @@ const WalletPage: React.FC = () => {
             </div>
             <div className="mt-6 flex items-center justify-center text-[#91d3d1]/70 text-sm">
               <Smartphone className="w-4 h-4 mr-2" />
-              <span>SuperSeed Wallet</span>
+              <span>SuperSeed Lane Runner</span>
             </div>
           </div>
         )}

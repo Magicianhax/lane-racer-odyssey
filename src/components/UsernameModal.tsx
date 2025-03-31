@@ -57,9 +57,9 @@ export const UsernameModal: React.FC<UsernameModalProps> = ({ onComplete }) => {
         </Button>
       </div>
       
-      <h3 className="text-lg font-bold mb-1">Enter Onchain Mode</h3>
+      <h3 className="text-lg font-bold mb-1">Choose Username</h3>
       <p className="text-xs text-gray-300 mb-3">
-        Choose a username and get your blockchain wallet.
+        Select a username to create your blockchain wallet.
         Your scores will be saved to the blockchain.
       </p>
 
