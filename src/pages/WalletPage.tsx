@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { UsernameModal } from '@/components/UsernameModal';
 import { WalletInfoPanel } from '@/components/WalletInfoPanel';
 import { WithdrawModal } from '@/components/WithdrawModal';
-import { ArrowLeft, ExternalLink } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Smartphone } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from 'sonner';
 
@@ -15,6 +15,7 @@ const WalletPage: React.FC = () => {
   const [showUserModal, setShowUserModal] = useState(false);
   const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   
   useEffect(() => {
     if (!isConnected) {
@@ -30,20 +31,8 @@ const WalletPage: React.FC = () => {
     navigate('/');
   };
   
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] p-4">
-      <div className="absolute top-4 left-4">
-        <Button 
-          variant="ghost" 
-          size="icon"
-          onClick={handleGoBack}
-          className="text-gray-300 hover:text-white"
-        >
-          <ArrowLeft className="h-5 w-5" />
-          <span className="ml-2">Back to Home</span>
-        </Button>
-      </div>
-      
+  const WalletContent = () => (
+    <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] p-4">
       <div className="max-w-md w-full mx-auto">
         <h1 className="text-3xl font-bold mb-6 text-center text-gradient">Wallet</h1>
         
@@ -104,6 +93,48 @@ const WalletPage: React.FC = () => {
             </>
           )}
         </div>
+      </div>
+    </div>
+  );
+  
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] text-white overflow-hidden">
+      <div className="absolute inset-0 bg-[#91d3d1]/5 mix-blend-overlay pointer-events-none"></div>
+      <div className="absolute top-4 left-4 z-10">
+        <Button 
+          variant="ghost" 
+          size="icon"
+          onClick={handleGoBack}
+          className="text-gray-300 hover:text-white"
+        >
+          <ArrowLeft className="h-5 w-5" />
+          <span className="ml-2">Back to Home</span>
+        </Button>
+      </div>
+      
+      <div className="container mx-auto px-4 py-8 flex flex-col items-center justify-center h-screen">
+        {isMobile ? (
+          <div className="w-full h-full">
+            <WalletContent />
+          </div>
+        ) : (
+          <div className="mobile-frame-container flex flex-col items-center justify-center">
+            <div className="mobile-frame shadow-[0_0_40px_5px_rgba(255,255,255,0.15)]">
+              <div className="notch"></div>
+              <div className="side-button left-button"></div>
+              <div className="side-button right-button-top"></div>
+              <div className="side-button right-button-bottom"></div>
+              <div className="mobile-screen flex items-center justify-center">
+                <WalletContent />
+              </div>
+              <div className="home-indicator"></div>
+            </div>
+            <div className="mt-6 flex items-center justify-center text-[#91d3d1]/70 text-sm">
+              <Smartphone className="w-4 h-4 mr-2" />
+              <span>SuperSeed Wallet</span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
