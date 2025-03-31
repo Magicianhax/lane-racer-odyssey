@@ -28,24 +28,27 @@ const WalletPage: React.FC = () => {
   };
 
   const renderContent = () => (
-    <div className="container mx-auto px-4 py-8">
-      <Button 
-        variant="ghost" 
-        className="mb-6 text-white hover:text-white hover:bg-zinc-800/50" 
-        onClick={handleBackToHome}
-      >
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        Back to Home
-      </Button>
-      
-      <div className="max-w-md mx-auto">
-        <h1 className="text-2xl font-bold mb-6 text-center text-gradient">Wallet</h1>
+    <div className="min-h-full bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57]">
+      <div className="absolute inset-0 bg-[#91d3d1]/5 mix-blend-overlay pointer-events-none"></div>
+      <div className="container mx-auto px-4 py-8">
+        <Button 
+          variant="ghost" 
+          className="mb-6 text-white hover:text-white hover:bg-zinc-800/50" 
+          onClick={handleBackToHome}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Home
+        </Button>
         
-        {showUserModal ? (
-          <UsernameModal onComplete={handleSetupComplete} />
-        ) : (
-          <WalletInfoPanel />
-        )}
+        <div className="max-w-md mx-auto">
+          <h1 className="text-2xl font-bold mb-6 text-center text-gradient">Wallet</h1>
+          
+          {showUserModal ? (
+            <UsernameModal onComplete={handleSetupComplete} />
+          ) : (
+            <WalletInfoPanel />
+          )}
+        </div>
       </div>
     </div>
   );
@@ -57,14 +60,14 @@ const WalletPage: React.FC = () => {
       {isMobile ? (
         renderContent()
       ) : (
-        <div className="container mx-auto px-4 py-8 flex flex-col items-center justify-center h-screen bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57]">
+        <div className="container mx-auto px-4 py-8 flex flex-col items-center justify-center h-screen">
           <div className="mobile-frame-container">
             <div className="mobile-frame">
               <div className="notch"></div>
               <div className="side-button left-button"></div>
               <div className="side-button right-button-top"></div>
               <div className="side-button right-button-bottom"></div>
-              <div className="mobile-screen">
+              <div className="mobile-screen bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57]">
                 {renderContent()}
               </div>
               <div className="home-indicator"></div>
