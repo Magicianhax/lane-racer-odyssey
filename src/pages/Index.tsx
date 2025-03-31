@@ -4,16 +4,10 @@ import GameMenu from "@/components/GameMenu";
 import { Smartphone } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Web3Provider } from "@/contexts/Web3Context";
-import { useState } from "react";
+import { GameStateProvider } from "@/contexts/GameStateContext";
 
 const Index = () => {
   const isMobile = useIsMobile();
-  const [gameState, setGameState] = useState<'main' | 'playing' | 'paused' | 'gameOver'>('main');
-
-  // This function would be passed to GameMenu to resume the game
-  const handleResume = () => {
-    setGameState('playing');
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] text-white overflow-hidden">
@@ -22,8 +16,10 @@ const Index = () => {
         {isMobile ? (
           <div className="w-full h-full relative">
             <Web3Provider>
-              <GameMenu gameState={gameState} onResume={handleResume} />
-              <Game />
+              <GameStateProvider>
+                <GameMenu />
+                <Game />
+              </GameStateProvider>
             </Web3Provider>
           </div>
         ) : (
@@ -35,8 +31,10 @@ const Index = () => {
               <div className="side-button right-button-bottom"></div>
               <div className="mobile-screen relative">
                 <Web3Provider>
-                  <GameMenu gameState={gameState} onResume={handleResume} />
-                  <Game />
+                  <GameStateProvider>
+                    <GameMenu />
+                    <Game />
+                  </GameStateProvider>
                 </Web3Provider>
               </div>
               <div className="home-indicator"></div>

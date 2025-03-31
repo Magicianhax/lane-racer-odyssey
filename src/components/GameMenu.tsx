@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Volume2, VolumeX, Wallet, Home, Play, Settings, X } from 'lucide-react';
 import { useWeb3 } from '@/contexts/Web3Context';
+import { useGameState } from '@/contexts/GameStateContext';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import {
@@ -13,11 +14,11 @@ import {
 
 interface GameMenuProps {
   onResume?: () => void;
-  gameState: 'main' | 'playing' | 'paused' | 'gameOver';
 }
 
-const GameMenu: React.FC<GameMenuProps> = ({ onResume, gameState }) => {
+const GameMenu: React.FC<GameMenuProps> = ({ onResume }) => {
   const { createUserWallet, isConnected, wallet, username } = useWeb3();
+  const { gameState, setGameState } = useGameState();
   const navigate = useNavigate();
   const [volume, setVolume] = useState<number[]>([50]);
   const [isMuted, setIsMuted] = useState(false);
@@ -71,6 +72,7 @@ const GameMenu: React.FC<GameMenuProps> = ({ onResume, gameState }) => {
     if (onResume) {
       onResume();
     }
+    setGameState('playing');
     setMenuOpen(false);
   };
 
