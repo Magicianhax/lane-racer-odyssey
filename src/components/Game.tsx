@@ -21,7 +21,8 @@ import {
   User, 
   Settings, 
   Home, 
-  Rocket 
+  Rocket,
+  Car 
 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
@@ -29,6 +30,7 @@ import { ModeSelectionScreen } from './ModeSelectionComponents';
 import { useWeb3 } from '@/contexts/Web3Context';
 import { OnchainMode } from '@/components/OnchainMode';
 import { LeaderboardDialog } from './LeaderboardDialog';
+import CarSelectionDialog from './CarSelectionDialog';
 
 const DEFAULT_PLAYER_CAR = '/playercar.png';
 const DEFAULT_ENEMY_CARS = ['/enemycar1.png', '/enemycar2.png', '/enemycar3.png'];
@@ -62,6 +64,7 @@ const Game: React.FC = () => {
   const [currentHowToPlayPage, setCurrentHowToPlayPage] = useState<number>(0);
   const [isSoundEnabled, setIsSoundEnabled] = useState<boolean>(true);
   const [showLeaderboard, setShowLeaderboard] = useState<boolean>(false);
+  const [showCarSelection, setShowCarSelection] = useState<boolean>(false);
   
   const [selectedGameMode, setSelectedGameMode] = useState<GameMode>(GameMode.NONE);
   const [username, setUsername] = useState<string>('');
@@ -886,6 +889,19 @@ const Game: React.FC = () => {
     }
   ];
   
+  const handleSelectCar = (carUrl: string) => {
+    setPlayerCarURL(carUrl);
+    localStorage.setItem('selectedCar', carUrl);
+    playButtonSound();
+  };
+  
+  useEffect(() => {
+    const savedCar = localStorage.getItem('selectedCar');
+    if (savedCar) {
+      setPlayerCarURL(savedCar);
+    }
+  }, []);
+  
   return (
     <div className="flex flex-col items-center justify-center w-full h-full">
       <div className="game-canvas-container relative w-full max-w-[600px]">
@@ -973,6 +989,15 @@ const Game: React.FC = () => {
                   disabled={!gameInitialized}
                 >
                   {gameInitialized ? 'Start Game' : <Loader2 className="h-5 w-5 animate-spin" />}
+                </Button>
+                
+                <Button 
+                  onClick={() => setShowCarSelection(true)}
+                  variant="teal-outline"
+                  className="w-full rounded-xl py-6 text-lg font-medium"
+                >
+                  <Car className="mr-2 h-5 w-5" />
+                  Select Car
                 </Button>
                 
                 <Button 
@@ -1269,6 +1294,13 @@ const Game: React.FC = () => {
       <LeaderboardDialog 
         open={showLeaderboard} 
         onOpenChange={setShowLeaderboard} 
+      />
+      
+      <CarSelectionDialog
+        open={showCarSelection}
+        onOpenChange={setShowCarSelection}
+        onSelectCar={handleSelectCar}
+        selectedCar={playerCarURL}
       />
     </div>
   );
