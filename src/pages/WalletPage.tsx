@@ -9,7 +9,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 const WalletPage: React.FC = () => {
-  const { isConnected, username } = useWeb3();
+  const { isConnected, username, wallet, refreshBalance } = useWeb3();
   const [showUserModal, setShowUserModal] = useState(false);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -46,7 +46,7 @@ const WalletPage: React.FC = () => {
           {showUserModal ? (
             <UsernameModal onComplete={handleSetupComplete} />
           ) : (
-            <WalletInfoPanel />
+            <WalletInfoPanel wallet={wallet} refreshBalance={refreshBalance} />
           )}
         </div>
       </div>
