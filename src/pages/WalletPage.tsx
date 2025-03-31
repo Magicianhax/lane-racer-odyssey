@@ -8,6 +8,7 @@ import { WalletInfoPanel } from '@/components/WalletInfoPanel';
 import { WithdrawModal } from '@/components/WithdrawModal';
 import { ArrowLeft, ExternalLink } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { toast } from 'sonner';
 
 const WalletPage: React.FC = () => {
   const { isConnected, username, wallet, refreshBalance } = useWeb3();
