@@ -74,7 +74,7 @@ const WalletPage: React.FC = () => {
           variant="ghost" 
           size="sm"
           onClick={handleGoBack}
-          className="text-gray-300 hover:text-white hover:bg-gray-800/30 focus:bg-gray-800/30 focus:text-white active:bg-gray-800/50 focus:ring-0 focus:ring-offset-0"
+          className="text-gray-300 hover:text-white hover:bg-gray-800/30 focus:bg-gray-800/30 focus:text-white active:bg-gray-800/50 focus:ring-0 focus:ring-offset-0 transition-colors"
         >
           <ArrowLeft className="h-4 w-4 mr-1" />
           <span className="text-sm">Back</span>
