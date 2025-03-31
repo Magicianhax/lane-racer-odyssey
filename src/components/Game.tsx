@@ -930,6 +930,10 @@ const Game: React.FC = () => {
       <div className="game-canvas-container relative w-full max-w-[600px] h-full">
         <canvas ref={canvasRef} className="w-full h-full"></canvas>
         
+        {isConnected && wallet.address && gameState === GameState.GAMEPLAY && (
+          <WalletInfoPanel wallet={wallet} refreshBalance={refreshBalance} />
+        )}
+        
         {gameState === GameState.GAMEPLAY && (
           <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10">
             <div className="flex items-center space-x-2 glassmorphism px-3 py-1 rounded-full">
@@ -1380,12 +1384,6 @@ const Game: React.FC = () => {
         onOpenChange={setShowCarSelection}
         onSelectCar={handleSelectCar}
         selectedCar={playerCarURL}
-      />
-      
-      <WalletInfoPanel
-        open={isConnected}
-        wallet={wallet}
-        refreshBalance={refreshBalance}
       />
     </div>
   );
