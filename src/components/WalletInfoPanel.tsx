@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Copy, Wallet, RefreshCw } from 'lucide-react';
+import { Copy, RefreshCw, ArrowUpRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 type WalletInfoPanelProps = {
@@ -11,14 +11,16 @@ type WalletInfoPanelProps = {
     privateKey: string | null;
   };
   refreshBalance: () => Promise<void>;
+  onWithdraw?: () => void;
 };
 
 export const WalletInfoPanel: React.FC<WalletInfoPanelProps> = ({
   wallet,
-  refreshBalance
+  refreshBalance,
+  onWithdraw
 }) => {
   const shortenAddress = (address: string) => {
-    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+    return `0x${address.substring(2, 6)}...${address.substring(address.length - 4)}`;
   };
 
   const handleCopyAddress = () => {
@@ -31,39 +33,49 @@ export const WalletInfoPanel: React.FC<WalletInfoPanelProps> = ({
   if (!wallet.address) return null;
 
   return (
-    <div className="bg-black/20 p-3 rounded-lg">
-      <div className="flex justify-between items-center mb-2">
-        <div className="flex items-center">
-          <div className="bg-[#91d3d1]/20 rounded-full p-1 mr-2">
-            <Wallet className="h-3 w-3 text-[#91d3d1]" />
-          </div>
-          <div className="text-sm text-white">Wallet</div>
-        </div>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="h-6 w-6 p-0"
-          onClick={() => refreshBalance()}
-        >
-          <RefreshCw className="h-3 w-3" />
-        </Button>
-      </div>
-      
-      <div className="flex items-center justify-between mb-2 text-xs bg-black/20 p-2 rounded-lg">
-        <span className="truncate text-white">{shortenAddress(wallet.address)}</span>
+    <div className="space-y-4">
+      {/* Wallet Address */}
+      <div className="bg-gray-800/70 p-3 rounded-lg flex items-center justify-between">
+        <span className="text-gray-200">{shortenAddress(wallet.address)}</span>
         <Button 
           variant="ghost" 
           size="icon" 
           onClick={handleCopyAddress}
-          className="h-6 w-6"
+          className="h-8 w-8 text-gray-400 hover:text-white hover:bg-gray-700"
         >
-          <Copy className="h-3 w-3" />
+          <Copy className="h-4 w-4" />
         </Button>
       </div>
       
-      <div className="flex justify-between items-center">
-        <span className="text-xs text-gray-400">Balance:</span>
-        <span className="font-mono text-sm text-white">{wallet.balance || '0'} ETH</span>
+      {/* Balance */}
+      <div className="bg-gray-800/70 p-3 rounded-lg">
+        <div className="flex justify-between items-center mb-1">
+          <span className="text-gray-400 text-sm">Balance</span>
+          <div className="flex gap-2">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => refreshBalance()}
+              className="h-6 w-6 p-0 text-gray-400 hover:text-white"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+            </Button>
+            
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={onWithdraw}
+              className="h-6 px-2 py-0 text-[#91d3d1] hover:text-[#7ec7c5] text-xs flex items-center"
+            >
+              <ArrowUpRight className="h-3.5 w-3.5 mr-1" />
+              Withdraw
+            </Button>
+          </div>
+        </div>
+        
+        <div className="font-mono text-white text-sm">
+          {wallet.balance || '0'} ETH
+        </div>
       </div>
     </div>
   );
