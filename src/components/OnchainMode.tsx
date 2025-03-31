@@ -13,7 +13,7 @@ export const OnchainMode: React.FC = () => {
     navigate('/wallet');
   };
 
-  // If already connected, show active wallet button
+  // If already connected, show active wallet button without the text
   if (isConnected) {
     return (
       <Button 

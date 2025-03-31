@@ -995,14 +995,12 @@ const Game: React.FC = () => {
         
         {gameState === GameState.START_SCREEN && !showHowToPlay && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#0b131e] via-[#172637] to-[#1f3a57] backdrop-blur-sm transition-all duration-500 animate-fade-in">
-            <div className="glassmorphism rounded-3xl p-8 mb-10 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
+            <div className="glassmorphism rounded-3xl p-8 mb-8 max-w-md mx-auto text-center shadow-xl animate-scale-in border border-[#91d3d1]/20">
               <h1 className="text-5xl font-bold mb-2 tracking-tight text-white text-gradient">Superseed Lane Runner</h1>
               
               {username && (
                 <div className="chip text-xs bg-[#91d3d1]/20 text-[#91d3d1] px-3 py-1 rounded-full mb-2 inline-flex items-center">
-                  <Blocks className="w-3 h-3 mr-1" />
-                  ONCHAIN • 
-                  <User className="w-3 h-3 mx-1" /> {username}
+                  <User className="w-3 h-3 mr-1" /> {username}
                 </div>
               )}
               
@@ -1045,20 +1043,11 @@ const Game: React.FC = () => {
                   Leaderboard
                 </Button>
                 
-                <div className="w-full border-t border-[#91d3d1]/10 mt-2 pt-4">
-                  <div className="mb-3">
-                    <div className="flex items-center justify-center gap-2 text-[#91d3d1]">
-                      <Rocket className="h-4 w-4" />
-                      <span className="font-medium">Onchain Mode {isConnected ? '(Active)' : ''}</span>
-                    </div>
-                    {isConnected && username && (
-                      <div className="text-xs text-gray-400 mt-1">Playing as {username}</div>
-                    )}
-                  </div>
+                <div className="w-full mt-2 pt-2">
                   <OnchainMode />
                 </div>
                 
-                <div className="flex items-center space-x-4 mt-2">
+                <div className="flex items-center space-x-4 mt-1">
                   {highScore > 0 && (
                     <div className="flex items-center space-x-2 text-[#91d3d1]">
                       <Trophy className="w-5 h-5" />

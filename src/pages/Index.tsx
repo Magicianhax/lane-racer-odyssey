@@ -24,7 +24,7 @@ const Index = () => {
               <div className="side-button left-button"></div>
               <div className="side-button right-button-top"></div>
               <div className="side-button right-button-bottom"></div>
-              <div className="mobile-screen flex items-center justify-center">
+              <div className="mobile-screen flex items-center justify-center pb-0">
                 <Web3Provider>
                   <Game />
                 </Web3Provider>
