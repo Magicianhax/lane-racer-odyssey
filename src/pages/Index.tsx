@@ -1,10 +1,8 @@
-
 import Game from "@/components/Game";
 import { Smartphone, Loader2 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Web3Provider } from "@/contexts/Web3Context";
 import { useState, useEffect } from "react";
-import { CompetitionsButton } from "@/components/CompetitionsButton";
 
 const Index = () => {
   const isMobile = useIsMobile();
@@ -51,13 +49,7 @@ const Index = () => {
               <LoadingScreen />
             ) : (
               <Web3Provider>
-                <div className="relative h-full">
-                  {/* Competitions button added for mobile */}
-                  <div className="absolute top-4 right-4 z-10">
-                    <CompetitionsButton />
-                  </div>
-                  <Game />
-                </div>
+                <Game />
               </Web3Provider>
             )}
           </div>
@@ -73,13 +65,7 @@ const Index = () => {
                   <LoadingScreen />
                 ) : (
                   <Web3Provider>
-                    <div className="relative h-full w-full">
-                      {/* Competitions button added for desktop */}
-                      <div className="absolute top-4 right-4 z-10">
-                        <CompetitionsButton />
-                      </div>
-                      <Game />
-                    </div>
+                    <Game />
                   </Web3Provider>
                 )}
               </div>
