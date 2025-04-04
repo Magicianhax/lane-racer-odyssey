@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { toast } from 'sonner';
@@ -14,6 +13,27 @@ const GAME_SCORE_ABI = [
   "event ScoreSubmitted(address indexed player, uint256 score, uint256 timestamp)",
   "event NewHighScore(address indexed player, uint256 score, uint256 timestamp)"
 ];
+
+// Competition Mock API (in a real implementation, this would be a smart contract)
+type Competition = {
+  id: string;
+  name: string;
+  description: string;
+  startDate: number; // timestamp
+  endDate: number; // timestamp
+  prizePool: string; // ETH amount
+  rewardDistribution: number[]; // Percentages for top 3
+  creator: string;
+  participants: string[];
+};
+
+type CompetitionScore = {
+  competitionId: string;
+  address: string;
+  username: string;
+  score: number;
+  timestamp: number;
+};
 
 const CONTRACT_ADDRESS = "0x454EEca51B63c7488628Ebe608241c4551c4c8a8";
 const SUPERSEED_RPC_URL = "https://sepolia.superseed.xyz/";
@@ -47,9 +67,93 @@ type Web3ContextType = {
   getAllScores: (startIndex: number, count: number) => Promise<{ player: string; score: number; timestamp: number; }[]>;
   getPlayerScores: (address: string) => Promise<{ player: string; score: number; timestamp: number; }[]>;
   getTotalScores: () => Promise<number>;
+  // Competition-related functions
+  getCompetitions: () => Promise<Competition[]>;
+  getCompetition: (id: string) => Promise<Competition | null>;
+  createCompetition: (competition: Omit<Competition, "id" | "creator" | "participants">) => Promise<string>;
+  joinCompetition: (competitionId: string) => Promise<boolean>;
+  submitCompetitionScore: (competitionId: string, score: number) => Promise<boolean>;
+  getCompetitionScores: (competitionId: string) => Promise<CompetitionScore[]>;
+  getUserCompetitions: () => Promise<Competition[]>;
+  getActiveCompetitions: () => Promise<Competition[]>;
+  getPastCompetitions: () => Promise<Competition[]>;
+  getUpcomingCompetitions: () => Promise<Competition[]>;
+  isJoined: (competitionId: string) => Promise<boolean>;
 };
 
 const Web3Context = createContext<Web3ContextType | undefined>(undefined);
+
+// Mock competition data
+const mockCompetitions: Competition[] = [
+  {
+    id: "comp-1",
+    name: "Weekend Challenge",
+    description: "Compete for the highest score this weekend!",
+    startDate: Date.now() - 86400000, // 1 day ago
+    endDate: Date.now() + 172800000, // 2 days from now
+    prizePool: "0.05",
+    rewardDistribution: [60, 30, 10],
+    creator: "0x8ba1f109551bD432803012645Ac136ddd64DBA72",
+    participants: ["0x8ba1f109551bD432803012645Ac136ddd64DBA72"]
+  },
+  {
+    id: "comp-2",
+    name: "Pro Tournament",
+    description: "High stakes competition with big rewards!",
+    startDate: Date.now() + 259200000, // 3 days from now
+    endDate: Date.now() + 518400000, // 6 days from now
+    prizePool: "0.1",
+    rewardDistribution: [50, 30, 20],
+    creator: "0x8ba1f109551bD432803012645Ac136ddd64DBA72",
+    participants: []
+  },
+  {
+    id: "comp-3",
+    name: "Past Tournament",
+    description: "This competition has ended",
+    startDate: Date.now() - 518400000, // 6 days ago
+    endDate: Date.now() - 259200000, // 3 days ago
+    prizePool: "0.03",
+    rewardDistribution: [60, 40],
+    creator: "0x8ba1f109551bD432803012645Ac136ddd64DBA72",
+    participants: ["0x8ba1f109551bD432803012645Ac136ddd64DBA72", "0x78731D3Ca6b7E34aC0F824c42a7cC18A495cabaB"]
+  }
+];
+
+const mockScores: CompetitionScore[] = [
+  {
+    competitionId: "comp-1",
+    address: "0x8ba1f109551bD432803012645Ac136ddd64DBA72",
+    username: "Player1",
+    score: 750,
+    timestamp: Date.now() - 43200000 // 12 hours ago
+  },
+  {
+    competitionId: "comp-3",
+    address: "0x8ba1f109551bD432803012645Ac136ddd64DBA72",
+    username: "Player1",
+    score: 950,
+    timestamp: Date.now() - 345600000 // 4 days ago
+  },
+  {
+    competitionId: "comp-3",
+    address: "0x78731D3Ca6b7E34aC0F824c42a7cC18A495cabaB",
+    username: "Player2",
+    score: 850,
+    timestamp: Date.now() - 345600000 // 4 days ago
+  }
+];
+
+// Store competitions and scores in localStorage
+const initializeMockData = () => {
+  if (!localStorage.getItem('gameCompetitions')) {
+    localStorage.setItem('gameCompetitions', JSON.stringify(mockCompetitions));
+  }
+  
+  if (!localStorage.getItem('gameCompetitionsScores')) {
+    localStorage.setItem('gameCompetitionsScores', JSON.stringify(mockScores));
+  }
+};
 
 export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [wallet, setWallet] = useState<{ 
@@ -71,6 +175,7 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isWithdrawing, setIsWithdrawing] = useState(false);
 
   useEffect(() => {
+    initializeMockData();
     const checkExistingWallet = async () => {
       try {
         // Check for stored wallet data
@@ -466,6 +571,216 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Competition-related functions
+  const getCompetitions = async (): Promise<Competition[]> => {
+    try {
+      const storedCompetitions = localStorage.getItem('gameCompetitions');
+      return storedCompetitions ? JSON.parse(storedCompetitions) : [];
+    } catch (error) {
+      console.error("Error getting competitions:", error);
+      return [];
+    }
+  };
+
+  const getCompetition = async (id: string): Promise<Competition | null> => {
+    try {
+      const competitions = await getCompetitions();
+      return competitions.find(comp => comp.id === id) || null;
+    } catch (error) {
+      console.error("Error getting competition:", error);
+      return null;
+    }
+  };
+
+  const createCompetition = async (competitionData: Omit<Competition, "id" | "creator" | "participants">): Promise<string> => {
+    if (!wallet.address) {
+      throw new Error("Wallet not connected");
+    }
+    
+    try {
+      const competitions = await getCompetitions();
+      const newCompetition: Competition = {
+        ...competitionData,
+        id: `comp-${Date.now()}`,
+        creator: wallet.address,
+        participants: []
+      };
+      
+      const updatedCompetitions = [...competitions, newCompetition];
+      localStorage.setItem('gameCompetitions', JSON.stringify(updatedCompetitions));
+      
+      toast.success("Competition created successfully");
+      return newCompetition.id;
+    } catch (error) {
+      console.error("Error creating competition:", error);
+      toast.error("Failed to create competition");
+      throw error;
+    }
+  };
+
+  const joinCompetition = async (competitionId: string): Promise<boolean> => {
+    if (!wallet.address) {
+      toast.error("Wallet not connected");
+      return false;
+    }
+    
+    try {
+      const competitions = await getCompetitions();
+      const competitionIndex = competitions.findIndex(comp => comp.id === competitionId);
+      
+      if (competitionIndex === -1) {
+        toast.error("Competition not found");
+        return false;
+      }
+      
+      const competition = competitions[competitionIndex];
+      
+      // Check if already joined
+      if (competition.participants.includes(wallet.address)) {
+        toast.info("You've already joined this competition");
+        return true;
+      }
+      
+      // Update participants
+      competition.participants.push(wallet.address);
+      competitions[competitionIndex] = competition;
+      
+      localStorage.setItem('gameCompetitions', JSON.stringify(competitions));
+      toast.success("Joined competition successfully");
+      
+      return true;
+    } catch (error) {
+      console.error("Error joining competition:", error);
+      toast.error("Failed to join competition");
+      return false;
+    }
+  };
+
+  const submitCompetitionScore = async (competitionId: string, score: number): Promise<boolean> => {
+    if (!wallet.address || !username) {
+      toast.error("Wallet not connected");
+      return false;
+    }
+    
+    try {
+      const competition = await getCompetition(competitionId);
+      
+      if (!competition) {
+        toast.error("Competition not found");
+        return false;
+      }
+      
+      const now = Date.now();
+      
+      // Check if competition is active
+      if (now < competition.startDate || now > competition.endDate) {
+        toast.error("Competition is not active");
+        return false;
+      }
+      
+      // Check if user is a participant
+      if (!competition.participants.includes(wallet.address)) {
+        toast.error("You're not a participant in this competition");
+        return false;
+      }
+      
+      // Get existing scores
+      const storedScores = localStorage.getItem('gameCompetitionsScores');
+      const scores: CompetitionScore[] = storedScores ? JSON.parse(storedScores) : [];
+      
+      // Add new score
+      const newScore: CompetitionScore = {
+        competitionId,
+        address: wallet.address,
+        username,
+        score,
+        timestamp: now
+      };
+      
+      scores.push(newScore);
+      localStorage.setItem('gameCompetitionsScores', JSON.stringify(scores));
+      
+      toast.success("Score submitted to competition");
+      return true;
+    } catch (error) {
+      console.error("Error submitting competition score:", error);
+      toast.error("Failed to submit competition score");
+      return false;
+    }
+  };
+
+  const getCompetitionScores = async (competitionId: string): Promise<CompetitionScore[]> => {
+    try {
+      const storedScores = localStorage.getItem('gameCompetitionsScores');
+      const allScores: CompetitionScore[] = storedScores ? JSON.parse(storedScores) : [];
+      
+      // Filter scores by competition
+      return allScores.filter(score => score.competitionId === competitionId);
+    } catch (error) {
+      console.error("Error getting competition scores:", error);
+      return [];
+    }
+  };
+
+  const getUserCompetitions = async (): Promise<Competition[]> => {
+    if (!wallet.address) return [];
+    
+    try {
+      const competitions = await getCompetitions();
+      return competitions.filter(comp => 
+        comp.creator === wallet.address || comp.participants.includes(wallet.address)
+      );
+    } catch (error) {
+      console.error("Error getting user competitions:", error);
+      return [];
+    }
+  };
+
+  const getActiveCompetitions = async (): Promise<Competition[]> => {
+    try {
+      const competitions = await getCompetitions();
+      const now = Date.now();
+      return competitions.filter(comp => comp.startDate <= now && comp.endDate >= now);
+    } catch (error) {
+      console.error("Error getting active competitions:", error);
+      return [];
+    }
+  };
+
+  const getPastCompetitions = async (): Promise<Competition[]> => {
+    try {
+      const competitions = await getCompetitions();
+      const now = Date.now();
+      return competitions.filter(comp => comp.endDate < now);
+    } catch (error) {
+      console.error("Error getting past competitions:", error);
+      return [];
+    }
+  };
+
+  const getUpcomingCompetitions = async (): Promise<Competition[]> => {
+    try {
+      const competitions = await getCompetitions();
+      const now = Date.now();
+      return competitions.filter(comp => comp.startDate > now);
+    } catch (error) {
+      console.error("Error getting upcoming competitions:", error);
+      return [];
+    }
+  };
+
+  const isJoined = async (competitionId: string): Promise<boolean> => {
+    if (!wallet.address) return false;
+    
+    try {
+      const competition = await getCompetition(competitionId);
+      return competition ? competition.participants.includes(wallet.address) : false;
+    } catch (error) {
+      console.error("Error checking if joined:", error);
+      return false;
+    }
+  };
+
   const value = {
     wallet,
     username,
@@ -486,7 +801,19 @@ export const Web3Provider: React.FC<{ children: React.ReactNode }> = ({ children
     withdrawEth,
     isWithdrawing,
     refreshBalance,
-    getTopScores
+    getTopScores,
+    // Competition-related functions
+    getCompetitions,
+    getCompetition,
+    createCompetition,
+    joinCompetition,
+    submitCompetitionScore,
+    getCompetitionScores,
+    getUserCompetitions,
+    getActiveCompetitions,
+    getPastCompetitions,
+    getUpcomingCompetitions,
+    isJoined
   };
 
   return <Web3Context.Provider value={value}>{children}</Web3Context.Provider>;
