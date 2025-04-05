@@ -13,6 +13,14 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 // Define the Score type based on the contract structure
 export interface Score {
@@ -210,34 +218,31 @@ export const AllScoresLeaderboard: React.FC<{
             })}
           </div>
           
-          {/* Pagination Controls */}
-          <div className="flex items-center justify-between mt-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handlePrevPage}
-              disabled={currentPage === 0}
-              className="h-8 px-2 text-xs"
-            >
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Previous
-            </Button>
-            
-            <span className="text-xs text-gray-400">
-              Page {currentPage + 1} of {totalPages} ({totalScores} total scores)
-            </span>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleNextPage}
-              disabled={currentPage >= totalPages - 1}
-              className="h-8 px-2 text-xs"
-            >
-              Next
-              <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-          </div>
+          <Pagination className="mt-4">
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious 
+                  onClick={handlePrevPage}
+                  className={`${currentPage === 0 ? 'opacity-50 pointer-events-none' : ''} bg-zinc-800/50 hover:bg-zinc-700 text-sm border-zinc-700`}
+                  aria-disabled={currentPage === 0}
+                />
+              </PaginationItem>
+              
+              <PaginationItem>
+                <span className="text-xs flex items-center px-3 py-1.5 text-gray-400 bg-zinc-800/30 rounded border border-zinc-800">
+                  Page {currentPage + 1} of {totalPages}
+                </span>
+              </PaginationItem>
+              
+              <PaginationItem>
+                <PaginationNext 
+                  onClick={handleNextPage}
+                  className={`${currentPage >= totalPages - 1 ? 'opacity-50 pointer-events-none' : ''} bg-zinc-800/50 hover:bg-zinc-700 text-sm border-zinc-700`}
+                  aria-disabled={currentPage >= totalPages - 1}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
           
           <div className="mt-3 pt-2 border-t border-zinc-800 text-[10px] text-gray-400 flex justify-between items-center">
             <span>Updated {isRefreshing ? 'now' : 'recently'}</span>
