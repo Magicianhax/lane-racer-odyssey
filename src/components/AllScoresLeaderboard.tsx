@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useWeb3 } from '@/contexts/Web3Context';
 import { Button } from '@/components/ui/button';
@@ -33,7 +32,7 @@ export const AllScoresLeaderboard: React.FC<{
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [totalScores, setTotalScores] = useState(0);
   const [currentPage, setCurrentPage] = useState(0);
-  const [pageSize] = useState(10); // Number of scores per page
+  const [pageSize] = useState(5); // Changed from 10 to 5 scores per page
 
   const fetchLeaderboard = async () => {
     if (!contract) {
